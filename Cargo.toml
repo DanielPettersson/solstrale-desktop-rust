@@ -3,6 +3,11 @@ name = "solstrale-desktop-rust"
 version = "0.1.0"
 edition = "2021"
 
+[profile.release]
+lto = true
+codegen-units = 1
+
 [dependencies]
 solstrale = { path = "../solstrale-rust" }
 eframe = "0.21.3"
+image = "0.24.5"

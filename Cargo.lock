@@ -2088,6 +2088,7 @@ name = "solstrale-desktop-rust"
 version = "0.1.0"
 dependencies = [
  "eframe",
+ "image",
  "solstrale",
 ]
 
