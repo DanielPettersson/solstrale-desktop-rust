@@ -1,25 +1,24 @@
 mod scene;
 
 use crate::scene::create_scene;
-use eframe::egui::{Color32, ColorImage, ProgressBar, TextureOptions, TopBottomPanel, Vec2};
+use eframe::egui::{
+    Color32, ColorImage, Context, ProgressBar, TextureOptions, TopBottomPanel, Vec2,
+};
 use eframe::epaint::TextureHandle;
-use eframe::{egui, run_native, NativeOptions};
+use eframe::{egui, run_native, App, Frame, NativeOptions};
 use egui::CentralPanel;
 use solstrale::post::OidnPostProcessor;
-use solstrale::ray_trace;
+use solstrale::ray_trace_arc;
 use solstrale::renderer::shader::PathTracingShader;
-use solstrale::renderer::RenderConfig;
+use solstrale::renderer::{RenderConfig, Scene};
 use std::sync::mpsc::channel;
 use std::sync::{Arc, Mutex};
 use std::thread;
 
-const WIDTH: usize = 800;
-const HEIGHT: usize = 400;
 const SAMPLES_PER_PIXEL: u32 = 50;
 
 fn main() -> eframe::Result<()> {
     let native_options = NativeOptions {
-        initial_window_size: Some(Vec2::new(WIDTH as f32, HEIGHT as f32)),
         resizable: true,
         ..Default::default()
     };
@@ -32,6 +31,8 @@ fn main() -> eframe::Result<()> {
 }
 
 struct SolstraleApp {
+    scene: Arc<Scene>,
+    rendering: bool,
     render_info: Arc<Mutex<RenderInfo>>,
     texture_handle: TextureHandle,
 }
@@ -44,72 +45,45 @@ struct RenderInfo {
 
 impl SolstraleApp {
     fn new(cc: &eframe::CreationContext<'_>) -> Self {
-        let (output_sender, output_receiver) = channel();
-        let (_, abort_receiver) = channel();
-
-        thread::spawn(move || {
-            let scene = create_scene(RenderConfig {
+        SolstraleApp {
+            scene: Arc::new(create_scene(RenderConfig {
                 samples_per_pixel: SAMPLES_PER_PIXEL,
                 shader: PathTracingShader::create(50),
                 post_processor: Some(OidnPostProcessor::create()),
-            });
-            ray_trace(
-                WIDTH as u32,
-                HEIGHT as u32,
-                scene,
-                &output_sender,
-                &abort_receiver,
-            )
-            .unwrap();
-        });
-
-        let render_info = Arc::new(Mutex::new(RenderInfo {
-            color_image: ColorImage::new([WIDTH, HEIGHT], Color32::BLACK),
-            image_updated: false,
-            progress: 0.0,
-        }));
-        let render_info_clone = render_info.clone();
-
-        let app = SolstraleApp {
-            render_info,
+            })),
+            rendering: false,
+            render_info: Arc::new(Mutex::new(RenderInfo {
+                color_image: ColorImage::new([1, 1], Color32::BLACK),
+                image_updated: false,
+                progress: 0.0,
+            })),
             texture_handle: cc.egui_ctx.load_texture(
                 "",
-                ColorImage::new([WIDTH, HEIGHT], Color32::BLACK),
+                ColorImage::new([1, 1], Color32::BLACK),
                 TextureOptions::default(),
             ),
-        };
-
-        let clone_ctx = cc.egui_ctx.clone();
-
-        thread::spawn(move || {
-            for render_output in output_receiver {
-                let image = render_output.render_image;
-                let fs = image.as_flat_samples();
-                let color_image = ColorImage::from_rgb(
-                    [image.width() as usize, image.height() as usize],
-                    fs.as_slice(),
-                );
-                let mut render_info = render_info_clone.lock().unwrap();
-                render_info.image_updated = true;
-                render_info.progress = render_output.progress;
-                render_info.color_image = color_image;
-
-                clone_ctx.request_repaint();
-            }
-        });
-
-        app
+        }
     }
 }
 
-impl eframe::App for SolstraleApp {
-    fn update(&mut self, ctx: &egui::Context, _: &mut eframe::Frame) {
+impl App for SolstraleApp {
+    fn update(&mut self, ctx: &Context, _: &mut Frame) {
         let mut render_info = self.render_info.lock().unwrap();
 
         TopBottomPanel::bottom("bottom-panel").show(ctx, |ui| {
             ui.add(ProgressBar::new(render_info.progress as f32));
         });
         CentralPanel::default().show(ctx, |ui| {
+            if !self.rendering {
+                render(
+                    self.render_info.clone(),
+                    self.scene.clone(),
+                    ui.available_size(),
+                    ui.ctx().clone(),
+                );
+                self.rendering = true;
+            }
+
             if render_info.image_updated {
                 self.texture_handle = ctx.load_texture(
                     "render_texture",
@@ -122,4 +96,37 @@ impl eframe::App for SolstraleApp {
             ui.image(&self.texture_handle, ui.available_size())
         });
     }
+}
+
+fn render(render_info: Arc<Mutex<RenderInfo>>, scene: Arc<Scene>, render_size: Vec2, ctx: Context) {
+    let (output_sender, output_receiver) = channel();
+    let (_, abort_receiver) = channel();
+
+    thread::spawn(move || {
+        ray_trace_arc(
+            render_size.x as u32,
+            render_size.y as u32,
+            scene,
+            &output_sender,
+            &abort_receiver,
+        )
+        .unwrap();
+    });
+
+    thread::spawn(move || {
+        for render_output in output_receiver {
+            let image = render_output.render_image;
+            let fs = image.as_flat_samples();
+            let color_image = ColorImage::from_rgb(
+                [image.width() as usize, image.height() as usize],
+                fs.as_slice(),
+            );
+            let mut render_info = render_info.lock().unwrap();
+            render_info.image_updated = true;
+            render_info.progress = render_output.progress;
+            render_info.color_image = color_image;
+
+            ctx.request_repaint();
+        }
+    });
 }
