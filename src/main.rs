@@ -11,7 +11,7 @@ use solstrale::post::OidnPostProcessor;
 use solstrale::ray_trace_arc;
 use solstrale::renderer::shader::PathTracingShader;
 use solstrale::renderer::{RenderConfig, Scene};
-use std::sync::mpsc::channel;
+use std::sync::mpsc::{channel, Sender};
 use std::sync::{Arc, Mutex};
 use std::thread;
 
@@ -32,7 +32,7 @@ fn main() -> eframe::Result<()> {
 
 struct SolstraleApp {
     scene: Arc<Scene>,
-    rendering: bool,
+    abort_sender: Option<Sender<bool>>,
     render_info: Arc<Mutex<RenderInfo>>,
     texture_handle: TextureHandle,
 }
@@ -51,7 +51,7 @@ impl SolstraleApp {
                 shader: PathTracingShader::create(50),
                 post_processor: Some(OidnPostProcessor::create()),
             })),
-            rendering: false,
+            abort_sender: None,
             render_info: Arc::new(Mutex::new(RenderInfo {
                 color_image: ColorImage::new([1, 1], Color32::BLACK),
                 image_updated: false,
@@ -71,17 +71,24 @@ impl App for SolstraleApp {
         let mut render_info = self.render_info.lock().unwrap();
 
         TopBottomPanel::bottom("bottom-panel").show(ctx, |ui| {
-            ui.add(ProgressBar::new(render_info.progress as f32));
+            ui.horizontal(|ui| {
+                if ui.button("Restart").clicked() {
+                    if let Some(abort_sender) = &self.abort_sender {
+                        abort_sender.send(true).ok();
+                        self.abort_sender = None;
+                    }
+                }
+                ui.add(ProgressBar::new(render_info.progress as f32));
+            });
         });
         CentralPanel::default().show(ctx, |ui| {
-            if !self.rendering {
-                render(
+            if self.abort_sender.is_none() {
+                self.abort_sender = Some(render(
                     self.render_info.clone(),
                     self.scene.clone(),
                     ui.available_size(),
                     ui.ctx().clone(),
-                );
-                self.rendering = true;
+                ));
             }
 
             if render_info.image_updated {
@@ -98,9 +105,14 @@ impl App for SolstraleApp {
     }
 }
 
-fn render(render_info: Arc<Mutex<RenderInfo>>, scene: Arc<Scene>, render_size: Vec2, ctx: Context) {
+fn render(
+    render_info: Arc<Mutex<RenderInfo>>,
+    scene: Arc<Scene>,
+    render_size: Vec2,
+    ctx: Context,
+) -> Sender<bool> {
     let (output_sender, output_receiver) = channel();
-    let (_, abort_receiver) = channel();
+    let (abort_sender, abort_receiver) = channel();
 
     thread::spawn(move || {
         ray_trace_arc(
@@ -129,4 +141,6 @@ fn render(render_info: Arc<Mutex<RenderInfo>>, scene: Arc<Scene>, render_size: V
             ctx.request_repaint();
         }
     });
+
+    abort_sender
 }
