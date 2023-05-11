@@ -27,10 +27,10 @@ trait Creator<T> {
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
 struct Scene {
-    world: Hittable,
-    camera: CameraConfig,
-    background_color: Vec3,
     render_configuration: RenderConfig,
+    background_color: Vec3,
+    camera: CameraConfig,
+    world: Hittable,
 }
 
 impl Creator<solstrale::renderer::Scene> for Scene {
@@ -357,17 +357,14 @@ mod test {
 
         let yaml = serde_yaml::to_string(&scene).unwrap();
         assert_eq!(
-            "world:
-  type: List
-  children:
-  - type: Sphere
-    material:
-      type: Lambertian
-      texture:
-        type: Color
-        data: {}
-    data:
-      radius: 1.0
+            "render_configuration:
+  samples_per_pixel: 50
+  shader: PathTracing
+  post_processor: Oidn
+background_color:
+  x: 0.0
+  y: 0.0
+  z: 0.0
 camera:
   vertical_fov_degrees: 0.0
   aperture_size: 0.0
@@ -380,14 +377,17 @@ camera:
     x: 0.0
     y: 0.0
     z: 0.0
-background_color:
-  x: 0.0
-  y: 0.0
-  z: 0.0
-render_configuration:
-  samples_per_pixel: 50
-  shader: PathTracing
-  post_processor: Oidn
+world:
+  type: List
+  children:
+  - type: Sphere
+    material:
+      type: Lambertian
+      texture:
+        type: Color
+        data: {}
+    data:
+      radius: 1.0
 ",
             yaml
         );

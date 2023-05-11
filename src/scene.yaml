@@ -1,3 +1,23 @@
+render_configuration:
+  samples_per_pixel: 50
+  shader: PathTracing
+  post_processor: Oidn
+background_color:
+  x: 0.2
+  y: 0.3
+  z: 0.5
+camera:
+  vertical_fov_degrees: 20.0
+  aperture_size: 0.1
+  focus_distance: 3.5
+  look_from:
+    x: -0.2
+    y: 0.8
+    z: 4.0
+  look_at:
+    x: 0.0
+    y: 0.5
+    z: 0.0
 world:
   type: List
   children:
@@ -66,23 +86,3 @@ world:
         y: 0.0
         z: 0.3
         angle_y: 35.0
-camera:
-  vertical_fov_degrees: 20.0
-  aperture_size: 0.1
-  focus_distance: 3.5
-  look_from:
-    x: -0.2
-    y: 0.8
-    z: 4.0
-  look_at:
-    x: 0.0
-    y: 0.5
-    z: 0.0
-background_color:
-  x: 0.2
-  y: 0.3
-  z: 0.5
-render_configuration:
-  samples_per_pixel: 50
-  shader: PathTracing
-  post_processor: Oidn

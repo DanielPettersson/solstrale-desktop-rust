@@ -3,19 +3,22 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 
 use eframe::egui::{
-    Color32, ColorImage, Context, ProgressBar, TextureOptions, TopBottomPanel, Vec2,
+    Color32, ColorImage, Context, ProgressBar, SidePanel, TextureOptions, TopBottomPanel, Vec2,
 };
 use eframe::epaint::TextureHandle;
 use eframe::{egui, run_native, App, Frame, NativeOptions};
 use egui::CentralPanel;
 use solstrale::ray_trace;
-use solstrale::renderer::Scene;
 
 mod scene_model;
 
 fn main() -> eframe::Result<()> {
     let native_options = NativeOptions {
         resizable: true,
+        initial_window_size: Some(Vec2 {
+            x: 1000.0,
+            y: 600.0,
+        }),
         ..Default::default()
     };
 
@@ -27,10 +30,10 @@ fn main() -> eframe::Result<()> {
 }
 
 struct SolstraleApp {
-    scene: Arc<Scene>,
     abort_sender: Option<Sender<bool>>,
     render_info: Arc<Mutex<RenderInfo>>,
     texture_handle: TextureHandle,
+    scene_yaml: String,
 }
 
 struct RenderInfo {
@@ -41,8 +44,9 @@ struct RenderInfo {
 
 impl SolstraleApp {
     fn new(cc: &eframe::CreationContext<'_>) -> Self {
+        let yaml = include_str!("scene.yaml");
+
         SolstraleApp {
-            scene: Arc::new(scene_model::create_scene(include_str!("scene.yaml")).unwrap()),
             abort_sender: None,
             render_info: Arc::new(Mutex::new(RenderInfo {
                 color_image: ColorImage::new([1, 1], Color32::BLACK),
@@ -54,6 +58,7 @@ impl SolstraleApp {
                 ColorImage::new([1, 1], Color32::BLACK),
                 TextureOptions::default(),
             ),
+            scene_yaml: yaml.parse().unwrap(),
         }
     }
 }
@@ -64,7 +69,7 @@ impl App for SolstraleApp {
 
         TopBottomPanel::bottom("bottom-panel").show(ctx, |ui| {
             ui.horizontal(|ui| {
-                if ui.button("Restart").clicked() {
+                if ui.button("Render").clicked() {
                     if let Some(abort_sender) = &self.abort_sender {
                         abort_sender.send(true).ok();
                         self.abort_sender = None;
@@ -73,11 +78,25 @@ impl App for SolstraleApp {
                 ui.add(ProgressBar::new(render_info.progress as f32));
             });
         });
+
+        SidePanel::left("code-panel").show(ctx, |ui| {
+            egui::ScrollArea::vertical().show(ui, |ui| {
+                ui.add(
+                    egui::TextEdit::multiline(&mut self.scene_yaml)
+                        .font(egui::TextStyle::Monospace) // for cursor height
+                        .code_editor()
+                        .lock_focus(true)
+                        .desired_width(f32::INFINITY)
+                        .min_size(Vec2 { x: 300.0, y: 0.0 }),
+                );
+            });
+        });
+
         CentralPanel::default().show(ctx, |ui| {
             if self.abort_sender.is_none() {
                 self.abort_sender = Some(render(
                     self.render_info.clone(),
-                    self.scene.clone(),
+                    &self.scene_yaml,
                     ui.available_size(),
                     ui.ctx().clone(),
                 ));
@@ -99,12 +118,14 @@ impl App for SolstraleApp {
 
 fn render(
     render_info: Arc<Mutex<RenderInfo>>,
-    scene: Arc<Scene>,
+    scene_yaml: &str,
     render_size: Vec2,
     ctx: Context,
 ) -> Sender<bool> {
     let (output_sender, output_receiver) = channel();
     let (abort_sender, abort_receiver) = channel();
+
+    let scene = Arc::new(scene_model::create_scene(scene_yaml).unwrap());
 
     thread::spawn(move || {
         ray_trace(
