@@ -8,7 +8,7 @@ use eframe::epaint::TextureHandle;
 use eframe::{egui, run_native, App, Frame, NativeOptions};
 use egui::CentralPanel;
 use solstrale::post::OidnPostProcessor;
-use solstrale::ray_trace_arc;
+use solstrale::ray_trace;
 use solstrale::renderer::shader::PathTracingShader;
 use solstrale::renderer::{RenderConfig, Scene};
 use std::sync::mpsc::{channel, Sender};
@@ -48,8 +48,8 @@ impl SolstraleApp {
         SolstraleApp {
             scene: Arc::new(create_scene(RenderConfig {
                 samples_per_pixel: SAMPLES_PER_PIXEL,
-                shader: PathTracingShader::create(50),
-                post_processor: Some(OidnPostProcessor::create()),
+                shader: PathTracingShader::new(50),
+                post_processor: Some(OidnPostProcessor::new()),
             })),
             abort_sender: None,
             render_info: Arc::new(Mutex::new(RenderInfo {
@@ -115,7 +115,7 @@ fn render(
     let (abort_sender, abort_receiver) = channel();
 
     thread::spawn(move || {
-        ray_trace_arc(
+        ray_trace(
             render_size.x as u32,
             render_size.y as u32,
             scene,
