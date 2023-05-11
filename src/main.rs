@@ -1,22 +1,17 @@
-mod scene;
-mod scene_model;
+use std::sync::mpsc::{channel, Sender};
+use std::sync::{Arc, Mutex};
+use std::thread;
 
-use crate::scene::create_scene;
 use eframe::egui::{
     Color32, ColorImage, Context, ProgressBar, TextureOptions, TopBottomPanel, Vec2,
 };
 use eframe::epaint::TextureHandle;
 use eframe::{egui, run_native, App, Frame, NativeOptions};
 use egui::CentralPanel;
-use solstrale::post::OidnPostProcessor;
 use solstrale::ray_trace;
-use solstrale::renderer::shader::PathTracingShader;
-use solstrale::renderer::{RenderConfig, Scene};
-use std::sync::mpsc::{channel, Sender};
-use std::sync::{Arc, Mutex};
-use std::thread;
+use solstrale::renderer::Scene;
 
-const SAMPLES_PER_PIXEL: u32 = 50;
+mod scene_model;
 
 fn main() -> eframe::Result<()> {
     let native_options = NativeOptions {
@@ -47,11 +42,7 @@ struct RenderInfo {
 impl SolstraleApp {
     fn new(cc: &eframe::CreationContext<'_>) -> Self {
         SolstraleApp {
-            scene: Arc::new(create_scene(RenderConfig {
-                samples_per_pixel: SAMPLES_PER_PIXEL,
-                shader: PathTracingShader::new(50),
-                post_processor: Some(OidnPostProcessor::new()),
-            })),
+            scene: Arc::new(scene_model::create_scene(include_str!("scene.yaml")).unwrap()),
             abort_sender: None,
             render_info: Arc::new(Mutex::new(RenderInfo {
                 color_image: ColorImage::new([1, 1], Color32::BLACK),
