@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::error::Error;
 
+use crate::scene_model::HittableType::RotationY;
 use crate::scene_model::MaterialType::Lambertian;
 use serde::{Deserialize, Serialize};
 use serde_yaml::Value;
@@ -120,7 +121,7 @@ enum HittableType {
     List,
     Sphere,
     Model,
-    Translation,
+    RotationY,
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
@@ -150,39 +151,49 @@ impl Creator<Hittables> for Hittable {
                 list
             }
             HittableType::Sphere => Sphere::new(
-                solstrale::geo::vec3::Vec3::new(
-                    get_f64_opt(&self.data, "x"),
-                    get_f64_opt(&self.data, "y"),
-                    get_f64_opt(&self.data, "z"),
-                ),
+                get_pos_opt(&self.data),
                 get_f64_opt(&self.data, "radius"),
                 self.material
                     .as_ref()
                     .expect("Sphere expects material")
                     .create(),
             ),
-            HittableType::Model => load_obj_model(
-                get_str_opt(&self.data, "path"),
-                get_str_opt(&self.data, "name"),
-                get_f64_opt(&self.data, "scale"),
-            )
-            .unwrap(),
-            HittableType::Translation => {
+            HittableType::Model => {
+                let model = load_obj_model(
+                    get_str_opt(&self.data, "path"),
+                    get_str_opt(&self.data, "name"),
+                    get_f64_opt(&self.data, "scale"),
+                )
+                .unwrap();
+
+                let pos = get_pos_opt(&self.data);
+
+                let translated = if pos.near_zero() {
+                    model
+                } else {
+                    Translation::new(model, pos)
+                };
+
+                let angle_y = get_f64_opt(&self.data, "angle_y");
+
+                if angle_y == 0. {
+                    translated
+                } else {
+                    solstrale::hittable::rotation_y::RotationY::new(translated, angle_y)
+                }
+            }
+            RotationY => {
                 let child = self
                     .children
                     .as_ref()
-                    .expect("Translation expects children")
+                    .expect("RotationY expects children")
                     .iter()
                     .next()
-                    .expect("Translation expects a child");
+                    .expect("RotationY expects a child");
 
-                Translation::new(
+                solstrale::hittable::rotation_y::RotationY::new(
                     child.create(),
-                    solstrale::geo::vec3::Vec3::new(
-                        get_f64_opt(&self.data, "x"),
-                        get_f64_opt(&self.data, "y"),
-                        get_f64_opt(&self.data, "z"),
-                    ),
+                    get_f64_opt(&self.data, "angle"),
                 )
             }
         }
@@ -221,11 +232,7 @@ impl Creator<Materials> for Material {
                     .create(),
                 get_f64_opt(&self.data, "index_of_refraction"),
             ),
-            MaterialType::Light => DiffuseLight::new(
-                get_f64_opt(&self.data, "r"),
-                get_f64_opt(&self.data, "g"),
-                get_f64_opt(&self.data, "b"),
-            ),
+            MaterialType::Light => DiffuseLight::new_from_vec3(get_col_opt(&self.data)),
         }
     }
 }
@@ -270,6 +277,22 @@ fn get_str_opt<'a>(map: &'a Option<HashMap<String, Value>>, key: &str) -> &'a st
 
 fn get_str<'a>(map: &'a HashMap<String, Value>, key: &str) -> &'a str {
     map[key].as_str().expect(&*format!("expected key {}", key))
+}
+
+fn get_pos_opt(map: &Option<HashMap<String, Value>>) -> solstrale::geo::vec3::Vec3 {
+    solstrale::geo::vec3::Vec3::new(
+        get_f64_opt(map, "x"),
+        get_f64_opt(map, "y"),
+        get_f64_opt(map, "z"),
+    )
+}
+
+fn get_col_opt(map: &Option<HashMap<String, Value>>) -> solstrale::geo::vec3::Vec3 {
+    solstrale::geo::vec3::Vec3::new(
+        get_f64_opt(map, "r"),
+        get_f64_opt(map, "g"),
+        get_f64_opt(map, "b"),
+    )
 }
 
 #[cfg(test)]
