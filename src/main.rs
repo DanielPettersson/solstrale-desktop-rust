@@ -1,4 +1,5 @@
 mod scene;
+mod scene_model;
 
 use crate::scene::create_scene;
 use eframe::egui::{
