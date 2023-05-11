@@ -18,11 +18,11 @@ use solstrale::renderer::shader::{AlbedoShader, NormalShader, PathTracingShader,
 
 pub fn create_scene(yaml: &str) -> Result<solstrale::renderer::Scene, Box<dyn Error>> {
     let scene: Scene = serde_yaml::from_str(yaml)?;
-    Ok(scene.create())
+    scene.create()
 }
 
 trait Creator<T> {
-    fn create(&self) -> T;
+    fn create(&self) -> Result<T, Box<dyn Error>>;
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
@@ -34,13 +34,13 @@ struct Scene {
 }
 
 impl Creator<solstrale::renderer::Scene> for Scene {
-    fn create(&self) -> solstrale::renderer::Scene {
-        solstrale::renderer::Scene {
-            world: self.world.create(),
-            camera: self.camera.create(),
-            background_color: self.background_color.create(),
-            render_config: self.render_configuration.create(),
-        }
+    fn create(&self) -> Result<solstrale::renderer::Scene, Box<dyn Error>> {
+        Ok(solstrale::renderer::Scene {
+            world: self.world.create()?,
+            camera: self.camera.create()?,
+            background_color: self.background_color.create()?,
+            render_config: self.render_configuration.create()?,
+        })
     }
 }
 
@@ -54,14 +54,14 @@ struct CameraConfig {
 }
 
 impl Creator<solstrale::camera::CameraConfig> for CameraConfig {
-    fn create(&self) -> solstrale::camera::CameraConfig {
-        solstrale::camera::CameraConfig {
+    fn create(&self) -> Result<solstrale::camera::CameraConfig, Box<dyn Error>> {
+        Ok(solstrale::camera::CameraConfig {
             vertical_fov_degrees: self.vertical_fov_degrees,
             aperture_size: self.aperture_size,
             focus_distance: self.focus_distance,
-            look_from: self.look_from.create(),
-            look_at: self.look_at.create(),
-        }
+            look_from: self.look_from.create()?,
+            look_at: self.look_at.create()?,
+        })
     }
 }
 
@@ -87,8 +87,8 @@ struct RenderConfig {
 }
 
 impl Creator<solstrale::renderer::RenderConfig> for RenderConfig {
-    fn create(&self) -> solstrale::renderer::RenderConfig {
-        solstrale::renderer::RenderConfig {
+    fn create(&self) -> Result<solstrale::renderer::RenderConfig, Box<dyn Error>> {
+        Ok(solstrale::renderer::RenderConfig {
             samples_per_pixel: self.samples_per_pixel,
             shader: match self.shader {
                 ShaderType::PathTracing => PathTracingShader::new(50),
@@ -99,7 +99,7 @@ impl Creator<solstrale::renderer::RenderConfig> for RenderConfig {
             post_processor: self.post_processor.as_ref().map(|p| match p {
                 PostProcessorType::Oidn => OidnPostProcessor::new(),
             }),
-        }
+        })
     }
 }
 
@@ -111,8 +111,8 @@ struct Vec3 {
 }
 
 impl Creator<solstrale::geo::vec3::Vec3> for Vec3 {
-    fn create(&self) -> solstrale::geo::vec3::Vec3 {
-        solstrale::geo::vec3::Vec3::new(self.x, self.y, self.z)
+    fn create(&self) -> Result<solstrale::geo::vec3::Vec3, Box<dyn Error>> {
+        Ok(solstrale::geo::vec3::Vec3::new(self.x, self.y, self.z))
     }
 }
 
@@ -136,37 +136,37 @@ struct Hittable {
 }
 
 impl Creator<Hittables> for Hittable {
-    fn create(&self) -> Hittables {
-        match self.r#type {
+    fn create(&self) -> Result<Hittables, Box<dyn Error>> {
+        Ok(match self.r#type {
             HittableType::List => {
                 let mut list = HittableList::new();
                 for child in self
                     .children
                     .as_ref()
-                    .expect("List expects children")
+                    .ok_or("List expects children")?
                     .iter()
                 {
-                    list.add(child.create())
+                    list.add(child.create()?)
                 }
                 list
             }
             HittableType::Sphere => Sphere::new(
-                get_pos_opt(&self.data),
-                get_f64_opt(&self.data, "radius"),
+                get_pos_opt(&self.data)?,
+                get_f64_opt(&self.data, "radius")?,
                 self.material
                     .as_ref()
-                    .expect("Sphere expects material")
-                    .create(),
+                    .ok_or("Sphere expects material")?
+                    .create()?,
             ),
             HittableType::Model => {
                 let model = load_obj_model(
-                    get_str_opt(&self.data, "path"),
-                    get_str_opt(&self.data, "name"),
-                    get_f64_opt(&self.data, "scale"),
+                    get_str_opt(&self.data, "path")?,
+                    get_str_opt(&self.data, "name")?,
+                    get_f64_opt(&self.data, "scale")?,
                 )
                 .unwrap();
 
-                let pos = get_pos_opt(&self.data);
+                let pos = get_pos_opt(&self.data)?;
 
                 let translated = if pos.near_zero() {
                     model
@@ -174,7 +174,7 @@ impl Creator<Hittables> for Hittable {
                     Translation::new(model, pos)
                 };
 
-                let angle_y = get_f64_opt(&self.data, "angle_y");
+                let angle_y = get_f64_opt(&self.data, "angle_y")?;
 
                 if angle_y == 0. {
                     translated
@@ -192,11 +192,11 @@ impl Creator<Hittables> for Hittable {
                     .expect("RotationY expects a child");
 
                 solstrale::hittable::rotation_y::RotationY::new(
-                    child.create(),
-                    get_f64_opt(&self.data, "angle"),
+                    child.create()?,
+                    get_f64_opt(&self.data, "angle")?,
                 )
             }
-        }
+        })
     }
 }
 
@@ -217,23 +217,23 @@ struct Material {
 }
 
 impl Creator<Materials> for Material {
-    fn create(&self) -> Materials {
-        match self.r#type {
+    fn create(&self) -> Result<Materials, Box<dyn Error>> {
+        Ok(match self.r#type {
             Lambertian => solstrale::material::Lambertian::new(
                 self.texture
                     .as_ref()
-                    .expect("Lambertian expects texture")
-                    .create(),
+                    .ok_or("Lambertian expects texture")?
+                    .create()?,
             ),
             MaterialType::Glass => Dielectric::new(
                 self.texture
                     .as_ref()
-                    .expect("Glass expects texture")
-                    .create(),
-                get_f64_opt(&self.data, "index_of_refraction"),
+                    .ok_or("Glass expects texture")?
+                    .create()?,
+                get_f64_opt(&self.data, "index_of_refraction")?,
             ),
-            MaterialType::Light => DiffuseLight::new_from_vec3(get_col_opt(&self.data)),
-        }
+            MaterialType::Light => DiffuseLight::new_from_vec3(get_col_opt(&self.data)?),
+        })
     }
 }
 
@@ -250,49 +250,65 @@ struct Texture {
 }
 
 impl Creator<Textures> for Texture {
-    fn create(&self) -> Textures {
-        match self.r#type {
-            TextureType::Color => SolidColor::new(
-                get_f64(&self.data, "r"),
-                get_f64(&self.data, "g"),
-                get_f64(&self.data, "b"),
-            ),
-            TextureType::Image => ImageTexture::load(get_str(&self.data, "file"))
-                .expect("Failed to load image texture"),
-        }
+    fn create(&self) -> Result<Textures, Box<dyn Error>> {
+        Ok(match self.r#type {
+            TextureType::Color => SolidColor::new_from_vec3(get_col(&self.data)?),
+            TextureType::Image => ImageTexture::load(get_str(&self.data, "file")?)?,
+        })
     }
 }
 
-fn get_f64_opt(map: &Option<HashMap<String, Value>>, key: &str) -> f64 {
+fn get_f64_opt(map: &Option<HashMap<String, Value>>, key: &str) -> Result<f64, Box<dyn Error>> {
     get_f64(map.as_ref().expect("expected data"), key)
 }
 
-fn get_f64(map: &HashMap<String, Value>, key: &str) -> f64 {
-    map[key].as_f64().expect(&*format!("expected key {}", key))
+fn get_f64(map: &HashMap<String, Value>, key: &str) -> Result<f64, Box<dyn Error>> {
+    map.get(key)
+        .ok_or(format!("expected key {}", key))?
+        .as_f64()
+        .ok_or(Box::try_from(format!("key {} is not a number", key)).unwrap())
 }
 
-fn get_str_opt<'a>(map: &'a Option<HashMap<String, Value>>, key: &str) -> &'a str {
+fn get_str_opt<'a>(
+    map: &'a Option<HashMap<String, Value>>,
+    key: &str,
+) -> Result<&'a str, Box<dyn Error>> {
     get_str(map.as_ref().expect("expected data"), key)
 }
 
-fn get_str<'a>(map: &'a HashMap<String, Value>, key: &str) -> &'a str {
-    map[key].as_str().expect(&*format!("expected key {}", key))
+fn get_str<'a>(map: &'a HashMap<String, Value>, key: &str) -> Result<&'a str, Box<dyn Error>> {
+    map.get(key)
+        .ok_or(format!("expected key {}", key))?
+        .as_str()
+        .ok_or(Box::try_from(format!("key {} is not a string", key)).unwrap())
 }
 
-fn get_pos_opt(map: &Option<HashMap<String, Value>>) -> solstrale::geo::vec3::Vec3 {
-    solstrale::geo::vec3::Vec3::new(
-        get_f64_opt(map, "x"),
-        get_f64_opt(map, "y"),
-        get_f64_opt(map, "z"),
-    )
+fn get_pos_opt(
+    map: &Option<HashMap<String, Value>>,
+) -> Result<solstrale::geo::vec3::Vec3, Box<dyn Error>> {
+    Ok(solstrale::geo::vec3::Vec3::new(
+        get_f64_opt(map, "x")?,
+        get_f64_opt(map, "y")?,
+        get_f64_opt(map, "z")?,
+    ))
 }
 
-fn get_col_opt(map: &Option<HashMap<String, Value>>) -> solstrale::geo::vec3::Vec3 {
-    solstrale::geo::vec3::Vec3::new(
-        get_f64_opt(map, "r"),
-        get_f64_opt(map, "g"),
-        get_f64_opt(map, "b"),
-    )
+fn get_col(map: &HashMap<String, Value>) -> Result<solstrale::geo::vec3::Vec3, Box<dyn Error>> {
+    Ok(solstrale::geo::vec3::Vec3::new(
+        get_f64(map, "r")?,
+        get_f64(map, "g")?,
+        get_f64(map, "b")?,
+    ))
+}
+
+fn get_col_opt(
+    map: &Option<HashMap<String, Value>>,
+) -> Result<solstrale::geo::vec3::Vec3, Box<dyn Error>> {
+    Ok(solstrale::geo::vec3::Vec3::new(
+        get_f64_opt(map, "r")?,
+        get_f64_opt(map, "g")?,
+        get_f64_opt(map, "b")?,
+    ))
 }
 
 #[cfg(test)]
