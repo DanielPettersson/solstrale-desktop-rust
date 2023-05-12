@@ -163,8 +163,7 @@ impl Creator<Hittables> for Hittable {
                     get_str_opt(&self.data, "path")?,
                     get_str_opt(&self.data, "name")?,
                     get_f64_opt(&self.data, "scale")?,
-                )
-                .unwrap();
+                )?;
 
                 let pos = get_pos_opt(&self.data)?;
 

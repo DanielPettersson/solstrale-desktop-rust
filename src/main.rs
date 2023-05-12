@@ -1,3 +1,4 @@
+use std::error::Error;
 use std::sync::mpsc::{channel, Sender};
 use std::sync::{Arc, Mutex};
 use std::thread;
@@ -34,6 +35,9 @@ struct SolstraleApp {
     render_info: Arc<Mutex<RenderInfo>>,
     texture_handle: TextureHandle,
     scene_yaml: String,
+    show_error: bool,
+    error_message: String,
+    render_requested: bool,
 }
 
 struct RenderInfo {
@@ -59,6 +63,9 @@ impl SolstraleApp {
                 TextureOptions::default(),
             ),
             scene_yaml: yaml.parse().unwrap(),
+            show_error: false,
+            error_message: "".to_string(),
+            render_requested: true,
         }
     }
 }
@@ -69,11 +76,15 @@ impl App for SolstraleApp {
 
         TopBottomPanel::bottom("bottom-panel").show(ctx, |ui| {
             ui.horizontal(|ui| {
-                if ui.button("Render").clicked() {
+                if ui
+                    .add_enabled(!self.show_error, egui::Button::new("Render"))
+                    .clicked()
+                {
                     if let Some(abort_sender) = &self.abort_sender {
                         abort_sender.send(true).ok();
                         self.abort_sender = None;
                     }
+                    self.render_requested = true;
                 }
                 ui.add(ProgressBar::new(render_info.progress as f32));
             });
@@ -93,13 +104,21 @@ impl App for SolstraleApp {
         });
 
         CentralPanel::default().show(ctx, |ui| {
-            if self.abort_sender.is_none() {
-                self.abort_sender = Some(render(
+            if self.abort_sender.is_none() && self.render_requested && !self.show_error {
+                let res = render(
                     self.render_info.clone(),
                     &self.scene_yaml,
                     ui.available_size(),
                     ui.ctx().clone(),
-                ));
+                );
+                match res {
+                    Ok(abort_sender) => self.abort_sender = Some(abort_sender),
+                    Err(err) => {
+                        self.render_requested = false;
+                        self.show_error = true;
+                        self.error_message = format!("{}", err)
+                    }
+                }
             }
 
             if render_info.image_updated {
@@ -113,6 +132,14 @@ impl App for SolstraleApp {
 
             ui.image(&self.texture_handle, ui.available_size())
         });
+
+        if self.show_error {
+            egui::Window::new("Error")
+                .open(&mut self.show_error)
+                .show(ctx, |ui| {
+                    ui.label(&self.error_message);
+                });
+        }
     }
 }
 
@@ -121,11 +148,11 @@ fn render(
     scene_yaml: &str,
     render_size: Vec2,
     ctx: Context,
-) -> Sender<bool> {
+) -> Result<Sender<bool>, Box<dyn Error>> {
     let (output_sender, output_receiver) = channel();
     let (abort_sender, abort_receiver) = channel();
 
-    let scene = Arc::new(scene_model::create_scene(scene_yaml).unwrap());
+    let scene = Arc::new(scene_model::create_scene(scene_yaml)?);
 
     thread::spawn(move || {
         ray_trace(
@@ -155,5 +182,5 @@ fn render(
         }
     });
 
-    abort_sender
+    Ok(abort_sender)
 }
