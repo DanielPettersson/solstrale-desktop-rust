@@ -1,6 +1,9 @@
 render_configuration:
   samples_per_pixel: 50
-  shader: PathTracing
+  shader:
+    type: PathTracing
+    data:
+      max_depth: 50
   post_processor: Oidn
 background_color:
   x: 0.2

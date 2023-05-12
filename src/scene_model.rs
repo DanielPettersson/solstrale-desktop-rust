@@ -14,7 +14,9 @@ use solstrale::hittable::Hittables;
 use solstrale::material::texture::{ImageTexture, SolidColor, Textures};
 use solstrale::material::{Dielectric, DiffuseLight, Materials};
 use solstrale::post::OidnPostProcessor;
-use solstrale::renderer::shader::{AlbedoShader, NormalShader, PathTracingShader, SimpleShader};
+use solstrale::renderer::shader::{
+    AlbedoShader, NormalShader, PathTracingShader, Shaders, SimpleShader,
+};
 
 use crate::scene_model::HittableType::RotationY;
 use crate::scene_model::MaterialType::Lambertian;
@@ -118,6 +120,25 @@ enum ShaderType {
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
+struct Shader {
+    r#type: ShaderType,
+    data: Option<HashMap<String, Value>>,
+}
+
+impl Creator<Shaders> for Shader {
+    fn create(&self) -> Result<Shaders, Box<dyn Error>> {
+        Ok(match self.r#type {
+            ShaderType::PathTracing => {
+                PathTracingShader::new(get_u32_opt(&self.data, "max_depth")?)
+            }
+            ShaderType::Albedo => AlbedoShader::new(),
+            ShaderType::Normal => NormalShader::new(),
+            ShaderType::Simple => SimpleShader::new(),
+        })
+    }
+}
+
+#[derive(Serialize, Deserialize, PartialEq, Debug)]
 enum PostProcessorType {
     Oidn,
 }
@@ -125,7 +146,7 @@ enum PostProcessorType {
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
 struct RenderConfig {
     samples_per_pixel: u32,
-    shader: ShaderType,
+    shader: Shader,
     #[serde(skip_serializing_if = "Option::is_none")]
     post_processor: Option<PostProcessorType>,
 }
@@ -134,12 +155,7 @@ impl Creator<solstrale::renderer::RenderConfig> for RenderConfig {
     fn create(&self) -> Result<solstrale::renderer::RenderConfig, Box<dyn Error>> {
         Ok(solstrale::renderer::RenderConfig {
             samples_per_pixel: self.samples_per_pixel,
-            shader: match self.shader {
-                ShaderType::PathTracing => PathTracingShader::new(50),
-                ShaderType::Albedo => AlbedoShader::new(),
-                ShaderType::Normal => NormalShader::new(),
-                ShaderType::Simple => SimpleShader::new(),
-            },
+            shader: self.shader.create()?,
             post_processor: self.post_processor.as_ref().map(|p| match p {
                 PostProcessorType::Oidn => OidnPostProcessor::new(),
             }),
@@ -328,6 +344,18 @@ impl Creator<Textures> for Texture {
     }
 }
 
+fn get_u32_opt(map: &Option<HashMap<String, Value>>, key: &str) -> Result<u32, Box<dyn Error>> {
+    get_u32(map.as_ref().expect("expected data"), key)
+}
+
+fn get_u32(map: &HashMap<String, Value>, key: &str) -> Result<u32, Box<dyn Error>> {
+    map.get(key)
+        .ok_or(format!("expected key {}", key))?
+        .as_u64()
+        .map(|u| u as u32)
+        .ok_or(Box::try_from(format!("key {} is not a number", key)).unwrap())
+}
+
 fn get_f64_opt(map: &Option<HashMap<String, Value>>, key: &str) -> Result<f64, Box<dyn Error>> {
     get_f64(map.as_ref().expect("expected data"), key)
 }
@@ -389,7 +417,7 @@ mod test {
 
     use crate::scene_model::{
         CameraConfig, Hittable, HittableType, Material, MaterialType, PostProcessorType,
-        RenderConfig, Scene, ShaderType, Texture, TextureType, Vec3,
+        RenderConfig, Scene, Shader, ShaderType, Texture, TextureType, Vec3,
     };
 
     #[test]
@@ -438,7 +466,13 @@ mod test {
             },
             render_configuration: RenderConfig {
                 samples_per_pixel: 50,
-                shader: ShaderType::PathTracing,
+                shader: Shader {
+                    r#type: ShaderType::PathTracing,
+                    data: Some(HashMap::from([(
+                        "max_depth".to_owned(),
+                        Value::Number(Number::from(50)),
+                    )])),
+                },
                 post_processor: Some(PostProcessorType::Oidn),
             },
         };
@@ -447,7 +481,10 @@ mod test {
         assert_eq!(
             "render_configuration:
   samples_per_pixel: 50
-  shader: PathTracing
+  shader:
+    type: PathTracing
+    data:
+      max_depth: 50
   post_processor: Oidn
 background_color:
   x: 0.0
