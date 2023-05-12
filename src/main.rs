@@ -3,15 +3,19 @@ use std::sync::mpsc::{channel, Sender};
 use std::sync::{Arc, Mutex};
 use std::thread;
 
+use eframe::egui::Event::Key;
 use eframe::egui::{
-    Color32, ColorImage, Context, ProgressBar, SidePanel, TextureOptions, TopBottomPanel, Vec2,
+    Color32, ColorImage, Context, Modifiers, ProgressBar, SidePanel, TextureOptions,
+    TopBottomPanel, Vec2,
 };
 use eframe::epaint::TextureHandle;
 use eframe::{egui, run_native, App, Frame, NativeOptions};
+
 use egui::CentralPanel;
 use solstrale::ray_trace;
 
 mod scene_model;
+mod yaml_highlighter;
 
 fn main() -> eframe::Result<()> {
     let native_options = NativeOptions {
@@ -76,10 +80,11 @@ impl App for SolstraleApp {
 
         TopBottomPanel::bottom("bottom-panel").show(ctx, |ui| {
             ui.horizontal(|ui| {
-                if ui
+                let render_button_clicked = ui
                     .add_enabled(!self.show_error, egui::Button::new("Render"))
-                    .clicked()
-                {
+                    .clicked();
+
+                if render_button_clicked || is_ctrl_enter_pressed(ui) {
                     if let Some(abort_sender) = &self.abort_sender {
                         abort_sender.send(true).ok();
                         self.abort_sender = None;
@@ -92,13 +97,22 @@ impl App for SolstraleApp {
 
         SidePanel::left("code-panel").show(ctx, |ui| {
             egui::ScrollArea::vertical().show(ui, |ui| {
+                let mut layouter = |ui: &egui::Ui, string: &str, _wrap_width: f32| {
+                    let layout_job = yaml_highlighter::highlight(ui.ctx(), string);
+                    ui.fonts(|f| f.layout_job(layout_job))
+                };
+
+                let ctrl_down = is_ctrl_down(ui);
+
                 ui.add(
                     egui::TextEdit::multiline(&mut self.scene_yaml)
                         .font(egui::TextStyle::Monospace) // for cursor height
                         .code_editor()
                         .lock_focus(true)
                         .desired_width(f32::INFINITY)
-                        .min_size(Vec2 { x: 300.0, y: 0.0 }),
+                        .min_size(Vec2 { x: 300.0, y: 0.0 })
+                        .interactive(!ctrl_down)
+                        .layouter(&mut layouter),
                 );
             });
         });
@@ -141,6 +155,44 @@ impl App for SolstraleApp {
                 });
         }
     }
+}
+
+fn is_ctrl_down(ui: &mut egui::Ui) -> bool {
+    ui.input(|input| {
+        for event in input.events.clone() {
+            if match event {
+                Key {
+                    key: _key,
+                    pressed: _pressed,
+                    repeat: _repeat,
+                    modifiers,
+                } => modifiers.matches(Modifiers::CTRL),
+                _ => false,
+            } {
+                return true;
+            }
+        }
+        false
+    })
+}
+
+fn is_ctrl_enter_pressed(ui: &mut egui::Ui) -> bool {
+    ui.input(|input| {
+        for event in input.events.clone() {
+            if match event {
+                Key {
+                    key: egui::Key::Enter,
+                    pressed: false,
+                    repeat: false,
+                    modifiers,
+                } => modifiers.matches(Modifiers::CTRL),
+                _ => false,
+            } {
+                return true;
+            }
+        }
+        false
+    })
 }
 
 fn render(

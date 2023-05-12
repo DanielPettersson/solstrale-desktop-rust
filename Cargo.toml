@@ -13,3 +13,7 @@ eframe = "0.21.3"
 image = "0.24.5"
 serde = { version = "1.0.163", features = ["derive"] }
 serde_yaml = "0.9.21"
+enum-map = { version = "2.5.0", features = ["serde"] }
+syntect = { version = "5.0.0", default-features = false, features = [
+    "default-fancy",
+] }
