@@ -1,6 +1,9 @@
 use std::collections::HashMap;
 use std::error::Error;
 
+use derive_more::Display;
+use moka::sync::Cache;
+use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use serde_yaml::Value;
 use solstrale::hittable::hittable_list::HittableList;
@@ -15,6 +18,47 @@ use solstrale::renderer::shader::{AlbedoShader, NormalShader, PathTracingShader,
 
 use crate::scene_model::HittableType::RotationY;
 use crate::scene_model::MaterialType::Lambertian;
+
+static MODEL_CACHE: Lazy<Cache<ModelKey, Result<Hittables, ModelError>>> =
+    Lazy::new(|| Cache::new(10));
+
+#[derive(PartialEq, Eq, Hash)]
+struct ModelKey {
+    path: String,
+    filename: String,
+    scale: i32,
+    x: i32,
+    y: i32,
+    z: i32,
+}
+
+#[derive(Clone, Debug, Display)]
+struct ModelError {
+    message: String,
+}
+
+impl ModelError {
+    fn new(err: Box<dyn Error>) -> Self {
+        Self {
+            message: format!("{}", err),
+        }
+    }
+}
+
+impl Error for ModelError {}
+
+impl ModelKey {
+    fn new(path: &str, filename: &str, scale: f64, pos: solstrale::geo::vec3::Vec3) -> Self {
+        Self {
+            path: path.to_string(),
+            filename: filename.to_string(),
+            scale: (scale * 100.) as i32,
+            x: (pos.x * 100.) as i32,
+            y: (pos.y * 100.) as i32,
+            z: (pos.z * 100.) as i32,
+        }
+    }
+}
 
 pub fn create_scene(yaml: &str) -> Result<solstrale::renderer::Scene, Box<dyn Error>> {
     let scene: Scene = serde_yaml::from_str(yaml)?;
@@ -121,6 +165,7 @@ enum HittableType {
     List,
     Sphere,
     Model,
+    Quad,
     RotationY,
 }
 
@@ -159,12 +204,16 @@ impl Creator<Hittables> for Hittable {
                     .create()?,
             ),
             HittableType::Model => {
-                let model = load_obj_model(
-                    get_str_opt(&self.data, "path")?,
-                    get_str_opt(&self.data, "name")?,
-                    get_f64_opt(&self.data, "scale")?,
-                    get_pos_opt(&self.data)?,
-                )?;
+                let path = get_str_opt(&self.data, "path")?;
+                let filename = get_str_opt(&self.data, "name")?;
+                let scale = get_f64_opt(&self.data, "scale")?;
+                let pos = get_pos_opt(&self.data)?;
+
+                let key = ModelKey::new(path, filename, scale, pos);
+
+                let model = MODEL_CACHE.get_with(key, || {
+                    load_obj_model(path, filename, scale, pos).map_err(|err| ModelError::new(err))
+                })?;
 
                 let angle_y = get_f64_opt(&self.data, "angle_y")?;
 
@@ -174,6 +223,27 @@ impl Creator<Hittables> for Hittable {
                     solstrale::hittable::rotation_y::RotationY::new(model, angle_y)
                 }
             }
+            HittableType::Quad => solstrale::hittable::quad::Quad::new(
+                solstrale::geo::vec3::Vec3::new(
+                    get_f64_opt(&self.data, "qx")?,
+                    get_f64_opt(&self.data, "qy")?,
+                    get_f64_opt(&self.data, "qz")?,
+                ),
+                solstrale::geo::vec3::Vec3::new(
+                    get_f64_opt(&self.data, "ux")?,
+                    get_f64_opt(&self.data, "uy")?,
+                    get_f64_opt(&self.data, "uz")?,
+                ),
+                solstrale::geo::vec3::Vec3::new(
+                    get_f64_opt(&self.data, "vx")?,
+                    get_f64_opt(&self.data, "vy")?,
+                    get_f64_opt(&self.data, "vz")?,
+                ),
+                self.material
+                    .as_ref()
+                    .ok_or("Quad expects material")?
+                    .create()?,
+            ),
             RotationY => {
                 let child = self
                     .children
@@ -197,6 +267,7 @@ enum MaterialType {
     Lambertian,
     Glass,
     Light,
+    Metal,
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
@@ -225,6 +296,13 @@ impl Creator<Materials> for Material {
                 get_f64_opt(&self.data, "index_of_refraction")?,
             ),
             MaterialType::Light => DiffuseLight::new_from_vec3(get_col_opt(&self.data)?),
+            MaterialType::Metal => solstrale::material::Metal::new(
+                self.texture
+                    .as_ref()
+                    .ok_or("Lambertian expects texture")?
+                    .create()?,
+                get_f64_opt(&self.data, "fuzz")?,
+            ),
         })
     }
 }
