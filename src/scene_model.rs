@@ -1,20 +1,20 @@
 use std::collections::HashMap;
 use std::error::Error;
 
-use crate::scene_model::HittableType::RotationY;
-use crate::scene_model::MaterialType::Lambertian;
 use serde::{Deserialize, Serialize};
 use serde_yaml::Value;
 use solstrale::hittable::hittable_list::HittableList;
 use solstrale::hittable::obj_model::load_obj_model;
 use solstrale::hittable::sphere::Sphere;
-use solstrale::hittable::translation::Translation;
 use solstrale::hittable::Hittable as HittableTrait;
 use solstrale::hittable::Hittables;
 use solstrale::material::texture::{ImageTexture, SolidColor, Textures};
 use solstrale::material::{Dielectric, DiffuseLight, Materials};
 use solstrale::post::OidnPostProcessor;
 use solstrale::renderer::shader::{AlbedoShader, NormalShader, PathTracingShader, SimpleShader};
+
+use crate::scene_model::HittableType::RotationY;
+use crate::scene_model::MaterialType::Lambertian;
 
 pub fn create_scene(yaml: &str) -> Result<solstrale::renderer::Scene, Box<dyn Error>> {
     let scene: Scene = serde_yaml::from_str(yaml)?;
@@ -163,22 +163,15 @@ impl Creator<Hittables> for Hittable {
                     get_str_opt(&self.data, "path")?,
                     get_str_opt(&self.data, "name")?,
                     get_f64_opt(&self.data, "scale")?,
+                    get_pos_opt(&self.data)?,
                 )?;
-
-                let pos = get_pos_opt(&self.data)?;
-
-                let translated = if pos.near_zero() {
-                    model
-                } else {
-                    Translation::new(model, pos)
-                };
 
                 let angle_y = get_f64_opt(&self.data, "angle_y")?;
 
                 if angle_y == 0. {
-                    translated
+                    model
                 } else {
-                    solstrale::hittable::rotation_y::RotationY::new(translated, angle_y)
+                    solstrale::hittable::rotation_y::RotationY::new(model, angle_y)
                 }
             }
             RotationY => {
@@ -312,12 +305,14 @@ fn get_col_opt(
 
 #[cfg(test)]
 mod test {
+    use std::collections::HashMap;
+
+    use serde_yaml::{Number, Value};
+
     use crate::scene_model::{
         CameraConfig, Hittable, HittableType, Material, MaterialType, PostProcessorType,
         RenderConfig, Scene, ShaderType, Texture, TextureType, Vec3,
     };
-    use serde_yaml::{Number, Value};
-    use std::collections::HashMap;
 
     #[test]
     fn serialize() {
