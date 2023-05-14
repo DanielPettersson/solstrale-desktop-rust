@@ -180,7 +180,7 @@ fn render(
     let (output_sender, output_receiver) = channel();
     let (abort_sender, abort_receiver) = channel();
 
-    let scene = Arc::new(scene_model::create_scene(scene_yaml)?);
+    let scene = scene_model::create_scene(scene_yaml)?;
 
     thread::spawn(move || {
         ray_trace(
