@@ -9,7 +9,7 @@ use eframe::egui::{
     TopBottomPanel, Vec2,
 };
 use eframe::epaint::TextureHandle;
-use eframe::{egui, run_native, App, Frame, NativeOptions};
+use eframe::{egui, run_native, App, Frame, NativeOptions, IconData};
 
 use egui::CentralPanel;
 use solstrale::ray_trace;
@@ -18,12 +18,16 @@ mod scene_model;
 mod yaml_highlighter;
 
 fn main() -> eframe::Result<()> {
+    let icon_bytes = include_bytes!("icon.png");
+    let icon = IconData::try_from_png_bytes(icon_bytes).expect("Failed to load application icon");
+
     let native_options = NativeOptions {
         resizable: true,
         initial_window_size: Some(Vec2 {
             x: 1000.0,
             y: 600.0,
         }),
+        icon_data: Some(icon),
         ..Default::default()
     };
 
