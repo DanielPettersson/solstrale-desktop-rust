@@ -4,16 +4,12 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 
 use eframe::egui::Event::Key;
-use eframe::egui::{
-    Color32, ColorImage, Context, Modifiers, ProgressBar, SidePanel, TextureOptions,
-    TopBottomPanel, Vec2,
-};
+use eframe::egui::{Color32, ColorImage, Context, Modifiers, PointerButton, ProgressBar, SidePanel, TextureOptions, TopBottomPanel, Vec2};
 use eframe::epaint::TextureHandle;
 use eframe::{egui, run_native, App, Frame, NativeOptions, IconData};
 
 use egui::CentralPanel;
 use solstrale::ray_trace;
-use solstrale::renderer::Scene;
 use crate::scene_model::{create_scene, Creator, SceneModel};
 
 mod scene_model;
@@ -45,7 +41,7 @@ struct SolstraleApp {
     abort_sender: Option<Sender<bool>>,
     render_info: Arc<Mutex<RenderInfo>>,
     texture_handle: TextureHandle,
-    scene_model: SceneModel,
+    scene_model: Option<SceneModel>,
     scene_yaml: String,
     show_error: bool,
     error_message: String,
@@ -74,7 +70,7 @@ impl SolstraleApp {
                 ColorImage::new([1, 1], Color32::BLACK),
                 TextureOptions::default(),
             ),
-            scene_model: create_scene(yaml).expect("Failed to create default scene model"),
+            scene_model: None,
             scene_yaml: yaml.parse().unwrap(),
             show_error: false,
             error_message: "".to_string(),
@@ -120,23 +116,56 @@ impl App for SolstraleApp {
                 );
 
                 if response.changed() {
-                    if let Ok(scene_model) = create_scene(&self.scene_yaml) {
-                        self.scene_model = scene_model
-                    }
+                    self.scene_model = None;
                 }
-
             });
         });
 
         CentralPanel::default().show(ctx, |ui| {
-            if self.abort_sender.is_none() && self.render_requested && !self.show_error {
+            ui.input(|input_state|{
+                let mouse_left_down = input_state.pointer.button_down(PointerButton::Primary);
+                let mouse_moving = input_state.pointer.is_moving();
 
-                let res = create_scene(&self.scene_yaml).and_then(|scene_model| render(
-                    self.render_info.clone(),
-                    &scene_model,
-                    ui.available_size(),
-                    ui.ctx().clone(),
-                ));
+                if ui.ui_contains_pointer() && mouse_left_down && mouse_moving && self.scene_model.is_some() {
+                    let scene = self.scene_model.as_mut().unwrap();
+                    scene.camera.look_from.x += input_state.pointer.delta().x as f64;
+                    scene.camera.look_from.y += input_state.pointer.delta().y as f64;
+
+                    if let Some(abort_sender) = &self.abort_sender {
+                        abort_sender.send(true).ok();
+                        self.abort_sender = None;
+                    }
+                    self.render_requested = true;
+                }
+
+                if let Some(sm) = &self.scene_model {
+                    if !mouse_moving {
+                        self.scene_yaml = sm.to_yaml();
+                    }
+                }
+
+            });
+
+            if self.abort_sender.is_none() && self.render_requested && !self.show_error {
+                let res = match &self.scene_model {
+                    None => {
+                        create_scene(&self.scene_yaml).and_then(|scene_model| {
+                            self.scene_model = Some(scene_model);
+                            render(
+                                self.render_info.clone(),
+                                self.scene_model.as_ref().unwrap(),
+                                ui.available_size(),
+                                ui.ctx().clone(),
+                            )
+                        })
+                    },
+                    Some(scene_model) => render(
+                        self.render_info.clone(),
+                        scene_model,
+                        ui.available_size(),
+                        ui.ctx().clone(),
+                    ),
+                };
 
                 match res {
                     Ok(abort_sender) => self.abort_sender = Some(abort_sender),

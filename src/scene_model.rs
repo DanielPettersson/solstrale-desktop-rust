@@ -78,8 +78,14 @@ pub trait Creator<T> {
 pub struct SceneModel {
     render_configuration: RenderConfig,
     background_color: Pos,
-    camera: CameraConfig,
+    pub camera: CameraConfig,
     world: Vec<Hittable>,
+}
+
+impl SceneModel {
+    pub fn to_yaml(&self) -> String {
+        serde_yaml::to_string(self).unwrap()
+    }
 }
 
 impl Creator<Scene> for SceneModel {
@@ -99,11 +105,11 @@ impl Creator<Scene> for SceneModel {
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
-struct CameraConfig {
+pub struct CameraConfig {
     vertical_fov_degrees: f64,
     aperture_size: f64,
     focus_distance: f64,
-    look_from: Pos,
+    pub look_from: Pos,
     look_at: Pos,
 }
 
@@ -199,10 +205,10 @@ impl Creator<solstrale::renderer::RenderConfig> for RenderConfig {
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
-struct Pos {
-    x: f64,
-    y: f64,
-    z: f64,
+pub struct Pos {
+    pub x: f64,
+    pub y: f64,
+    pub z: f64,
 }
 
 impl Creator<Vec3> for Pos {
