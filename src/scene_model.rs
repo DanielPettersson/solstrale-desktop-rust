@@ -13,6 +13,7 @@ use solstrale::hittable::Hittables;
 use solstrale::material::texture::{ImageTexture, SolidColor, Textures};
 use solstrale::material::{Dielectric, DiffuseLight, Materials};
 use solstrale::post::OidnPostProcessor;
+use solstrale::renderer::Scene;
 use solstrale::renderer::shader::{
     AlbedoShader, NormalShader, PathTracingShader, Shaders, SimpleShader,
 };
@@ -64,31 +65,31 @@ impl ModelKey {
     }
 }
 
-pub fn create_scene(yaml: &str) -> Result<solstrale::renderer::Scene, StdBox<dyn Error>> {
-    let scene: Scene = serde_yaml::from_str(yaml)?;
-    scene.create()
+pub fn create_scene(yaml: &str) -> Result<SceneModel, StdBox<dyn Error>> {
+    let scene: SceneModel = serde_yaml::from_str(yaml)?;
+    Ok(scene)
 }
 
-trait Creator<T> {
+pub trait Creator<T> {
     fn create(&self) -> Result<T, StdBox<dyn Error>>;
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
-struct Scene {
+pub struct SceneModel {
     render_configuration: RenderConfig,
     background_color: Pos,
     camera: CameraConfig,
     world: Vec<Hittable>,
 }
 
-impl Creator<solstrale::renderer::Scene> for Scene {
-    fn create(&self) -> Result<solstrale::renderer::Scene, StdBox<dyn Error>> {
+impl Creator<Scene> for SceneModel {
+    fn create(&self) -> Result<Scene, StdBox<dyn Error>> {
         let mut list = HittableList::new();
         for child in self.world.iter() {
             list.add(child.create()?)
         }
 
-        Ok(solstrale::renderer::Scene {
+        Ok(Scene {
             world: list,
             camera: self.camera.create()?,
             background_color: self.background_color.create()?,
@@ -541,7 +542,7 @@ mod test {
 
     #[test]
     fn serialize() {
-        let scene = Scene {
+        let scene = SceneModel {
             world: vec![Hittable {
                 list: None,
                 sphere: Some(Sphere {
@@ -647,7 +648,7 @@ world:
             yaml
         );
 
-        let de_scene: Scene = serde_yaml::from_str(&yaml).unwrap();
+        let de_scene: SceneModel = serde_yaml::from_str(&yaml).unwrap();
         assert_eq!(scene, de_scene);
     }
 }

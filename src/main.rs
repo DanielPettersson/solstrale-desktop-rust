@@ -13,6 +13,8 @@ use eframe::{egui, run_native, App, Frame, NativeOptions, IconData};
 
 use egui::CentralPanel;
 use solstrale::ray_trace;
+use solstrale::renderer::Scene;
+use crate::scene_model::{create_scene, Creator, SceneModel};
 
 mod scene_model;
 mod yaml_highlighter;
@@ -28,6 +30,7 @@ fn main() -> eframe::Result<()> {
             y: 600.0,
         }),
         icon_data: Some(icon),
+        app_id: Some("solstrale".to_string()),
         ..Default::default()
     };
 
@@ -42,6 +45,7 @@ struct SolstraleApp {
     abort_sender: Option<Sender<bool>>,
     render_info: Arc<Mutex<RenderInfo>>,
     texture_handle: TextureHandle,
+    scene_model: SceneModel,
     scene_yaml: String,
     show_error: bool,
     error_message: String,
@@ -70,6 +74,7 @@ impl SolstraleApp {
                 ColorImage::new([1, 1], Color32::BLACK),
                 TextureOptions::default(),
             ),
+            scene_model: create_scene(yaml).expect("Failed to create default scene model"),
             scene_yaml: yaml.parse().unwrap(),
             show_error: false,
             error_message: "".to_string(),
@@ -108,7 +113,7 @@ impl App for SolstraleApp {
 
                 let ctrl_down = is_ctrl_down(ui);
 
-                ui.add(
+                let response = ui.add(
                     egui::TextEdit::multiline(&mut self.scene_yaml)
                         .font(egui::TextStyle::Monospace) // for cursor height
                         .code_editor()
@@ -118,17 +123,26 @@ impl App for SolstraleApp {
                         .interactive(!ctrl_down)
                         .layouter(&mut layouter),
                 );
+
+                if response.changed() {
+                    if let Ok(scene_model) = create_scene(&self.scene_yaml) {
+                        self.scene_model = scene_model
+                    }
+                }
+
             });
         });
 
         CentralPanel::default().show(ctx, |ui| {
             if self.abort_sender.is_none() && self.render_requested && !self.show_error {
-                let res = render(
+
+                let res = create_scene(&self.scene_yaml).and_then(|scene_model| render(
                     self.render_info.clone(),
-                    &self.scene_yaml,
+                    &scene_model,
                     ui.available_size(),
                     ui.ctx().clone(),
-                );
+                ));
+
                 match res {
                     Ok(abort_sender) => self.abort_sender = Some(abort_sender),
                     Err(err) => {
@@ -201,14 +215,14 @@ fn is_ctrl_enter_pressed(ui: &mut egui::Ui) -> bool {
 
 fn render(
     render_info: Arc<Mutex<RenderInfo>>,
-    scene_yaml: &str,
+    scene_model: &SceneModel,
     render_size: Vec2,
     ctx: Context,
 ) -> Result<Sender<bool>, Box<dyn Error>> {
     let (output_sender, output_receiver) = channel();
     let (abort_sender, abort_receiver) = channel();
 
-    let scene = Arc::new(scene_model::create_scene(scene_yaml)?);
+    let scene = Arc::new(scene_model.create()?);
 
     thread::spawn(move || {
         ray_trace(
@@ -218,7 +232,7 @@ fn render(
             &output_sender,
             &abort_receiver,
         )
-        .unwrap();
+            .unwrap();
     });
 
     thread::spawn(move || {
