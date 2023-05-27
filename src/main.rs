@@ -93,7 +93,7 @@ impl App for SolstraleApp {
                     .add_enabled(!self.show_error, egui::Button::new("Render"))
                     .clicked();
 
-                if render_button_clicked || is_ctrl_enter_pressed(ui) {
+                if render_button_clicked || is_ctrl_r(ui) {
                     if let Some(abort_sender) = &self.abort_sender {
                         abort_sender.send(true).ok();
                         self.abort_sender = None;
@@ -111,16 +111,11 @@ impl App for SolstraleApp {
                     ui.fonts(|f| f.layout_job(layout_job))
                 };
 
-                let ctrl_down = is_ctrl_down(ui);
-
                 let response = ui.add(
                     egui::TextEdit::multiline(&mut self.scene_yaml)
-                        .font(egui::TextStyle::Monospace) // for cursor height
                         .code_editor()
-                        .lock_focus(true)
                         .desired_width(f32::INFINITY)
                         .min_size(Vec2 { x: 300.0, y: 0.0 })
-                        .interactive(!ctrl_down)
                         .layouter(&mut layouter),
                 );
 
@@ -175,32 +170,13 @@ impl App for SolstraleApp {
     }
 }
 
-fn is_ctrl_down(ui: &mut egui::Ui) -> bool {
+fn is_ctrl_r(ui: &mut egui::Ui) -> bool {
     ui.input(|input| {
         for event in input.events.clone() {
             if match event {
                 Key {
-                    key: _key,
+                    key: egui::Key::R,
                     pressed: _pressed,
-                    repeat: _repeat,
-                    modifiers,
-                } => modifiers.matches(Modifiers::CTRL),
-                _ => false,
-            } {
-                return true;
-            }
-        }
-        false
-    })
-}
-
-fn is_ctrl_enter_pressed(ui: &mut egui::Ui) -> bool {
-    ui.input(|input| {
-        for event in input.events.clone() {
-            if match event {
-                Key {
-                    key: egui::Key::Enter,
-                    pressed: false,
                     repeat: false,
                     modifiers,
                 } => modifiers.matches(Modifiers::CTRL),
@@ -222,7 +198,7 @@ fn render(
     let (output_sender, output_receiver) = channel();
     let (abort_sender, abort_receiver) = channel();
 
-    let scene = Arc::new(scene_model.create()?);
+    let scene = scene_model.create()?;
 
     thread::spawn(move || {
         ray_trace(
