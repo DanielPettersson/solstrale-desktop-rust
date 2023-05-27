@@ -13,7 +13,6 @@ use eframe::{egui, run_native, App, Frame, NativeOptions, IconData};
 
 use egui::CentralPanel;
 use solstrale::ray_trace;
-use solstrale::renderer::Scene;
 use crate::scene_model::{create_scene, Creator, SceneModel};
 
 mod scene_model;
@@ -45,7 +44,6 @@ struct SolstraleApp {
     abort_sender: Option<Sender<bool>>,
     render_info: Arc<Mutex<RenderInfo>>,
     texture_handle: TextureHandle,
-    scene_model: SceneModel,
     scene_yaml: String,
     show_error: bool,
     error_message: String,
@@ -74,7 +72,6 @@ impl SolstraleApp {
                 ColorImage::new([1, 1], Color32::BLACK),
                 TextureOptions::default(),
             ),
-            scene_model: create_scene(yaml).expect("Failed to create default scene model"),
             scene_yaml: yaml.parse().unwrap(),
             show_error: false,
             error_message: "".to_string(),
@@ -111,20 +108,13 @@ impl App for SolstraleApp {
                     ui.fonts(|f| f.layout_job(layout_job))
                 };
 
-                let response = ui.add(
+                ui.add(
                     egui::TextEdit::multiline(&mut self.scene_yaml)
                         .code_editor()
                         .desired_width(f32::INFINITY)
                         .min_size(Vec2 { x: 300.0, y: 0.0 })
                         .layouter(&mut layouter),
                 );
-
-                if response.changed() {
-                    if let Ok(scene_model) = create_scene(&self.scene_yaml) {
-                        self.scene_model = scene_model
-                    }
-                }
-
             });
         });
 
