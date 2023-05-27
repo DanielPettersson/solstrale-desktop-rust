@@ -1,4 +1,5 @@
 use std::error::Error;
+use std::boxed::Box as StdBox;
 
 use derive_more::Display;
 use moka::sync::Cache;
@@ -41,7 +42,7 @@ impl ModelError {
         }
     }
 
-    fn new_from_err(err: Box<dyn Error>) -> Self {
+    fn new_from_err(err: StdBox<dyn Error>) -> Self {
         Self {
             message: format!("{}", err),
         }
@@ -63,13 +64,13 @@ impl ModelKey {
     }
 }
 
-pub fn create_scene(yaml: &str) -> Result<solstrale::renderer::Scene, Box<dyn Error>> {
+pub fn create_scene(yaml: &str) -> Result<solstrale::renderer::Scene, StdBox<dyn Error>> {
     let scene: Scene = serde_yaml::from_str(yaml)?;
     scene.create()
 }
 
 trait Creator<T> {
-    fn create(&self) -> Result<T, Box<dyn Error>>;
+    fn create(&self) -> Result<T, StdBox<dyn Error>>;
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
@@ -81,7 +82,7 @@ struct Scene {
 }
 
 impl Creator<solstrale::renderer::Scene> for Scene {
-    fn create(&self) -> Result<solstrale::renderer::Scene, Box<dyn Error>> {
+    fn create(&self) -> Result<solstrale::renderer::Scene, StdBox<dyn Error>> {
         let mut list = HittableList::new();
         for child in self.world.iter() {
             list.add(child.create()?)
@@ -106,7 +107,7 @@ struct CameraConfig {
 }
 
 impl Creator<solstrale::camera::CameraConfig> for CameraConfig {
-    fn create(&self) -> Result<solstrale::camera::CameraConfig, Box<dyn Error>> {
+    fn create(&self) -> Result<solstrale::camera::CameraConfig, StdBox<dyn Error>> {
         Ok(solstrale::camera::CameraConfig {
             vertical_fov_degrees: self.vertical_fov_degrees,
             aperture_size: self.aperture_size,
@@ -138,7 +139,7 @@ struct PathTracing {
 struct NoParamShader {}
 
 impl Creator<Shaders> for Shader {
-    fn create(&self) -> Result<Shaders, Box<dyn Error>> {
+    fn create(&self) -> Result<Shaders, StdBox<dyn Error>> {
         match self {
             Shader {
                 path_tracing: Some(p),
@@ -165,7 +166,7 @@ impl Creator<Shaders> for Shader {
                 normal: Some(_),
             } => Ok(NormalShader::new()),
             _ => Err(
-                Box::try_from(ModelError::new("Shader should have single field defined")).unwrap(),
+                StdBox::try_from(ModelError::new("Shader should have single field defined")).unwrap(),
             ),
         }
     }
@@ -185,7 +186,7 @@ struct RenderConfig {
 }
 
 impl Creator<solstrale::renderer::RenderConfig> for RenderConfig {
-    fn create(&self) -> Result<solstrale::renderer::RenderConfig, Box<dyn Error>> {
+    fn create(&self) -> Result<solstrale::renderer::RenderConfig, StdBox<dyn Error>> {
         Ok(solstrale::renderer::RenderConfig {
             samples_per_pixel: self.samples_per_pixel,
             shader: self.shader.create()?,
@@ -204,7 +205,7 @@ struct Pos {
 }
 
 impl Creator<Vec3> for Pos {
-    fn create(&self) -> Result<Vec3, Box<dyn Error>> {
+    fn create(&self) -> Result<Vec3, StdBox<dyn Error>> {
         Ok(Vec3::new(self.x, self.y, self.z))
     }
 }
@@ -220,7 +221,11 @@ struct Hittable {
     #[serde(skip_serializing_if = "Option::is_none")]
     quad: Option<Quad>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    r#box: Option<Box>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     rotation_y: Option<RotationY>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    translation: Option<Translation>,
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
@@ -229,7 +234,7 @@ struct List {
 }
 
 impl Creator<Hittables> for List {
-    fn create(&self) -> Result<Hittables, Box<dyn Error>> {
+    fn create(&self) -> Result<Hittables, StdBox<dyn Error>> {
         let mut list = HittableList::new();
         for child in self.children.iter() {
             list.add(child.create()?)
@@ -246,7 +251,7 @@ struct Sphere {
 }
 
 impl Creator<Hittables> for Sphere {
-    fn create(&self) -> Result<Hittables, Box<dyn Error>> {
+    fn create(&self) -> Result<Hittables, StdBox<dyn Error>> {
         Ok(solstrale::hittable::sphere::Sphere::new(
             self.center.create()?,
             self.radius,
@@ -265,7 +270,7 @@ struct Model {
 }
 
 impl Creator<Hittables> for Model {
-    fn create(&self) -> Result<Hittables, Box<dyn Error>> {
+    fn create(&self) -> Result<Hittables, StdBox<dyn Error>> {
         let key = ModelKey::new(self);
 
         let pos = self.pos.create()?;
@@ -291,7 +296,7 @@ struct Quad {
 }
 
 impl Creator<Hittables> for Quad {
-    fn create(&self) -> Result<Hittables, Box<dyn Error>> {
+    fn create(&self) -> Result<Hittables, StdBox<dyn Error>> {
         Ok(solstrale::hittable::quad::Quad::new(
             self.q.create()?,
             self.u.create()?,
@@ -302,13 +307,30 @@ impl Creator<Hittables> for Quad {
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
+struct Box {
+    a: Pos,
+    b: Pos,
+    material: Material,
+}
+
+impl Creator<Hittables> for Box {
+    fn create(&self) -> Result<Hittables, StdBox<dyn Error>> {
+        Ok(solstrale::hittable::quad::Quad::new_box(
+            self.a.create()?,
+            self.b.create()?,
+            self.material.create()?,
+        ))
+    }
+}
+
+#[derive(Serialize, Deserialize, PartialEq, Debug)]
 struct RotationY {
-    child: Box<Hittable>,
+    child: StdBox<Hittable>,
     angle: f64,
 }
 
 impl Creator<Hittables> for RotationY {
-    fn create(&self) -> Result<Hittables, Box<dyn Error>> {
+    fn create(&self) -> Result<Hittables, StdBox<dyn Error>> {
         Ok(solstrale::hittable::rotation_y::RotationY::new(
             self.child.create()?,
             self.angle,
@@ -316,46 +338,90 @@ impl Creator<Hittables> for RotationY {
     }
 }
 
+#[derive(Serialize, Deserialize, PartialEq, Debug)]
+struct Translation {
+    child: StdBox<Hittable>,
+    offset: Pos,
+}
+
+impl Creator<Hittables> for Translation {
+    fn create(&self) -> Result<Hittables, StdBox<dyn Error>> {
+        Ok(solstrale::hittable::translation::Translation::new(
+            self.child.create()?,
+            self.offset.create()?,
+        ))
+    }
+}
+
+
 impl Creator<Hittables> for Hittable {
-    fn create(&self) -> Result<Hittables, Box<dyn Error>> {
+    fn create(&self) -> Result<Hittables, StdBox<dyn Error>> {
         match self {
             Hittable {
                 list: Some(l),
                 sphere: None,
                 model: None,
                 quad: None,
+                r#box: None,
                 rotation_y: None,
+                translation: None,
             } => l.create(),
             Hittable {
                 list: None,
                 sphere: Some(s),
                 model: None,
                 quad: None,
+                r#box: None,
                 rotation_y: None,
+                translation: None,
             } => s.create(),
             Hittable {
                 list: None,
                 sphere: None,
                 model: Some(m),
                 quad: None,
+                r#box: None,
                 rotation_y: None,
+                translation: None,
             } => m.create(),
             Hittable {
                 list: None,
                 sphere: None,
                 model: None,
                 quad: Some(q),
+                r#box: None,
                 rotation_y: None,
+                translation: None,
             } => q.create(),
             Hittable {
                 list: None,
                 sphere: None,
                 model: None,
                 quad: None,
+                r#box: Some(b),
+                rotation_y: None,
+                translation: None,
+            } => b.create(),
+            Hittable {
+                list: None,
+                sphere: None,
+                model: None,
+                quad: None,
+                r#box: None,
                 rotation_y: Some(ry),
+                translation: None,
             } => ry.create(),
+            Hittable {
+                list: None,
+                sphere: None,
+                model: None,
+                quad: None,
+                r#box: None,
+                rotation_y: None,
+                translation: Some(t),
+            } => t.create(),
             _ => Err(
-                Box::try_from(ModelError::new("Hittable should have single field defined"))
+                StdBox::try_from(ModelError::new("Hittable should have single field defined"))
                     .unwrap(),
             ),
         }
@@ -397,7 +463,7 @@ struct Light {
 }
 
 impl Creator<Materials> for Material {
-    fn create(&self) -> Result<Materials, Box<dyn Error>> {
+    fn create(&self) -> Result<Materials, StdBox<dyn Error>> {
         match self {
             Material {
                 lambertian: Some(l),
@@ -424,7 +490,7 @@ impl Creator<Materials> for Material {
                 light: Some(l),
             } => Ok(DiffuseLight::new(l.color.r, l.color.g, l.color.b)),
             _ => Err(
-                Box::try_from(ModelError::new("Material should have single field defined"))
+                StdBox::try_from(ModelError::new("Material should have single field defined"))
                     .unwrap(),
             ),
         }
@@ -452,7 +518,7 @@ struct Image {
 }
 
 impl Creator<Textures> for Texture {
-    fn create(&self) -> Result<Textures, Box<dyn Error>> {
+    fn create(&self) -> Result<Textures, StdBox<dyn Error>> {
         match self {
             Texture {
                 color: Some(c),
@@ -463,7 +529,7 @@ impl Creator<Textures> for Texture {
                 image: Some(im),
             } => ImageTexture::load(im.file.as_ref()),
             _ => Err(
-                Box::try_from(ModelError::new("Texture should have single field defined")).unwrap(),
+                StdBox::try_from(ModelError::new("Texture should have single field defined")).unwrap(),
             ),
         }
     }
@@ -503,7 +569,9 @@ mod test {
                 }),
                 model: None,
                 quad: None,
+                r#box: None,
                 rotation_y: None,
+                translation: None,
             }],
             camera: CameraConfig {
                 vertical_fov_degrees: 0.0,
