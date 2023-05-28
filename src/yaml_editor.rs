@@ -1,10 +1,25 @@
+use std::sync::Arc;
 use eframe::egui;
 use eframe::egui::text::{LayoutJob, LayoutSection};
-use eframe::egui::TextFormat;
+use eframe::egui::{Galley, TextBuffer, TextEdit, TextFormat, Ui, Vec2};
 use egui::util::cache::{ComputerMut, FrameCache};
 
-/// Memoized Code highlighting
-pub fn highlight(ctx: &egui::Context, code: &str) -> LayoutJob {
+pub fn yaml_editor<'a>(text: &'a mut dyn TextBuffer, layouter: &'a mut fn(&Ui, &str, f32) -> Arc<Galley>, min_size: Vec2) -> TextEdit<'a> {
+    TextEdit::multiline(text)
+        .code_editor()
+        .desired_width(f32::INFINITY)
+        .min_size(min_size)
+        .layouter(layouter)
+}
+
+pub fn create_layouter() -> fn(&Ui, &str, f32) -> Arc<Galley> {
+    |ui: &Ui, string: &str, _wrap_width: f32| {
+        let layout_job = highlight(ui.ctx(), string);
+        ui.fonts(|f| f.layout_job(layout_job))
+    }
+}
+
+fn highlight(ctx: &egui::Context, code: &str) -> LayoutJob {
     impl ComputerMut<&str, LayoutJob> for Highlighter {
         fn compute(&mut self, code: &str) -> LayoutJob {
             self.highlight(code)

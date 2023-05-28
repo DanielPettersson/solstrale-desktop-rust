@@ -13,10 +13,12 @@ use eframe::{egui, run_native, App, Frame, NativeOptions, IconData};
 
 use egui::CentralPanel;
 use solstrale::ray_trace;
+use yaml_editor::yaml_editor;
 use crate::scene_model::{create_scene, Creator, SceneModel};
+use crate::yaml_editor::create_layouter;
 
 mod scene_model;
-mod yaml_highlighter;
+mod yaml_editor;
 
 fn main() -> eframe::Result<()> {
     let icon_bytes = include_bytes!("icon.png");
@@ -103,18 +105,11 @@ impl App for SolstraleApp {
 
         SidePanel::left("code-panel").show(ctx, |ui| {
             egui::ScrollArea::vertical().show(ui, |ui| {
-                let mut layouter = |ui: &egui::Ui, string: &str, _wrap_width: f32| {
-                    let layout_job = yaml_highlighter::highlight(ui.ctx(), string);
-                    ui.fonts(|f| f.layout_job(layout_job))
-                };
-
-                ui.add(
-                    egui::TextEdit::multiline(&mut self.scene_yaml)
-                        .code_editor()
-                        .desired_width(f32::INFINITY)
-                        .min_size(Vec2 { x: 300.0, y: 0.0 })
-                        .layouter(&mut layouter),
-                );
+                ui.add(yaml_editor(
+                    &mut self.scene_yaml,
+                    &mut create_layouter(),
+                    Vec2 { x: 300.0, y: 0.0 }
+                ));
             });
         });
 
