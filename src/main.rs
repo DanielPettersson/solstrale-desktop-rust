@@ -1,24 +1,25 @@
 use std::error::Error;
-use std::sync::mpsc::{channel, Sender};
 use std::sync::{Arc, Mutex};
+use std::sync::mpsc::{channel, Sender};
 use std::thread;
 
-use eframe::egui::Event::Key;
+use eframe::{App, egui, Frame, IconData, NativeOptions, run_native};
 use eframe::egui::{
-    Color32, ColorImage, Context, Modifiers, ProgressBar, SidePanel, TextureOptions,
+    Color32, ColorImage, Context, ProgressBar, SidePanel, TextureOptions,
     TopBottomPanel, Vec2,
 };
 use eframe::epaint::TextureHandle;
-use eframe::{egui, run_native, App, Frame, NativeOptions, IconData};
-
 use egui::CentralPanel;
 use solstrale::ray_trace;
+
 use yaml_editor::yaml_editor;
+
 use crate::scene_model::{create_scene, Creator, SceneModel};
 use crate::yaml_editor::create_layouter;
 
 mod scene_model;
 mod yaml_editor;
+mod render_button;
 
 fn main() -> eframe::Result<()> {
     let icon_bytes = include_bytes!("icon.png");
@@ -43,13 +44,17 @@ fn main() -> eframe::Result<()> {
 }
 
 struct SolstraleApp {
-    abort_sender: Option<Sender<bool>>,
+    render_control: RenderControl,
     render_info: Arc<Mutex<RenderInfo>>,
     texture_handle: TextureHandle,
     scene_yaml: String,
     show_error: bool,
     error_message: String,
-    render_requested: bool,
+}
+
+pub struct RenderControl {
+    pub abort_sender: Option<Sender<bool>>,
+    pub render_requested: bool,
 }
 
 struct RenderInfo {
@@ -63,7 +68,10 @@ impl SolstraleApp {
         let yaml = include_str!("scene.yaml");
 
         SolstraleApp {
-            abort_sender: None,
+            render_control: RenderControl {
+                abort_sender: None,
+                render_requested: true,
+            },
             render_info: Arc::new(Mutex::new(RenderInfo {
                 color_image: ColorImage::new([1, 1], Color32::BLACK),
                 image_updated: false,
@@ -77,7 +85,6 @@ impl SolstraleApp {
             scene_yaml: yaml.parse().unwrap(),
             show_error: false,
             error_message: "".to_string(),
-            render_requested: true,
         }
     }
 }
@@ -89,16 +96,10 @@ impl App for SolstraleApp {
         TopBottomPanel::bottom("bottom-panel").show(ctx, |ui| {
             ui.horizontal(|ui| {
                 let render_button_clicked = ui
-                    .add_enabled(!self.show_error, egui::Button::new("Render"))
+                    .add_enabled(!self.show_error, render_button::render_button())
                     .clicked();
+                render_button::handle_click(render_button_clicked, &mut self.render_control, ui);
 
-                if render_button_clicked || is_ctrl_r(ui) {
-                    if let Some(abort_sender) = &self.abort_sender {
-                        abort_sender.send(true).ok();
-                        self.abort_sender = None;
-                    }
-                    self.render_requested = true;
-                }
                 ui.add(ProgressBar::new(render_info.progress as f32));
             });
         });
@@ -114,7 +115,7 @@ impl App for SolstraleApp {
         });
 
         CentralPanel::default().show(ctx, |ui| {
-            if self.abort_sender.is_none() && self.render_requested && !self.show_error {
+            if self.render_control.abort_sender.is_none() && self.render_control.render_requested {
 
                 let res = create_scene(&self.scene_yaml).and_then(|scene_model| render(
                     self.render_info.clone(),
@@ -124,9 +125,9 @@ impl App for SolstraleApp {
                 ));
 
                 match res {
-                    Ok(abort_sender) => self.abort_sender = Some(abort_sender),
+                    Ok(abort_sender) => self.render_control.abort_sender = Some(abort_sender),
                     Err(err) => {
-                        self.render_requested = false;
+                        self.render_control.render_requested = false;
                         self.show_error = true;
                         self.error_message = format!("{}", err)
                     }
@@ -153,25 +154,6 @@ impl App for SolstraleApp {
                 });
         }
     }
-}
-
-fn is_ctrl_r(ui: &mut egui::Ui) -> bool {
-    ui.input(|input| {
-        for event in input.events.clone() {
-            if match event {
-                Key {
-                    key: egui::Key::R,
-                    pressed: _pressed,
-                    repeat: false,
-                    modifiers,
-                } => modifiers.matches(Modifiers::CTRL),
-                _ => false,
-            } {
-                return true;
-            }
-        }
-        false
-    })
 }
 
 fn render(
