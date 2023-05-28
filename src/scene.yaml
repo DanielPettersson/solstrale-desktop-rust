@@ -3,7 +3,8 @@ render_configuration:
   shader:
     path_tracing:
       max_depth: 50
-  post_processor: Oidn
+  post_processor:
+    oidn: {}
 background_color:
   x: 0
   y: 0

@@ -12,7 +12,7 @@ use solstrale::hittable::Hittable as HittableTrait;
 use solstrale::hittable::Hittables;
 use solstrale::material::texture::{ImageTexture, SolidColor, Textures};
 use solstrale::material::{Dielectric, DiffuseLight, Materials};
-use solstrale::post::OidnPostProcessor;
+use solstrale::post::{OidnPostProcessor, PostProcessors};
 use solstrale::renderer::Scene;
 use solstrale::renderer::shader::{
     AlbedoShader, NormalShader, PathTracingShader, Shaders, SimpleShader,
@@ -174,16 +174,33 @@ impl Creator<Shaders> for Shader {
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
-enum PostProcessorType {
-    Oidn,
+struct PostProcessor {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    oidn: Option<NoParamPostProcessor>,
 }
+
+impl Creator<PostProcessors> for PostProcessor {
+    fn create(&self) -> Result<PostProcessors, StdBox<dyn Error>> {
+        match self {
+            PostProcessor {
+                oidn: Some(_)
+            } => Ok(OidnPostProcessor::new()),
+            _ => Err(
+                StdBox::try_from(ModelError::new("PostProcessor should have single field defined")).unwrap(),
+            ),
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, PartialEq, Debug)]
+struct NoParamPostProcessor {}
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
 struct RenderConfig {
     samples_per_pixel: u32,
     shader: Shader,
     #[serde(skip_serializing_if = "Option::is_none")]
-    post_processor: Option<PostProcessorType>,
+    post_processor: Option<PostProcessor>,
 }
 
 impl Creator<solstrale::renderer::RenderConfig> for RenderConfig {
@@ -191,9 +208,10 @@ impl Creator<solstrale::renderer::RenderConfig> for RenderConfig {
         Ok(solstrale::renderer::RenderConfig {
             samples_per_pixel: self.samples_per_pixel,
             shader: self.shader.create()?,
-            post_processor: self.post_processor.as_ref().map(|p| match p {
-                PostProcessorType::Oidn => OidnPostProcessor::new(),
-            }),
+            post_processor: match self.post_processor.as_ref() {
+                None => None,
+                Some(p) => Some(p.create()?)
+            },
         })
     }
 }
@@ -602,7 +620,9 @@ mod test {
                     albedo: None,
                     normal: None,
                 },
-                post_processor: Some(PostProcessorType::Oidn),
+                post_processor: Some(PostProcessor {
+                    oidn: Some(NoParamPostProcessor{})
+                }),
             },
         };
 
@@ -613,7 +633,8 @@ mod test {
   shader:
     path_tracing:
       max_depth: 50
-  post_processor: Oidn
+  post_processor:
+    oidn: {}
 background_color:
   x: 0.0
   y: 0.0
