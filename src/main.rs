@@ -1,7 +1,5 @@
-use std::error::Error;
 use std::sync::{Arc, Mutex};
-use std::sync::mpsc::{channel, Sender};
-use std::thread;
+use std::sync::mpsc::{Sender};
 
 use eframe::{App, egui, Frame, IconData, NativeOptions, run_native};
 use eframe::egui::{
@@ -9,17 +7,17 @@ use eframe::egui::{
     TopBottomPanel, Vec2,
 };
 use eframe::epaint::TextureHandle;
-use egui::CentralPanel;
-use solstrale::ray_trace;
+use egui::{CentralPanel, ScrollArea, Window};
 
 use yaml_editor::yaml_editor;
+use crate::render_output::render_output;
 
-use crate::scene_model::{create_scene, Creator, SceneModel};
 use crate::yaml_editor::create_layouter;
 
 mod scene_model;
 mod yaml_editor;
 mod render_button;
+mod render_output;
 
 fn main() -> eframe::Result<()> {
     let icon_bytes = include_bytes!("icon.png");
@@ -46,10 +44,8 @@ fn main() -> eframe::Result<()> {
 struct SolstraleApp {
     render_control: RenderControl,
     render_info: Arc<Mutex<RenderInfo>>,
-    texture_handle: TextureHandle,
     scene_yaml: String,
-    show_error: bool,
-    error_message: String,
+    error_info: ErrorInfo,
 }
 
 pub struct RenderControl {
@@ -57,10 +53,14 @@ pub struct RenderControl {
     pub render_requested: bool,
 }
 
-struct RenderInfo {
-    color_image: ColorImage,
-    image_updated: bool,
-    progress: f64,
+pub struct RenderInfo {
+    pub texture_handle: TextureHandle,
+    pub progress: f64,
+}
+
+pub struct ErrorInfo {
+    pub show_error: bool,
+    pub error_message: String,
 }
 
 impl SolstraleApp {
@@ -73,39 +73,39 @@ impl SolstraleApp {
                 render_requested: true,
             },
             render_info: Arc::new(Mutex::new(RenderInfo {
-                color_image: ColorImage::new([1, 1], Color32::BLACK),
-                image_updated: false,
+                texture_handle: cc.egui_ctx.load_texture(
+                    "",
+                    ColorImage::new([1, 1], Color32::BLACK),
+                    TextureOptions::default(),
+                ),
                 progress: 0.0,
             })),
-            texture_handle: cc.egui_ctx.load_texture(
-                "",
-                ColorImage::new([1, 1], Color32::BLACK),
-                TextureOptions::default(),
-            ),
             scene_yaml: yaml.parse().unwrap(),
-            show_error: false,
-            error_message: "".to_string(),
+            error_info: ErrorInfo {
+                show_error: false,
+                error_message: "".to_string(),
+            },
         }
     }
 }
 
 impl App for SolstraleApp {
     fn update(&mut self, ctx: &Context, _: &mut Frame) {
-        let mut render_info = self.render_info.lock().unwrap();
 
         TopBottomPanel::bottom("bottom-panel").show(ctx, |ui| {
             ui.horizontal(|ui| {
                 let render_button_clicked = ui
-                    .add_enabled(!self.show_error, render_button::render_button())
+                    .add_enabled(!self.error_info.show_error, render_button::render_button())
                     .clicked();
                 render_button::handle_click(render_button_clicked, &mut self.render_control, ui);
 
+                let render_info = self.render_info.lock().unwrap();
                 ui.add(ProgressBar::new(render_info.progress as f32));
             });
         });
 
         SidePanel::left("code-panel").show(ctx, |ui| {
-            egui::ScrollArea::vertical().show(ui, |ui| {
+            ScrollArea::vertical().show(ui, |ui| {
                 ui.add(yaml_editor(
                     &mut self.scene_yaml,
                     &mut create_layouter(),
@@ -115,85 +115,22 @@ impl App for SolstraleApp {
         });
 
         CentralPanel::default().show(ctx, |ui| {
-            if self.render_control.abort_sender.is_none() && self.render_control.render_requested {
-
-                let res = create_scene(&self.scene_yaml).and_then(|scene_model| render(
-                    self.render_info.clone(),
-                    &scene_model,
-                    ui.available_size(),
-                    ui.ctx().clone(),
-                ));
-
-                match res {
-                    Ok(abort_sender) => self.render_control.abort_sender = Some(abort_sender),
-                    Err(err) => {
-                        self.render_control.render_requested = false;
-                        self.show_error = true;
-                        self.error_message = format!("{}", err)
-                    }
-                }
-            }
-
-            if render_info.image_updated {
-                self.texture_handle = ctx.load_texture(
-                    "render_texture",
-                    render_info.color_image.to_owned(),
-                    TextureOptions::default(),
-                );
-                render_info.image_updated = false;
-            }
-
-            ui.image(&self.texture_handle, ui.available_size())
+            ui.add(render_output(
+                &mut self.render_control,
+                &self.render_info,
+                &mut self.error_info,
+                &self.scene_yaml,
+                ui.available_size(),
+                ui.ctx().clone()
+            ));
         });
 
-        if self.show_error {
-            egui::Window::new("Error")
-                .open(&mut self.show_error)
+        if self.error_info.show_error {
+            Window::new("Error")
+                .open(&mut self.error_info.show_error)
                 .show(ctx, |ui| {
-                    ui.label(&self.error_message);
+                    ui.label(&self.error_info.error_message);
                 });
         }
     }
-}
-
-fn render(
-    render_info: Arc<Mutex<RenderInfo>>,
-    scene_model: &SceneModel,
-    render_size: Vec2,
-    ctx: Context,
-) -> Result<Sender<bool>, Box<dyn Error>> {
-    let (output_sender, output_receiver) = channel();
-    let (abort_sender, abort_receiver) = channel();
-
-    let scene = scene_model.create()?;
-
-    thread::spawn(move || {
-        ray_trace(
-            render_size.x as u32,
-            render_size.y as u32,
-            scene,
-            &output_sender,
-            &abort_receiver,
-        )
-            .unwrap();
-    });
-
-    thread::spawn(move || {
-        for render_output in output_receiver {
-            let image = render_output.render_image;
-            let fs = image.as_flat_samples();
-            let color_image = ColorImage::from_rgb(
-                [image.width() as usize, image.height() as usize],
-                fs.as_slice(),
-            );
-            let mut render_info = render_info.lock().unwrap();
-            render_info.image_updated = true;
-            render_info.progress = render_output.progress;
-            render_info.color_image = color_image;
-
-            ctx.request_repaint();
-        }
-    });
-
-    Ok(abort_sender)
 }
