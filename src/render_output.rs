@@ -1,11 +1,11 @@
-use std::error::Error;
-use std::sync::{Arc, Mutex};
-use std::sync::mpsc::{channel, Sender};
-use std::thread;
+use crate::scene_model::{create_scene, Creator, SceneModel};
+use crate::{ErrorInfo, RenderControl, RenderInfo};
 use eframe::egui::{ColorImage, Context, Image, TextureOptions, Vec2};
 use solstrale::ray_trace;
-use crate::{ErrorInfo, RenderControl, RenderInfo};
-use crate::scene_model::{create_scene, Creator, SceneModel};
+use std::error::Error;
+use std::sync::mpsc::{channel, Sender};
+use std::sync::{Arc, Mutex};
+use std::thread;
 
 pub fn render_output(
     render_control: &mut RenderControl,
@@ -16,20 +16,15 @@ pub fn render_output(
     ctx: Context,
 ) -> Image {
     if render_control.abort_sender.is_none() && render_control.render_requested {
-
-        let res = create_scene(scene_yaml).and_then(|scene_model| render(
-            render_info.clone(),
-            &scene_model,
-            render_size,
-            ctx.clone(),
-        ));
+        let res = create_scene(scene_yaml).and_then(|scene_model| {
+            render(render_info.clone(), &scene_model, render_size, ctx.clone())
+        });
 
         match res {
             Ok(abort_sender) => render_control.abort_sender = Some(abort_sender),
             Err(err) => {
                 render_control.render_requested = false;
-                error_info.show_error = true;
-                error_info.error_message = format!("{}", err)
+                error_info.handle(err);
             }
         }
     }
@@ -57,7 +52,7 @@ fn render(
             &output_sender,
             &abort_receiver,
         )
-            .unwrap();
+        .unwrap();
     });
 
     thread::spawn(move || {
@@ -70,11 +65,8 @@ fn render(
             );
             let mut render_info = render_info.lock().unwrap();
             render_info.progress = render_output.progress;
-            render_info.texture_handle = ctx.load_texture(
-                "render_texture",
-                color_image,
-                TextureOptions::default(),
-            );
+            render_info.texture_handle =
+                ctx.load_texture("render_texture", color_image, TextureOptions::default());
 
             ctx.request_repaint();
         }

@@ -1,23 +1,26 @@
+use std::error::Error;
+use std::sync::mpsc::Sender;
 use std::sync::{Arc, Mutex};
-use std::sync::mpsc::{Sender};
 
-use eframe::{App, egui, Frame, IconData, NativeOptions, run_native};
 use eframe::egui::{
-    Color32, ColorImage, Context, ProgressBar, SidePanel, TextureOptions,
-    TopBottomPanel, Vec2,
+    Color32, ColorImage, Context, ProgressBar, SidePanel, TextureOptions, TopBottomPanel, Vec2,
 };
 use eframe::epaint::TextureHandle;
+use eframe::{egui, run_native, App, Frame, IconData, NativeOptions};
 use egui::{CentralPanel, ScrollArea, Window};
+use egui_file::FileDialog;
 
-use yaml_editor::yaml_editor;
 use crate::render_output::render_output;
+use yaml_editor::yaml_editor;
 
 use crate::yaml_editor::create_layouter;
 
-mod scene_model;
-mod yaml_editor;
+mod load_scene;
 mod render_button;
 mod render_output;
+mod save_scene;
+mod scene_model;
+mod yaml_editor;
 
 fn main() -> eframe::Result<()> {
     let icon_bytes = include_bytes!("icon.png");
@@ -26,8 +29,8 @@ fn main() -> eframe::Result<()> {
     let native_options = NativeOptions {
         resizable: true,
         initial_window_size: Some(Vec2 {
-            x: 1000.0,
-            y: 600.0,
+            x: 1100.0,
+            y: 800.0,
         }),
         icon_data: Some(icon),
         app_id: Some("solstrale".to_string()),
@@ -46,6 +49,12 @@ struct SolstraleApp {
     render_info: Arc<Mutex<RenderInfo>>,
     scene_yaml: String,
     error_info: ErrorInfo,
+    dialogs: Dialogs,
+}
+
+pub struct Dialogs {
+    load_scene_dialog: Option<FileDialog>,
+    save_scene_dialog: Option<FileDialog>,
 }
 
 pub struct RenderControl {
@@ -61,6 +70,13 @@ pub struct RenderInfo {
 pub struct ErrorInfo {
     pub show_error: bool,
     pub error_message: String,
+}
+
+impl ErrorInfo {
+    pub fn handle(&mut self, err: Box<dyn Error>) {
+        self.show_error = true;
+        self.error_message = format!("{}", err);
+    }
 }
 
 impl SolstraleApp {
@@ -85,12 +101,40 @@ impl SolstraleApp {
                 show_error: false,
                 error_message: "".to_string(),
             },
+            dialogs: Dialogs {
+                load_scene_dialog: None,
+                save_scene_dialog: None,
+            },
         }
     }
 }
 
 impl App for SolstraleApp {
     fn update(&mut self, ctx: &Context, _: &mut Frame) {
+        TopBottomPanel::top("top-panel").show(ctx, |ui| {
+            ui.menu_button("File", |ui| {
+                if ui.button("Load scene").clicked() {
+                    load_scene::show(&mut self.dialogs);
+                }
+                if ui.button("Save scene").clicked() {
+                    save_scene::show(&mut self.dialogs);
+                }
+            })
+        });
+
+        load_scene::handle_dialog(
+            &mut self.dialogs,
+            &mut self.error_info,
+            &mut self.scene_yaml,
+            &ctx,
+        );
+
+        save_scene::handle_dialog(
+            &mut self.dialogs,
+            &mut self.error_info,
+            &self.scene_yaml,
+            &ctx,
+        );
 
         TopBottomPanel::bottom("bottom-panel").show(ctx, |ui| {
             ui.horizontal(|ui| {
@@ -109,7 +153,7 @@ impl App for SolstraleApp {
                 ui.add(yaml_editor(
                     &mut self.scene_yaml,
                     &mut create_layouter(),
-                    Vec2 { x: 300.0, y: 0.0 }
+                    Vec2 { x: 300.0, y: 0.0 },
                 ));
             });
         });
@@ -121,7 +165,7 @@ impl App for SolstraleApp {
                 &mut self.error_info,
                 &self.scene_yaml,
                 ui.available_size(),
-                ui.ctx().clone()
+                ui.ctx().clone(),
             ));
         });
 
