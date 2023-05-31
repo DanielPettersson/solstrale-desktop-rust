@@ -1,14 +1,10 @@
 use eframe::egui;
-use eframe::egui::{Button, Modifiers, Ui};
 use eframe::egui::Event::Key;
+use eframe::egui::{Modifiers, Ui};
 
 use crate::RenderControl;
 
-pub fn render_button() -> Button {
-    Button::new("Render")
-}
-
-pub fn handle_click(clicked: bool, render_control: & mut RenderControl, ui: &Ui) {
+pub fn handle_click(clicked: bool, render_control: &mut RenderControl, ui: &Ui) {
     if clicked || is_ctrl_r(ui) {
         if let Some(abort_sender) = &render_control.abort_sender {
             abort_sender.send(true).ok();
@@ -17,7 +13,6 @@ pub fn handle_click(clicked: bool, render_control: & mut RenderControl, ui: &Ui)
         render_control.render_requested = true;
     }
 }
-
 
 fn is_ctrl_r(ui: &Ui) -> bool {
     ui.input(|input| {

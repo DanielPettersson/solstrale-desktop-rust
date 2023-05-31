@@ -31,7 +31,7 @@ pub fn render_output(
 
     let mut render_info = render_info.lock().unwrap();
 
-    let texture_handle = render_info.texture_handle.get_or_insert_with(||{
+    let texture_handle = render_info.texture_handle.get_or_insert_with(|| {
         ctx.load_texture(
             "",
             ColorImage::new([1, 1], Color32::BLACK),
@@ -74,8 +74,17 @@ fn render(
             );
             let mut render_info = render_info.lock().unwrap();
             render_info.progress = render_output.progress;
-            render_info.texture_handle =
-                Some(ctx.load_texture("render_texture", color_image, TextureOptions::default()));
+            render_info.rgb_image = Some(image);
+            match render_info.texture_handle.as_mut() {
+                None => {
+                    render_info.texture_handle = Some(ctx.load_texture(
+                        "render_texture",
+                        color_image,
+                        TextureOptions::default(),
+                    ))
+                }
+                Some(handle) => handle.set(color_image, TextureOptions::default()),
+            };
 
             ctx.request_repaint();
         }

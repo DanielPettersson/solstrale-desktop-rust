@@ -6,7 +6,7 @@ use egui_file::FileDialog;
 use std::fs;
 
 pub fn show(dialogs: &mut Dialogs) {
-    let mut dialog = FileDialog::save_file(None);
+    let mut dialog = FileDialog::save_file(None).default_filename("scene.yaml");
     dialog.open();
     dialogs.save_scene_dialog = Some(dialog);
 }

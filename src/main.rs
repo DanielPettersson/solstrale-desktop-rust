@@ -2,13 +2,12 @@ use std::error::Error;
 use std::sync::mpsc::Sender;
 use std::sync::{Arc, Mutex};
 
-use eframe::egui::{
-    Context, ProgressBar, SidePanel, TopBottomPanel, Vec2,
-};
+use eframe::egui::{Button, Context, ProgressBar, SidePanel, TopBottomPanel, Vec2};
 use eframe::epaint::TextureHandle;
 use eframe::{egui, run_native, App, Frame, IconData, NativeOptions};
 use egui::{CentralPanel, ScrollArea, Window};
 use egui_file::FileDialog;
+use image::RgbImage;
 
 use crate::render_output::render_output;
 use yaml_editor::yaml_editor;
@@ -18,6 +17,7 @@ use crate::yaml_editor::create_layouter;
 mod load_scene;
 mod render_button;
 mod render_output;
+mod save_output;
 mod save_scene;
 mod scene_model;
 mod yaml_editor;
@@ -57,6 +57,7 @@ struct SolstraleApp {
 pub struct Dialogs {
     load_scene_dialog: Option<FileDialog>,
     save_scene_dialog: Option<FileDialog>,
+    save_output_dialog: Option<FileDialog>,
 }
 
 pub struct RenderControl {
@@ -76,6 +77,7 @@ impl Default for RenderControl {
 #[derive(Default)]
 pub struct RenderInfo {
     pub texture_handle: Option<TextureHandle>,
+    pub rgb_image: Option<RgbImage>,
     pub progress: f64,
 }
 
@@ -107,21 +109,29 @@ impl App for SolstraleApp {
     fn update(&mut self, ctx: &Context, _: &mut Frame) {
         TopBottomPanel::top("top-panel").show(ctx, |ui| {
             ui.horizontal(|ui| {
-                ui.menu_button("File", |ui| {
-                    if ui.button("Load scene").clicked() {
+                ui.menu_button("Scene", |ui| {
+                    if ui.button("Load").clicked() {
                         ui.close_menu();
                         load_scene::show(&mut self.dialogs);
                     }
-                    if ui.button("Save scene").clicked() {
+                    if ui.button("Save").clicked() {
                         ui.close_menu();
                         save_scene::show(&mut self.dialogs);
                     }
                 });
 
                 let render_button_clicked = ui
-                    .add_enabled(!self.error_info.show_error, render_button::render_button())
+                    .add_enabled(!self.error_info.show_error, Button::new("Render"))
                     .clicked();
                 render_button::handle_click(render_button_clicked, &mut self.render_control, ui);
+
+                let render_info = self.render_info.lock().unwrap();
+                let save_output_button_clicked = ui
+                    .add_enabled(render_info.rgb_image.is_some(), Button::new("Save output"))
+                    .clicked();
+                if save_output_button_clicked {
+                    save_output::show(&mut self.dialogs);
+                }
             });
         });
 
@@ -138,6 +148,11 @@ impl App for SolstraleApp {
             &self.scene_yaml,
             &ctx,
         );
+
+        if self.dialogs.save_output_dialog.is_some() {
+            let render_info = self.render_info.lock().unwrap();
+            save_output::handle_dialog(&mut self.dialogs, &mut self.error_info, &render_info, &ctx);
+        }
 
         TopBottomPanel::bottom("bottom-panel").show(ctx, |ui| {
             let render_info = self.render_info.lock().unwrap();
