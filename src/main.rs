@@ -3,7 +3,7 @@ use std::sync::mpsc::Sender;
 use std::sync::{Arc, Mutex};
 
 use eframe::egui::{
-    Color32, ColorImage, Context, ProgressBar, SidePanel, TextureOptions, TopBottomPanel, Vec2,
+    Context, ProgressBar, SidePanel, TopBottomPanel, Vec2,
 };
 use eframe::epaint::TextureHandle;
 use eframe::{egui, run_native, App, Frame, IconData, NativeOptions};
@@ -44,6 +44,7 @@ fn main() -> eframe::Result<()> {
     )
 }
 
+#[derive(Default)]
 struct SolstraleApp {
     render_control: RenderControl,
     render_info: Arc<Mutex<RenderInfo>>,
@@ -52,6 +53,7 @@ struct SolstraleApp {
     dialogs: Dialogs,
 }
 
+#[derive(Default)]
 pub struct Dialogs {
     load_scene_dialog: Option<FileDialog>,
     save_scene_dialog: Option<FileDialog>,
@@ -62,11 +64,22 @@ pub struct RenderControl {
     pub render_requested: bool,
 }
 
+impl Default for RenderControl {
+    fn default() -> Self {
+        Self {
+            abort_sender: None,
+            render_requested: true,
+        }
+    }
+}
+
+#[derive(Default)]
 pub struct RenderInfo {
-    pub texture_handle: TextureHandle,
+    pub texture_handle: Option<TextureHandle>,
     pub progress: f64,
 }
 
+#[derive(Default)]
 pub struct ErrorInfo {
     pub show_error: bool,
     pub error_message: String,
@@ -80,31 +93,12 @@ impl ErrorInfo {
 }
 
 impl SolstraleApp {
-    fn new(cc: &eframe::CreationContext<'_>) -> Self {
+    fn new(_: &eframe::CreationContext<'_>) -> Self {
         let yaml = include_str!("scene.yaml");
 
         SolstraleApp {
-            render_control: RenderControl {
-                abort_sender: None,
-                render_requested: true,
-            },
-            render_info: Arc::new(Mutex::new(RenderInfo {
-                texture_handle: cc.egui_ctx.load_texture(
-                    "",
-                    ColorImage::new([1, 1], Color32::BLACK),
-                    TextureOptions::default(),
-                ),
-                progress: 0.0,
-            })),
             scene_yaml: yaml.parse().unwrap(),
-            error_info: ErrorInfo {
-                show_error: false,
-                error_message: "".to_string(),
-            },
-            dialogs: Dialogs {
-                load_scene_dialog: None,
-                save_scene_dialog: None,
-            },
+            ..Default::default()
         }
     }
 }
@@ -112,14 +106,23 @@ impl SolstraleApp {
 impl App for SolstraleApp {
     fn update(&mut self, ctx: &Context, _: &mut Frame) {
         TopBottomPanel::top("top-panel").show(ctx, |ui| {
-            ui.menu_button("File", |ui| {
-                if ui.button("Load scene").clicked() {
-                    load_scene::show(&mut self.dialogs);
-                }
-                if ui.button("Save scene").clicked() {
-                    save_scene::show(&mut self.dialogs);
-                }
-            })
+            ui.horizontal(|ui| {
+                ui.menu_button("File", |ui| {
+                    if ui.button("Load scene").clicked() {
+                        ui.close_menu();
+                        load_scene::show(&mut self.dialogs);
+                    }
+                    if ui.button("Save scene").clicked() {
+                        ui.close_menu();
+                        save_scene::show(&mut self.dialogs);
+                    }
+                });
+
+                let render_button_clicked = ui
+                    .add_enabled(!self.error_info.show_error, render_button::render_button())
+                    .clicked();
+                render_button::handle_click(render_button_clicked, &mut self.render_control, ui);
+            });
         });
 
         load_scene::handle_dialog(
@@ -137,15 +140,8 @@ impl App for SolstraleApp {
         );
 
         TopBottomPanel::bottom("bottom-panel").show(ctx, |ui| {
-            ui.horizontal(|ui| {
-                let render_button_clicked = ui
-                    .add_enabled(!self.error_info.show_error, render_button::render_button())
-                    .clicked();
-                render_button::handle_click(render_button_clicked, &mut self.render_control, ui);
-
-                let render_info = self.render_info.lock().unwrap();
-                ui.add(ProgressBar::new(render_info.progress as f32));
-            });
+            let render_info = self.render_info.lock().unwrap();
+            ui.add(ProgressBar::new(render_info.progress as f32));
         });
 
         SidePanel::left("code-panel").show(ctx, |ui| {

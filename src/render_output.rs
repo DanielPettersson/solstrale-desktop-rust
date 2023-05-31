@@ -1,6 +1,6 @@
 use crate::scene_model::{create_scene, Creator, SceneModel};
 use crate::{ErrorInfo, RenderControl, RenderInfo};
-use eframe::egui::{ColorImage, Context, Image, TextureOptions, Vec2};
+use eframe::egui::{Color32, ColorImage, Context, Image, TextureOptions, Vec2};
 use solstrale::ray_trace;
 use std::error::Error;
 use std::sync::mpsc::{channel, Sender};
@@ -29,8 +29,17 @@ pub fn render_output(
         }
     }
 
-    let render_info = render_info.lock().unwrap();
-    Image::new(&render_info.texture_handle, render_size)
+    let mut render_info = render_info.lock().unwrap();
+
+    let texture_handle = render_info.texture_handle.get_or_insert_with(||{
+        ctx.load_texture(
+            "",
+            ColorImage::new([1, 1], Color32::BLACK),
+            TextureOptions::default(),
+        )
+    });
+
+    Image::new(texture_handle, render_size)
 }
 
 fn render(
@@ -66,7 +75,7 @@ fn render(
             let mut render_info = render_info.lock().unwrap();
             render_info.progress = render_output.progress;
             render_info.texture_handle =
-                ctx.load_texture("render_texture", color_image, TextureOptions::default());
+                Some(ctx.load_texture("render_texture", color_image, TextureOptions::default()));
 
             ctx.request_repaint();
         }
