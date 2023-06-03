@@ -1,4 +1,4 @@
-use crate::{Dialogs, ErrorInfo, RenderInfo};
+use crate::{Dialogs, ErrorInfo, RenderedImage};
 use eframe::egui;
 use egui::Context;
 use egui_file::FileDialog;
@@ -13,13 +13,13 @@ pub fn show(dialogs: &mut Dialogs) {
 pub fn handle_dialog(
     dialogs: &mut Dialogs,
     error_info: &mut ErrorInfo,
-    render_info: &RenderInfo,
+    rendered_image: &RenderedImage,
     ctx: &Context,
 ) {
     if let Some(dialog) = &mut dialogs.save_output_dialog {
         if dialog.show(ctx).selected() {
             if let Some(file_path) = dialog.path() {
-                let image = render_info
+                let image = rendered_image
                     .rgb_image
                     .as_ref()
                     .expect("Dialog is only displayed when there is an image");

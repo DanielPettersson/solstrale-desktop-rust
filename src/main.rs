@@ -1,6 +1,5 @@
 use std::error::Error;
-use std::sync::mpsc::Sender;
-use std::sync::{Arc, Mutex};
+use std::sync::mpsc::{Receiver, Sender};
 
 use eframe::egui::{Button, Context, ProgressBar, SidePanel, TopBottomPanel, Vec2};
 use eframe::epaint::TextureHandle;
@@ -8,10 +7,11 @@ use eframe::{egui, run_native, App, Frame, IconData, NativeOptions};
 use egui::{CentralPanel, ScrollArea, Window};
 use egui_file::FileDialog;
 use image::RgbImage;
+use solstrale::renderer::RenderProgress;
 
-use crate::render_output::render_output;
 use yaml_editor::yaml_editor;
 
+use crate::render_output::render_output;
 use crate::yaml_editor::create_layouter;
 
 mod load_scene;
@@ -47,7 +47,7 @@ fn main() -> eframe::Result<()> {
 #[derive(Default)]
 struct SolstraleApp {
     render_control: RenderControl,
-    render_info: Arc<Mutex<RenderInfo>>,
+    rendered_image: RenderedImage,
     scene_yaml: String,
     error_info: ErrorInfo,
     dialogs: Dialogs,
@@ -62,20 +62,29 @@ pub struct Dialogs {
 
 pub struct RenderControl {
     pub abort_sender: Option<Sender<bool>>,
+    pub render_receiver: Option<Receiver<RenderMessage>>,
     pub render_requested: bool,
+    pub loading_scene: bool,
 }
 
 impl Default for RenderControl {
     fn default() -> Self {
         Self {
             abort_sender: None,
+            render_receiver: None,
             render_requested: true,
+            loading_scene: false,
         }
     }
 }
 
+pub enum RenderMessage {
+    SampleRendered(RenderProgress),
+    Error(String),
+}
+
 #[derive(Default)]
-pub struct RenderInfo {
+pub struct RenderedImage {
     pub texture_handle: Option<TextureHandle>,
     pub rgb_image: Option<RgbImage>,
     pub progress: f64,
@@ -91,6 +100,10 @@ impl ErrorInfo {
     pub fn handle(&mut self, err: Box<dyn Error>) {
         self.show_error = true;
         self.error_message = format!("{}", err);
+    }
+    pub fn handle_str(&mut self, err: &str) {
+        self.show_error = true;
+        self.error_message = err.to_string();
     }
 }
 
@@ -121,13 +134,18 @@ impl App for SolstraleApp {
                 });
 
                 let render_button_clicked = ui
-                    .add_enabled(!self.error_info.show_error, Button::new("Render"))
+                    .add_enabled(
+                        !self.error_info.show_error && !self.render_control.render_requested,
+                        Button::new("Render"),
+                    )
                     .clicked();
                 render_button::handle_click(render_button_clicked, &mut self.render_control, ui);
 
-                let render_info = self.render_info.lock().unwrap();
                 let save_output_button_clicked = ui
-                    .add_enabled(render_info.rgb_image.is_some(), Button::new("Save output"))
+                    .add_enabled(
+                        self.rendered_image.progress > 0.,
+                        Button::new("Save output"),
+                    )
                     .clicked();
                 if save_output_button_clicked {
                     save_output::show(&mut self.dialogs);
@@ -150,13 +168,16 @@ impl App for SolstraleApp {
         );
 
         if self.dialogs.save_output_dialog.is_some() {
-            let render_info = self.render_info.lock().unwrap();
-            save_output::handle_dialog(&mut self.dialogs, &mut self.error_info, &render_info, &ctx);
+            save_output::handle_dialog(
+                &mut self.dialogs,
+                &mut self.error_info,
+                &self.rendered_image,
+                &ctx,
+            );
         }
 
         TopBottomPanel::bottom("bottom-panel").show(ctx, |ui| {
-            let render_info = self.render_info.lock().unwrap();
-            ui.add(ProgressBar::new(render_info.progress as f32));
+            ui.add(ProgressBar::new(self.rendered_image.progress as f32));
         });
 
         SidePanel::left("code-panel").show(ctx, |ui| {
@@ -172,7 +193,7 @@ impl App for SolstraleApp {
         CentralPanel::default().show(ctx, |ui| {
             ui.add(render_output(
                 &mut self.render_control,
-                &self.render_info,
+                &mut self.rendered_image,
                 &mut self.error_info,
                 &self.scene_yaml,
                 ui.available_size(),
