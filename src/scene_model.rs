@@ -1,5 +1,5 @@
-use std::error::Error;
 use std::boxed::Box as StdBox;
+use std::error::Error;
 
 use derive_more::Display;
 use moka::sync::Cache;
@@ -13,10 +13,10 @@ use solstrale::hittable::Hittables;
 use solstrale::material::texture::{ImageTexture, SolidColor, Textures};
 use solstrale::material::{Dielectric, DiffuseLight, Materials};
 use solstrale::post::{OidnPostProcessor, PostProcessors};
-use solstrale::renderer::Scene;
 use solstrale::renderer::shader::{
     AlbedoShader, NormalShader, PathTracingShader, Shaders, SimpleShader,
 };
+use solstrale::renderer::Scene;
 
 static MODEL_CACHE: Lazy<Cache<ModelKey, Result<Hittables, ModelError>>> =
     Lazy::new(|| Cache::new(10));
@@ -167,7 +167,8 @@ impl Creator<Shaders> for Shader {
                 normal: Some(_),
             } => Ok(NormalShader::new()),
             _ => Err(
-                StdBox::try_from(ModelError::new("Shader should have single field defined")).unwrap(),
+                StdBox::try_from(ModelError::new("Shader should have single field defined"))
+                    .unwrap(),
             ),
         }
     }
@@ -182,12 +183,11 @@ struct PostProcessor {
 impl Creator<PostProcessors> for PostProcessor {
     fn create(&self) -> Result<PostProcessors, StdBox<dyn Error>> {
         match self {
-            PostProcessor {
-                oidn: Some(_)
-            } => Ok(OidnPostProcessor::new()),
-            _ => Err(
-                StdBox::try_from(ModelError::new("PostProcessor should have single field defined")).unwrap(),
-            ),
+            PostProcessor { oidn: Some(_) } => Ok(OidnPostProcessor::new()),
+            _ => Err(StdBox::try_from(ModelError::new(
+                "PostProcessor should have single field defined",
+            ))
+            .unwrap()),
         }
     }
 }
@@ -210,7 +210,7 @@ impl Creator<solstrale::renderer::RenderConfig> for RenderConfig {
             shader: self.shader.create()?,
             post_processor: match self.post_processor.as_ref() {
                 None => None,
-                Some(p) => Some(p.create()?)
+                Some(p) => Some(p.create()?),
             },
         })
     }
@@ -285,7 +285,7 @@ struct Model {
     name: String,
     pos: Pos,
     scale: f64,
-    angle_y: f64,
+    angle_y: Option<f64>,
 }
 
 impl Creator<Hittables> for Model {
@@ -298,10 +298,9 @@ impl Creator<Hittables> for Model {
                 .map_err(|err| ModelError::new_from_err(err))
         })?;
 
-        Ok(if self.angle_y == 0. {
-            model
-        } else {
-            solstrale::hittable::rotation_y::RotationY::new(model, self.angle_y)
+        Ok(match self.angle_y {
+            None => model,
+            Some(angle_y) => solstrale::hittable::rotation_y::RotationY::new(model, angle_y),
         })
     }
 }
@@ -372,7 +371,6 @@ impl Creator<Hittables> for Translation {
     }
 }
 
-
 impl Creator<Hittables> for Hittable {
     fn create(&self) -> Result<Hittables, StdBox<dyn Error>> {
         match self {
@@ -439,10 +437,10 @@ impl Creator<Hittables> for Hittable {
                 rotation_y: None,
                 translation: Some(t),
             } => t.create(),
-            _ => Err(
-                StdBox::try_from(ModelError::new("Hittable should have single field defined"))
-                    .unwrap(),
-            ),
+            _ => Err(StdBox::try_from(ModelError::new(
+                "Hittable should have single field defined",
+            ))
+            .unwrap()),
         }
     }
 }
@@ -508,10 +506,10 @@ impl Creator<Materials> for Material {
                 metal: None,
                 light: Some(l),
             } => Ok(DiffuseLight::new(l.color.r, l.color.g, l.color.b)),
-            _ => Err(
-                StdBox::try_from(ModelError::new("Material should have single field defined"))
-                    .unwrap(),
-            ),
+            _ => Err(StdBox::try_from(ModelError::new(
+                "Material should have single field defined",
+            ))
+            .unwrap()),
         }
     }
 }
@@ -548,7 +546,8 @@ impl Creator<Textures> for Texture {
                 image: Some(im),
             } => ImageTexture::load(im.file.as_ref()),
             _ => Err(
-                StdBox::try_from(ModelError::new("Texture should have single field defined")).unwrap(),
+                StdBox::try_from(ModelError::new("Texture should have single field defined"))
+                    .unwrap(),
             ),
         }
     }
@@ -621,7 +620,7 @@ mod test {
                     normal: None,
                 },
                 post_processor: Some(PostProcessor {
-                    oidn: Some(NoParamPostProcessor{})
+                    oidn: Some(NoParamPostProcessor {}),
                 }),
             },
         };

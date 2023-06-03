@@ -4,6 +4,10 @@ use eframe::egui::{Modifiers, Ui};
 
 use crate::RenderControl;
 
+pub fn is_enabled(render_control: &RenderControl) -> bool {
+    !render_control.render_requested && !render_control.loading_scene
+}
+
 pub fn handle_click(clicked: bool, render_control: &mut RenderControl, ui: &Ui) {
     if clicked || is_ctrl_r(ui) {
         render_control.render_requested = true;

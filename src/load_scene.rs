@@ -1,4 +1,4 @@
-use crate::{Dialogs, ErrorInfo};
+use crate::{Dialogs, ErrorInfo, RenderControl};
 use eframe::egui;
 use eframe::egui::TextBuffer;
 use egui::Context;
@@ -20,6 +20,7 @@ pub fn handle_dialog(
     dialogs: &mut Dialogs,
     error_info: &mut ErrorInfo,
     scene_yaml: &mut dyn TextBuffer,
+    render_control: &mut RenderControl,
     ctx: &Context,
 ) {
     if let Some(dialog) = &mut dialogs.load_scene_dialog {
@@ -29,7 +30,10 @@ pub fn handle_dialog(
                     Ok(mut f) => {
                         let mut file_content = String::new();
                         match f.read_to_string(&mut file_content) {
-                            Ok(_) => scene_yaml.replace(&file_content),
+                            Ok(_) => {
+                                scene_yaml.replace(&file_content);
+                                render_control.render_requested = true;
+                            }
                             Err(err) => error_info.handle(Box::new(err)),
                         };
                     }

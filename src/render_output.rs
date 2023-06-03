@@ -14,7 +14,7 @@ pub fn render_output(
     scene_yaml: &str,
     render_size: Vec2,
     ctx: Context,
-) -> Image {
+) -> Option<Image> {
     if render_control.render_requested {
         if let Some(sender) = &render_control.abort_sender {
             sender.send(true).ok();
@@ -26,6 +26,7 @@ pub fn render_output(
         render_control.render_receiver = Some(res.0);
         render_control.abort_sender = Some(res.1);
         render_control.render_requested = false;
+        render_control.loading_scene = true;
     }
 
     if let Some(render_receiver) = &render_control.render_receiver {
@@ -50,8 +51,12 @@ pub fn render_output(
                         }
                         Some(handle) => handle.set(color_image, TextureOptions::default()),
                     };
+                    render_control.loading_scene = false;
                 }
-                RenderMessage::Error(error_message) => error_info.handle_str(&error_message),
+                RenderMessage::Error(error_message) => {
+                    error_info.handle_str(&error_message);
+                    render_control.loading_scene = false;
+                }
             },
             Err(err) => match err {
                 TryRecvError::Empty => {}
@@ -62,15 +67,19 @@ pub fn render_output(
         }
     }
 
-    let texture_handle = rendered_image.texture_handle.get_or_insert_with(|| {
-        ctx.load_texture(
-            "",
-            ColorImage::new([1, 1], Color32::BLACK),
-            TextureOptions::default(),
-        )
-    });
+    if render_control.loading_scene || render_control.render_requested {
+        None
+    } else {
+        let texture_handle = rendered_image.texture_handle.get_or_insert_with(|| {
+            ctx.load_texture(
+                "",
+                ColorImage::new([1, 1], Color32::BLACK),
+                TextureOptions::default(),
+            )
+        });
 
-    Image::new(texture_handle, render_size)
+        Some(Image::new(texture_handle, render_size))
+    }
 }
 
 fn render(

@@ -1,9 +1,11 @@
 use std::error::Error;
 use std::sync::mpsc::{Receiver, Sender};
 
-use eframe::egui::{Button, Context, ProgressBar, SidePanel, TopBottomPanel, Vec2};
+use eframe::egui::{
+    Button, Color32, Context, Pos2, ProgressBar, Rect, SidePanel, Stroke, TopBottomPanel, Vec2,
+};
 use eframe::epaint::TextureHandle;
-use eframe::{egui, run_native, App, Frame, IconData, NativeOptions};
+use eframe::{egui, emath, epaint, run_native, App, Frame, IconData, NativeOptions};
 use egui::{CentralPanel, ScrollArea, Window};
 use egui_file::FileDialog;
 use image::RgbImage;
@@ -135,7 +137,7 @@ impl App for SolstraleApp {
 
                 let render_button_clicked = ui
                     .add_enabled(
-                        !self.error_info.show_error && !self.render_control.render_requested,
+                        render_button::is_enabled(&self.render_control),
                         Button::new("Render"),
                     )
                     .clicked();
@@ -157,6 +159,7 @@ impl App for SolstraleApp {
             &mut self.dialogs,
             &mut self.error_info,
             &mut self.scene_yaml,
+            &mut self.render_control,
             &ctx,
         );
 
@@ -185,20 +188,64 @@ impl App for SolstraleApp {
                 ui.add(yaml_editor(
                     &mut self.scene_yaml,
                     &mut create_layouter(),
-                    Vec2 { x: 300.0, y: 0.0 },
+                    Vec2 {
+                        x: 300.0,
+                        y: ui.available_height(),
+                    },
                 ));
             });
         });
 
         CentralPanel::default().show(ctx, |ui| {
-            ui.add(render_output(
+            match render_output(
                 &mut self.render_control,
                 &mut self.rendered_image,
                 &mut self.error_info,
                 &self.scene_yaml,
                 ui.available_size(),
                 ui.ctx().clone(),
-            ));
+            ) {
+                None => {
+                    egui::Frame::canvas(ui.style()).show(ui, |ui| {
+                        ui.ctx().request_repaint();
+                        let time = ui.input(|i| i.time);
+                        let (_id, rect) = ui.allocate_space(ui.available_size());
+
+                        let to_screen = emath::RectTransform::from_to(
+                            Rect::from_x_y_ranges(0.0..=1.0, -1.0..=1.0),
+                            rect,
+                        );
+
+                        let mut shapes = vec![];
+
+                        for &mode in &[2, 3, 5] {
+                            let mode = mode as f64;
+                            let n = 120;
+                            let speed = 1.5;
+
+                            let points: Vec<Pos2> = (0..=n)
+                                .map(|i| {
+                                    let t = i as f64 / (n as f64);
+                                    let amp = (time * speed * mode).sin() / mode;
+                                    let y = amp * (t * std::f64::consts::TAU / 2.0 * mode).sin();
+                                    to_screen * Pos2::new(t as f32, y as f32)
+                                })
+                                .collect();
+
+                            let thickness = 10.0 / mode as f32;
+                            shapes.push(epaint::Shape::line(
+                                points,
+                                Stroke::new(thickness, Color32::WHITE),
+                            ));
+                        }
+
+                        ui.painter().extend(shapes);
+                    });
+                }
+                Some(im) => {
+                    ui.add(im);
+                }
+            };
         });
 
         if self.error_info.show_error {
