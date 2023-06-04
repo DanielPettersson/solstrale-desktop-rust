@@ -1,11 +1,9 @@
 use std::error::Error;
 use std::sync::mpsc::{Receiver, Sender};
 
-use eframe::egui::{
-    Button, Color32, Context, Pos2, ProgressBar, Rect, SidePanel, Stroke, TopBottomPanel, Vec2,
-};
+use eframe::egui::{Button, Context, Margin, ProgressBar, SidePanel, TopBottomPanel, Vec2};
 use eframe::epaint::TextureHandle;
-use eframe::{egui, emath, epaint, run_native, App, Frame, IconData, NativeOptions};
+use eframe::{egui, run_native, App, Frame, IconData, NativeOptions};
 use egui::{CentralPanel, ScrollArea, Window};
 use egui_file::FileDialog;
 use image::RgbImage;
@@ -17,6 +15,7 @@ use crate::render_output::render_output;
 use crate::yaml_editor::create_layouter;
 
 mod load_scene;
+mod loading_output;
 mod render_button;
 mod render_output;
 mod save_output;
@@ -179,74 +178,60 @@ impl App for SolstraleApp {
             );
         }
 
-        TopBottomPanel::bottom("bottom-panel").show(ctx, |ui| {
-            ui.add(ProgressBar::new(self.rendered_image.progress as f32));
-        });
-
-        SidePanel::left("code-panel").show(ctx, |ui| {
-            ScrollArea::vertical().show(ui, |ui| {
-                ui.add(yaml_editor(
-                    &mut self.scene_yaml,
-                    &mut create_layouter(),
-                    Vec2 {
-                        x: 300.0,
-                        y: ui.available_height(),
-                    },
-                ));
+        TopBottomPanel::bottom("bottom-panel")
+            .frame(egui::Frame {
+                inner_margin: Margin {
+                    left: 0.0,
+                    right: 0.0,
+                    top: 5.0,
+                    bottom: 1.0,
+                },
+                ..Default::default()
+            })
+            .show(ctx, |ui| {
+                ui.add(ProgressBar::new(self.rendered_image.progress as f32));
             });
-        });
 
-        CentralPanel::default().show(ctx, |ui| {
-            match render_output(
-                &mut self.render_control,
-                &mut self.rendered_image,
-                &mut self.error_info,
-                &self.scene_yaml,
-                ui.available_size(),
-                ui.ctx().clone(),
-            ) {
-                None => {
-                    egui::Frame::canvas(ui.style()).show(ui, |ui| {
-                        ui.ctx().request_repaint();
-                        let time = ui.input(|i| i.time);
-                        let (_id, rect) = ui.allocate_space(ui.available_size());
+        SidePanel::left("code-panel")
+            .frame(egui::Frame {
+                inner_margin: Margin::same(0.),
+                ..Default::default()
+            })
+            .show(ctx, |ui| {
+                ScrollArea::vertical().show(ui, |ui| {
+                    ui.add(yaml_editor(
+                        &mut self.scene_yaml,
+                        &mut create_layouter(),
+                        Vec2 {
+                            x: 300.0,
+                            y: ui.available_height(),
+                        },
+                    ));
+                });
+            });
 
-                        let to_screen = emath::RectTransform::from_to(
-                            Rect::from_x_y_ranges(0.0..=1.0, -1.0..=1.0),
-                            rect,
-                        );
-
-                        let mut shapes = vec![];
-
-                        for &mode in &[2, 3, 5] {
-                            let mode = mode as f64;
-                            let n = 120;
-                            let speed = 1.5;
-
-                            let points: Vec<Pos2> = (0..=n)
-                                .map(|i| {
-                                    let t = i as f64 / (n as f64);
-                                    let amp = (time * speed * mode).sin() / mode;
-                                    let y = amp * (t * std::f64::consts::TAU / 2.0 * mode).sin();
-                                    to_screen * Pos2::new(t as f32, y as f32)
-                                })
-                                .collect();
-
-                            let thickness = 10.0 / mode as f32;
-                            shapes.push(epaint::Shape::line(
-                                points,
-                                Stroke::new(thickness, Color32::WHITE),
-                            ));
-                        }
-
-                        ui.painter().extend(shapes);
-                    });
-                }
-                Some(im) => {
-                    ui.add(im);
-                }
-            };
-        });
+        CentralPanel::default()
+            .frame(egui::Frame {
+                inner_margin: Margin::same(0.),
+                ..Default::default()
+            })
+            .show(ctx, |ui| {
+                match render_output(
+                    &mut self.render_control,
+                    &mut self.rendered_image,
+                    &mut self.error_info,
+                    &self.scene_yaml,
+                    ui.available_size(),
+                    ui.ctx().clone(),
+                ) {
+                    None => {
+                        loading_output::show(ui);
+                    }
+                    Some(im) => {
+                        ui.add(im);
+                    }
+                };
+            });
 
         if self.error_info.show_error {
             Window::new("Error")
