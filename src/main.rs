@@ -140,7 +140,13 @@ impl App for SolstraleApp {
                         Button::new("Render"),
                     )
                     .clicked();
-                render_button::handle_click(render_button_clicked, &mut self.render_control, ui);
+
+                render_button::handle_click(
+                    render_button_clicked,
+                    &mut self.render_control,
+                    &mut self.error_info,
+                    ui
+                );
 
                 let save_output_button_clicked = ui
                     .add_enabled(
@@ -159,14 +165,14 @@ impl App for SolstraleApp {
             &mut self.error_info,
             &mut self.scene_yaml,
             &mut self.render_control,
-            &ctx,
+            ctx,
         );
 
         save_scene::handle_dialog(
             &mut self.dialogs,
             &mut self.error_info,
             &self.scene_yaml,
-            &ctx,
+            ctx,
         );
 
         if self.dialogs.save_output_dialog.is_some() {
@@ -174,7 +180,7 @@ impl App for SolstraleApp {
                 &mut self.dialogs,
                 &mut self.error_info,
                 &self.rendered_image,
-                &ctx,
+                ctx,
             );
         }
 

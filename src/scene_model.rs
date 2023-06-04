@@ -7,7 +7,7 @@ use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use solstrale::geo::vec3::Vec3;
 use solstrale::hittable::hittable_list::HittableList;
-use solstrale::hittable::obj_model::load_obj_model;
+use solstrale::hittable::obj_model::load_obj_model_with_default_material;
 use solstrale::hittable::Hittable as HittableTrait;
 use solstrale::hittable::Hittables;
 use solstrale::material::texture::{ImageTexture, SolidColor, Textures};
@@ -285,7 +285,10 @@ struct Model {
     name: String,
     pos: Pos,
     scale: f64,
+    #[serde(skip_serializing_if = "Option::is_none")]
     angle_y: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    material: Option<Material>,
 }
 
 impl Creator<Hittables> for Model {
@@ -293,8 +296,12 @@ impl Creator<Hittables> for Model {
         let key = ModelKey::new(self);
 
         let pos = self.pos.create()?;
+        let material = self.material
+            .as_ref()
+            .map_or(Ok(solstrale::material::Lambertian::new(SolidColor::new(1., 1., 1.))), |m| m.create())?;
+
         let model = MODEL_CACHE.get_with(key, || {
-            load_obj_model(&self.path, &self.name, self.scale, pos)
+            load_obj_model_with_default_material(&self.path, &self.name, self.scale, pos, material)
                 .map_err(|err| ModelError::new_from_err(err))
         })?;
 
