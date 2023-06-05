@@ -189,8 +189,8 @@ impl App for SolstraleApp {
                 inner_margin: Margin {
                     left: 0.0,
                     right: 0.0,
-                    top: 5.0,
-                    bottom: 1.0,
+                    top: 4.0,
+                    bottom: 0.0,
                 },
                 ..Default::default()
             })
@@ -200,7 +200,7 @@ impl App for SolstraleApp {
 
         SidePanel::left("code-panel")
             .frame(egui::Frame {
-                inner_margin: Margin::same(0.),
+                inner_margin: Margin::same(2.),
                 ..Default::default()
             })
             .show(ctx, |ui| {

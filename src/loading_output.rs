@@ -9,6 +9,12 @@ pub fn show(ui: &mut Ui) {
         ui.ctx().request_repaint();
         let time = ui.input(|i| i.time);
         let (_id, rect) = ui.allocate_space(ui.available_size());
+        let (line_color, text_color) = if ui.visuals().dark_mode {
+            (Color32::from_rgb(50, 50, 50), Color32::WHITE)
+        } else {
+            (Color32::from_rgb(200, 200, 200), Color32::BLACK)
+        };
+
 
         let to_screen = RectTransform::from_to(Rect::from_x_y_ranges(0.0..=1.0, -1.0..=1.0), rect);
 
@@ -28,7 +34,7 @@ pub fn show(ui: &mut Ui) {
                 .collect();
 
             let thickness = 20.0 / mode as f32;
-            shapes.push(Shape::line(points, Stroke::new(thickness, Color32::from_rgb(50, 50, 50))));
+            shapes.push(Shape::line(points, Stroke::new(thickness, line_color)));
         }
         ui.fonts(|fonts|
             shapes.push(Shape::text(
@@ -37,7 +43,7 @@ pub fn show(ui: &mut Ui) {
                 Align2::CENTER_CENTER,
                 "Preparing scene...",
                 FontId::monospace(to_screen.scale().x * 0.04),
-                Color32::WHITE,
+                text_color,
             ))
         );
 
