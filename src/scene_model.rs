@@ -18,18 +18,8 @@ use solstrale::renderer::shader::{
 };
 use solstrale::renderer::Scene;
 
-static MODEL_CACHE: Lazy<Cache<ModelKey, Result<Hittables, ModelError>>> =
-    Lazy::new(|| Cache::new(10));
-
-#[derive(PartialEq, Eq, Hash)]
-struct ModelKey {
-    path: String,
-    filename: String,
-    scale: i32,
-    x: i32,
-    y: i32,
-    z: i32,
-}
+static MODEL_CACHE: Lazy<Cache<String, Result<Hittables, ModelError>>> =
+    Lazy::new(|| Cache::new(4));
 
 #[derive(Clone, Debug, Display)]
 struct ModelError {
@@ -51,19 +41,6 @@ impl ModelError {
 }
 
 impl Error for ModelError {}
-
-impl ModelKey {
-    fn new(m: &Model) -> Self {
-        Self {
-            path: m.path.to_string(),
-            filename: m.name.to_string(),
-            scale: (m.scale * 100.) as i32,
-            x: (m.pos.x * 100.) as i32,
-            y: (m.pos.y * 100.) as i32,
-            z: (m.pos.z * 100.) as i32,
-        }
-    }
-}
 
 pub fn create_scene(yaml: &str) -> Result<SceneModel, StdBox<dyn Error>> {
     let scene: SceneModel = serde_yaml::from_str(yaml)?;
@@ -293,13 +270,15 @@ struct Model {
 
 impl Creator<Hittables> for Model {
     fn create(&self) -> Result<Hittables, StdBox<dyn Error>> {
-        let key = ModelKey::new(self);
-
         let pos = self.pos.create()?;
-        let material = self.material
-            .as_ref()
-            .map_or(Ok(solstrale::material::Lambertian::new(SolidColor::new(1., 1., 1.))), |m| m.create())?;
+        let material = self.material.as_ref().map_or(
+            Ok(solstrale::material::Lambertian::new(SolidColor::new(
+                1., 1., 1.,
+            ))),
+            |m| m.create(),
+        )?;
 
+        let key = format!("{:?}", self);
         let model = MODEL_CACHE.get_with(key, || {
             load_obj_model_with_default_material(&self.path, &self.name, self.scale, pos, material)
                 .map_err(|err| ModelError::new_from_err(err))
