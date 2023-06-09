@@ -123,14 +123,26 @@ impl App for SolstraleApp {
     fn update(&mut self, ctx: &Context, _: &mut Frame) {
         TopBottomPanel::top("top-panel").show(ctx, |ui| {
             ui.horizontal(|ui| {
-                ui.menu_button("Scene", |ui| {
-                    if ui.button("Load").clicked() {
+                ui.menu_button("File", |ui| {
+                    ui.menu_button("Scene", |ui| {
+                        if ui.button("Load").clicked() {
+                            ui.close_menu();
+                            load_scene::show(&mut self.dialogs);
+                        }
+                        if ui.button("Save").clicked() {
+                            ui.close_menu();
+                            save_scene::show(&mut self.dialogs);
+                        }
+                    });
+                    let save_output_button_clicked = ui
+                        .add_enabled(
+                            self.rendered_image.progress > 0.,
+                            Button::new("Save image"),
+                        )
+                        .clicked();
+                    if save_output_button_clicked {
                         ui.close_menu();
-                        load_scene::show(&mut self.dialogs);
-                    }
-                    if ui.button("Save").clicked() {
-                        ui.close_menu();
-                        save_scene::show(&mut self.dialogs);
+                        save_output::show(&mut self.dialogs);
                     }
                 });
 
@@ -147,16 +159,6 @@ impl App for SolstraleApp {
                     &mut self.error_info,
                     ui
                 );
-
-                let save_output_button_clicked = ui
-                    .add_enabled(
-                        self.rendered_image.progress > 0.,
-                        Button::new("Save output"),
-                    )
-                    .clicked();
-                if save_output_button_clicked {
-                    save_output::show(&mut self.dialogs);
-                }
             });
         });
 

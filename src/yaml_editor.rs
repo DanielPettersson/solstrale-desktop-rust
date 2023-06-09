@@ -4,7 +4,8 @@ use eframe::egui::text::{LayoutJob, LayoutSection};
 use eframe::egui::{Galley, TextBuffer, TextEdit, TextFormat, Ui, Vec2};
 use egui::util::cache::{ComputerMut, FrameCache};
 
-pub fn yaml_editor<'a>(text: &'a mut dyn TextBuffer, layouter: &'a mut fn(&Ui, &str, f32) -> Arc<Galley>, min_size: Vec2) -> TextEdit<'a> {
+pub fn yaml_editor<'a, L>(text: &'a mut dyn TextBuffer, layouter: &'a mut L, min_size: Vec2) -> TextEdit<'a>
+    where L: Fn(&Ui, &str, f32) -> Arc<Galley> {
     TextEdit::multiline(text)
         .code_editor()
         .desired_width(f32::INFINITY)
@@ -47,7 +48,6 @@ impl Default for Highlighter {
 impl Highlighter {
     fn highlight(&self, code: &str) -> LayoutJob {
         self.highlight_impl(code).unwrap_or_else(|| {
-            // Fallback:
             LayoutJob::simple(
                 code.into(),
                 egui::FontId::monospace(12.0),
