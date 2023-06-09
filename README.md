@@ -1,4 +1,4 @@
 # solstrale-desktop-rust
 A desktop UI for Solstråle raytracer
 
-![image](https://github.com/DanielPettersson/solstrale-desktop-rust/assets/3603911/0b39971e-ee3c-4d05-8898-d8cdb8983875)
+![Skärmbild från 2023-06-09 23-08-13](https://github.com/DanielPettersson/solstrale-desktop-rust/assets/3603911/5fef9313-25ea-42ca-8c11-351dcb654a64)
