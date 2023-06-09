@@ -170,7 +170,7 @@ impl Creator<PostProcessors> for PostProcessor {
             _ => Err(StdBox::try_from(ModelError::new(
                 "PostProcessor should have single field defined",
             ))
-                .unwrap()),
+            .unwrap()),
         }
     }
 }
@@ -214,8 +214,8 @@ static Z: &str = "z";
 
 impl Serialize for Pos {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        where
-            S: serde::ser::Serializer,
+    where
+        S: serde::ser::Serializer,
     {
         serializer.serialize_str(&format!("{}, {}, {}", self.x, self.y, self.z))
     }
@@ -223,8 +223,8 @@ impl Serialize for Pos {
 
 impl<'de> Deserialize<'de> for Pos {
     fn deserialize<D>(deserializer: D) -> Result<Pos, D::Error>
-        where
-            D: serde::de::Deserializer<'de>,
+    where
+        D: serde::de::Deserializer<'de>,
     {
         let s = String::deserialize(deserializer)?;
         let mut split = s.split(',');
@@ -236,8 +236,9 @@ impl<'de> Deserialize<'de> for Pos {
 }
 
 fn parse_option<'de, D>(a: Option<&str>, expected_field: &'static str) -> Result<f64, D::Error>
-    where
-        D: serde::de::Deserializer<'de>, {
+where
+    D: serde::de::Deserializer<'de>,
+{
     a.ok_or(serde::de::Error::missing_field(expected_field))?
         .trim()
         .parse::<f64>()
@@ -478,7 +479,7 @@ impl Creator<Hittables> for Hittable {
             _ => Err(StdBox::try_from(ModelError::new(
                 "Hittable should have single field defined",
             ))
-                .unwrap()),
+            .unwrap()),
         }
     }
 }
@@ -552,7 +553,7 @@ impl Creator<Materials> for Material {
             _ => Err(StdBox::try_from(ModelError::new(
                 "Material should have single field defined",
             ))
-                .unwrap()),
+            .unwrap()),
         }
     }
 }
@@ -579,8 +580,8 @@ static B: &str = "b";
 
 impl Serialize for Rgb {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        where
-            S: serde::ser::Serializer,
+    where
+        S: serde::ser::Serializer,
     {
         serializer.serialize_str(&format!("{}, {}, {}", self.r, self.g, self.b))
     }
@@ -588,8 +589,8 @@ impl Serialize for Rgb {
 
 impl<'de> Deserialize<'de> for Rgb {
     fn deserialize<D>(deserializer: D) -> Result<Rgb, D::Error>
-        where
-            D: serde::de::Deserializer<'de>,
+    where
+        D: serde::de::Deserializer<'de>,
     {
         let s = String::deserialize(deserializer)?;
         let mut split = s.split(',');
@@ -599,7 +600,6 @@ impl<'de> Deserialize<'de> for Rgb {
         Ok(Rgb { r, g, b })
     }
 }
-
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
 #[serde(deny_unknown_fields)]
