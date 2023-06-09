@@ -170,7 +170,7 @@ impl Creator<PostProcessors> for PostProcessor {
             _ => Err(StdBox::try_from(ModelError::new(
                 "PostProcessor should have single field defined",
             ))
-            .unwrap()),
+                .unwrap()),
         }
     }
 }
@@ -201,12 +201,47 @@ impl Creator<solstrale::renderer::RenderConfig> for RenderConfig {
     }
 }
 
-#[derive(Serialize, Deserialize, PartialEq, Debug)]
-#[serde(deny_unknown_fields)]
+#[derive(PartialEq, Debug)]
 struct Pos {
     x: f64,
     y: f64,
     z: f64,
+}
+
+static X: &str = "x";
+static Y: &str = "y";
+static Z: &str = "z";
+
+impl Serialize for Pos {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: serde::ser::Serializer,
+    {
+        serializer.serialize_str(&format!("{}, {}, {}", self.x, self.y, self.z))
+    }
+}
+
+impl<'de> Deserialize<'de> for Pos {
+    fn deserialize<D>(deserializer: D) -> Result<Pos, D::Error>
+        where
+            D: serde::de::Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        let mut split = s.split(',');
+        let x = parse_option::<D>(split.next(), X)?;
+        let y = parse_option::<D>(split.next(), Y)?;
+        let z = parse_option::<D>(split.next(), Z)?;
+        Ok(Pos { x, y, z })
+    }
+}
+
+fn parse_option<'de, D>(a: Option<&str>, expected_field: &'static str) -> Result<f64, D::Error>
+    where
+        D: serde::de::Deserializer<'de>, {
+    a.ok_or(serde::de::Error::missing_field(expected_field))?
+        .trim()
+        .parse::<f64>()
+        .map_err(serde::de::Error::custom)
 }
 
 impl Creator<Vec3> for Pos {
@@ -443,7 +478,7 @@ impl Creator<Hittables> for Hittable {
             _ => Err(StdBox::try_from(ModelError::new(
                 "Hittable should have single field defined",
             ))
-            .unwrap()),
+                .unwrap()),
         }
     }
 }
@@ -517,7 +552,7 @@ impl Creator<Materials> for Material {
             _ => Err(StdBox::try_from(ModelError::new(
                 "Material should have single field defined",
             ))
-            .unwrap()),
+                .unwrap()),
         }
     }
 }
@@ -531,13 +566,40 @@ struct Texture {
     image: Option<Image>,
 }
 
-#[derive(Serialize, Deserialize, PartialEq, Debug)]
-#[serde(deny_unknown_fields)]
+#[derive(PartialEq, Debug)]
 struct Rgb {
     r: f64,
     g: f64,
     b: f64,
 }
+
+static R: &str = "r";
+static G: &str = "g";
+static B: &str = "b";
+
+impl Serialize for Rgb {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: serde::ser::Serializer,
+    {
+        serializer.serialize_str(&format!("{}, {}, {}", self.r, self.g, self.b))
+    }
+}
+
+impl<'de> Deserialize<'de> for Rgb {
+    fn deserialize<D>(deserializer: D) -> Result<Rgb, D::Error>
+        where
+            D: serde::de::Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        let mut split = s.split(',');
+        let r = parse_option::<D>(split.next(), R)?;
+        let g = parse_option::<D>(split.next(), G)?;
+        let b = parse_option::<D>(split.next(), B)?;
+        Ok(Rgb { r, g, b })
+    }
+}
+
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
 #[serde(deny_unknown_fields)]
@@ -645,36 +707,21 @@ mod test {
       max_depth: 50
   post_processor:
     oidn: {}
-background_color:
-  x: 0.0
-  y: 0.0
-  z: 0.0
+background_color: 0, 0, 0
 camera:
   vertical_fov_degrees: 0.0
   aperture_size: 0.0
   focus_distance: 0.0
-  look_from:
-    x: 0.0
-    y: 0.0
-    z: 0.0
-  look_at:
-    x: 0.0
-    y: 0.0
-    z: 0.0
+  look_from: 0, 0, 0
+  look_at: 0, 0, 0
 world:
 - sphere:
-    center:
-      x: 0.0
-      y: 0.0
-      z: 0.0
+    center: 0, 0, 0
     radius: 1.0
     material:
       lambertian:
         texture:
-          color:
-            r: 0.0
-            g: 0.0
-            b: 0.0
+          color: 0, 0, 0
 ",
             yaml
         );

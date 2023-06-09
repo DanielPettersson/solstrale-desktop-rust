@@ -5,189 +5,84 @@ render_configuration:
       max_depth: 50
   post_processor:
     oidn: {}
-background_color:
-  x: 0
-  y: 0
-  z: 0
+background_color: 0, 0, 0
 camera:
   vertical_fov_degrees: 35.0
   aperture_size: 0
   focus_distance: 10
-  look_from:
-    x: 278
-    y: 278
-    z: -800
-  look_at:
-    x: 278
-    y: 278
-    z: 0
+  look_from: 278, 278, -800
+  look_at: 278, 278, 0
 world:
   - quad:
-      q:
-        x: 555
-        y: 0
-        z: 0
-      u:
-        x: 0
-        y: 555
-        z: 0
-      v:
-        x: 0
-        y: 0
-        z: 555
+      q: 555, 0, 0
+      u: 0, 555, 0
+      v: 0, 0, 555
       material:
         lambertian:
           texture:
-            color:
-              r: 0.12
-              g: 0.45
-              b: 0.15
+            color: 0.12, 0.45, 0.15
   - quad:
-      q:
-        x: 0
-        y: 0
-        z: 0
-      u:
-        x: 0
-        y: 555
-        z: 0
-      v:
-        x: 0
-        y: 0
-        z: 555
+      q: 0, 0, 0
+      u: 0, 555, 0
+      v: 0, 0, 555
       material:
         lambertian:
           texture:
-            color:
-              r: 0.65
-              g: 0.05
-              b: 0.05
+            color: 0.65, 0.05, 0.05
   - quad:
-      q:
-        x: 408
-        y: 554
-        z: 383
-      u:
-        x: -260
-        y: 0
-        z: 0
-      v:
-        x: 0
-        y: 0
-        z: -210
+      q: 408, 554, 383
+      u: -260, 0, 0
+      v: 0, 0, -210
       material:
         light:
-          color:
-            r: 15
-            g: 15
-            b: 15
+          color: 15, 15, 15
   - quad:
-      q:
-        x: 0
-        y: 0
-        z: 0
-      u:
-        x: 555
-        y: 0
-        z: 0
-      v:
-        x: 0
-        y: 0
-        z: 555
+      q: 0, 0, 0
+      u: 555, 0, 0
+      v: 0, 0, 555
       material:
         lambertian:
           texture:
-            color:
-              r: 0.73
-              g: 0.73
-              b: 0.73
+            color: 0.73, 0.73, 0.73
   - quad:
-      q:
-        x: 555
-        y: 555
-        z: 555
-      u:
-        x: -555
-        y: 0
-        z: 0
-      v:
-        x: 0
-        y: 0
-        z: -555
+      q: 555, 555, 555
+      u: -555, 0, 0
+      v: 0, 0, -555
       material:
         lambertian:
           texture:
-            color:
-              r: 0.73
-              g: 0.73
-              b: 0.73
+            color: 0.73, 0.73, 0.73
   - quad:
-      q:
-        x: 0
-        y: 0
-        z: 555
-      u:
-        x: 555
-        y: 0
-        z: 0
-      v:
-        x: 0
-        y: 555
-        z: 0
+      q: 0, 0, 555
+      u: 555, 0, 0
+      v: 0, 555, 0
       material:
         lambertian:
           texture:
-            color:
-              r: 0.73
-              g: 0.73
-              b: 0.73
+            color: 0.73, 0.73, 0.73
   - translation:
-      offset:
-        x: 265
-        y: 0
-        z: 295
+      offset: 265, 0, 295
       child:
         rotation_y:
           angle: 15
           child:
             box:
-              a:
-                x: 0
-                y: 0
-                z: 0
-              b:
-                x: 165
-                y: 330
-                z: 165
+              a: 0, 0, 0
+              b: 165, 330, 165
               material:
                 lambertian:
                   texture:
-                    color:
-                      r: 0.73
-                      g: 0.73
-                      b: 0.73
+                    color: 0.73, 0.73, 0.73
   - translation:
-      offset:
-        x: 130
-        y: 0
-        z: 65
+      offset: 130, 0, 65
       child:
         rotation_y:
           angle: -18
           child:
             box:
-              a:
-                x: 0
-                y: 0
-                z: 0
-              b:
-                x: 165
-                y: 165
-                z: 165
+              a: 0, 0, 0
+              b: 165, 165, 165
               material:
                 lambertian:
                   texture:
-                    color:
-                      r: 0.73
-                      g: 0.73
-                      b: 0.73
+                    color: 0.73, 0.73, 0.73
