@@ -2394,7 +2394,7 @@ dependencies = [
 
 [[package]]
 name = "solstrale-desktop-rust"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "derive_more",
  "eframe",
