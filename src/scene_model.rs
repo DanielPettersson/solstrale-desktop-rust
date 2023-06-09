@@ -52,6 +52,7 @@ pub trait Creator<T> {
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
+#[serde(deny_unknown_fields)]
 pub struct SceneModel {
     render_configuration: RenderConfig,
     background_color: Pos,
@@ -76,6 +77,7 @@ impl Creator<Scene> for SceneModel {
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
+#[serde(deny_unknown_fields)]
 struct CameraConfig {
     vertical_fov_degrees: f64,
     aperture_size: f64,
@@ -97,6 +99,7 @@ impl Creator<solstrale::camera::CameraConfig> for CameraConfig {
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
+#[serde(deny_unknown_fields)]
 struct Shader {
     #[serde(skip_serializing_if = "Option::is_none")]
     path_tracing: Option<PathTracing>,
@@ -109,11 +112,13 @@ struct Shader {
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
+#[serde(deny_unknown_fields)]
 struct PathTracing {
     max_depth: u32,
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
+#[serde(deny_unknown_fields)]
 struct NoParamShader {}
 
 impl Creator<Shaders> for Shader {
@@ -152,6 +157,7 @@ impl Creator<Shaders> for Shader {
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
+#[serde(deny_unknown_fields)]
 struct PostProcessor {
     #[serde(skip_serializing_if = "Option::is_none")]
     oidn: Option<NoParamPostProcessor>,
@@ -170,9 +176,11 @@ impl Creator<PostProcessors> for PostProcessor {
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
+#[serde(deny_unknown_fields)]
 struct NoParamPostProcessor {}
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
+#[serde(deny_unknown_fields)]
 struct RenderConfig {
     samples_per_pixel: u32,
     shader: Shader,
@@ -194,6 +202,7 @@ impl Creator<solstrale::renderer::RenderConfig> for RenderConfig {
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
+#[serde(deny_unknown_fields)]
 struct Pos {
     x: f64,
     y: f64,
@@ -207,6 +216,7 @@ impl Creator<Vec3> for Pos {
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
+#[serde(deny_unknown_fields)]
 struct Hittable {
     #[serde(skip_serializing_if = "Option::is_none")]
     list: Option<List>,
@@ -225,6 +235,7 @@ struct Hittable {
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
+#[serde(deny_unknown_fields)]
 struct List {
     children: Vec<Hittable>,
 }
@@ -240,6 +251,7 @@ impl Creator<Hittables> for List {
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
+#[serde(deny_unknown_fields)]
 struct Sphere {
     center: Pos,
     radius: f64,
@@ -257,6 +269,7 @@ impl Creator<Hittables> for Sphere {
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
+#[serde(deny_unknown_fields)]
 struct Model {
     path: String,
     name: String,
@@ -292,6 +305,7 @@ impl Creator<Hittables> for Model {
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
+#[serde(deny_unknown_fields)]
 struct Quad {
     q: Pos,
     u: Pos,
@@ -311,6 +325,7 @@ impl Creator<Hittables> for Quad {
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
+#[serde(deny_unknown_fields)]
 struct Box {
     a: Pos,
     b: Pos,
@@ -328,6 +343,7 @@ impl Creator<Hittables> for Box {
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
+#[serde(deny_unknown_fields)]
 struct RotationY {
     child: StdBox<Hittable>,
     angle: f64,
@@ -343,6 +359,7 @@ impl Creator<Hittables> for RotationY {
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
+#[serde(deny_unknown_fields)]
 struct Translation {
     child: StdBox<Hittable>,
     offset: Pos,
@@ -432,6 +449,7 @@ impl Creator<Hittables> for Hittable {
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
+#[serde(deny_unknown_fields)]
 struct Material {
     #[serde(skip_serializing_if = "Option::is_none")]
     lambertian: Option<Lambertian>,
@@ -444,23 +462,27 @@ struct Material {
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
+#[serde(deny_unknown_fields)]
 struct Lambertian {
     texture: Texture,
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
+#[serde(deny_unknown_fields)]
 struct Glass {
     texture: Texture,
     index_of_refraction: f64,
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
+#[serde(deny_unknown_fields)]
 struct Metal {
     texture: Texture,
     fuzz: f64,
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
+#[serde(deny_unknown_fields)]
 struct Light {
     color: Rgb,
 }
@@ -501,6 +523,7 @@ impl Creator<Materials> for Material {
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
+#[serde(deny_unknown_fields)]
 struct Texture {
     #[serde(skip_serializing_if = "Option::is_none")]
     color: Option<Rgb>,
@@ -509,6 +532,7 @@ struct Texture {
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
+#[serde(deny_unknown_fields)]
 struct Rgb {
     r: f64,
     g: f64,
@@ -516,6 +540,7 @@ struct Rgb {
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
+#[serde(deny_unknown_fields)]
 struct Image {
     file: String,
 }
@@ -544,7 +569,7 @@ mod test {
     use crate::scene_model::*;
 
     #[test]
-    fn serialize() {
+    fn serde() {
         let scene = SceneModel {
             world: vec![Hittable {
                 list: None,
