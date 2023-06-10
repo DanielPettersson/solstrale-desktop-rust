@@ -74,7 +74,7 @@ impl Default for RenderControl {
             abort_sender: None,
             render_receiver: None,
             render_requested: true,
-            loading_scene: false,
+            loading_scene: true,
         }
     }
 }
@@ -135,10 +135,7 @@ impl App for SolstraleApp {
                         }
                     });
                     let save_output_button_clicked = ui
-                        .add_enabled(
-                            self.rendered_image.progress > 0.,
-                            Button::new("Save image"),
-                        )
+                        .add_enabled(self.rendered_image.progress > 0., Button::new("Save image"))
                         .clicked();
                     if save_output_button_clicked {
                         ui.close_menu();
@@ -157,7 +154,7 @@ impl App for SolstraleApp {
                     render_button_clicked,
                     &mut self.render_control,
                     &mut self.error_info,
-                    ui
+                    ui,
                 );
             });
         });
