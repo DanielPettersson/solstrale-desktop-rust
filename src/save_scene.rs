@@ -7,6 +7,10 @@ use std::fs;
 
 pub fn show(dialogs: &mut Dialogs) {
     let mut dialog = FileDialog::save_file(None).default_filename("scene.yaml");
+    dialog = dialog.filter(Box::new(|f| match f.extension() {
+        None => false,
+        Some(ext) => ext.eq_ignore_ascii_case("yaml"),
+    }));
     dialog.open();
     dialogs.save_scene_dialog = Some(dialog);
 }
