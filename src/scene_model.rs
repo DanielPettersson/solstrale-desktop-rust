@@ -6,9 +6,9 @@ use moka::sync::Cache;
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use solstrale::geo::vec3::Vec3;
-use solstrale::hittable::hittable_list::HittableList;
-use solstrale::hittable::obj_model::load_obj_model_with_default_material;
+use solstrale::hittable::load_obj_model_with_default_material;
 use solstrale::hittable::Hittable as HittableTrait;
+use solstrale::hittable::HittableList;
 use solstrale::hittable::Hittables;
 use solstrale::material::texture::{ImageTexture, SolidColor, Textures};
 use solstrale::material::{Dielectric, DiffuseLight, Materials};
@@ -81,7 +81,6 @@ impl Creator<Scene> for SceneModel {
 struct CameraConfig {
     vertical_fov_degrees: f64,
     aperture_size: f64,
-    focus_distance: f64,
     look_from: Pos,
     look_at: Pos,
 }
@@ -91,7 +90,6 @@ impl Creator<solstrale::camera::CameraConfig> for CameraConfig {
         Ok(solstrale::camera::CameraConfig {
             vertical_fov_degrees: self.vertical_fov_degrees,
             aperture_size: self.aperture_size,
-            focus_distance: self.focus_distance,
             look_from: self.look_from.create()?,
             look_at: self.look_at.create()?,
         })
@@ -296,7 +294,7 @@ struct Sphere {
 
 impl Creator<Hittables> for Sphere {
     fn create(&self) -> Result<Hittables, StdBox<dyn Error>> {
-        Ok(solstrale::hittable::sphere::Sphere::new(
+        Ok(solstrale::hittable::Sphere::new(
             self.center.create()?,
             self.radius,
             self.material.create()?,
@@ -321,9 +319,10 @@ impl Creator<Hittables> for Model {
     fn create(&self) -> Result<Hittables, StdBox<dyn Error>> {
         let pos = self.pos.create()?;
         let material = self.material.as_ref().map_or(
-            Ok(solstrale::material::Lambertian::new(SolidColor::new(
-                1., 1., 1.,
-            ))),
+            Ok(solstrale::material::Lambertian::new(
+                SolidColor::new(1., 1., 1.),
+                None,
+            )),
             |m| m.create(),
         )?;
 
@@ -335,7 +334,7 @@ impl Creator<Hittables> for Model {
 
         Ok(match self.angle_y {
             None => model,
-            Some(angle_y) => solstrale::hittable::rotation_y::RotationY::new(model, angle_y),
+            Some(angle_y) => solstrale::hittable::RotationY::new(model, angle_y),
         })
     }
 }
@@ -351,7 +350,7 @@ struct Quad {
 
 impl Creator<Hittables> for Quad {
     fn create(&self) -> Result<Hittables, StdBox<dyn Error>> {
-        Ok(solstrale::hittable::quad::Quad::new(
+        Ok(solstrale::hittable::Quad::new(
             self.q.create()?,
             self.u.create()?,
             self.v.create()?,
@@ -370,7 +369,7 @@ struct Box {
 
 impl Creator<Hittables> for Box {
     fn create(&self) -> Result<Hittables, StdBox<dyn Error>> {
-        Ok(solstrale::hittable::quad::Quad::new_box(
+        Ok(solstrale::hittable::Quad::new_box(
             self.a.create()?,
             self.b.create()?,
             self.material.create()?,
@@ -387,7 +386,7 @@ struct RotationY {
 
 impl Creator<Hittables> for RotationY {
     fn create(&self) -> Result<Hittables, StdBox<dyn Error>> {
-        Ok(solstrale::hittable::rotation_y::RotationY::new(
+        Ok(solstrale::hittable::RotationY::new(
             self.child.create()?,
             self.angle,
         ))
@@ -403,7 +402,7 @@ struct Translation {
 
 impl Creator<Hittables> for Translation {
     fn create(&self) -> Result<Hittables, StdBox<dyn Error>> {
-        Ok(solstrale::hittable::translation::Translation::new(
+        Ok(solstrale::hittable::Translation::new(
             self.child.create()?,
             self.offset.create()?,
         ))
@@ -500,20 +499,26 @@ struct Material {
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
 #[serde(deny_unknown_fields)]
 struct Lambertian {
-    texture: Texture,
+    albedo: Texture,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    normal: Option<Texture>,
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
 #[serde(deny_unknown_fields)]
 struct Glass {
-    texture: Texture,
+    albedo: Texture,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    normal: Option<Texture>,
     index_of_refraction: f64,
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
 #[serde(deny_unknown_fields)]
 struct Metal {
-    texture: Texture,
+    albedo: Texture,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    normal: Option<Texture>,
     fuzz: f64,
 }
 
@@ -531,19 +536,39 @@ impl Creator<Materials> for Material {
                 glass: None,
                 metal: None,
                 light: None,
-            } => Ok(solstrale::material::Lambertian::new(l.texture.create()?)),
+            } => Ok(solstrale::material::Lambertian::new(
+                l.albedo.create()?,
+                match l.normal.as_ref() {
+                    None => None,
+                    Some(n) => Some(n.create()?),
+                },
+            )),
             Material {
                 lambertian: None,
                 glass: Some(g),
                 metal: None,
                 light: None,
-            } => Ok(Dielectric::new(g.texture.create()?, g.index_of_refraction)),
+            } => Ok(Dielectric::new(
+                g.albedo.create()?,
+                match g.normal.as_ref() {
+                    None => None,
+                    Some(n) => Some(n.create()?),
+                },
+                g.index_of_refraction,
+            )),
             Material {
                 lambertian: None,
                 glass: None,
                 metal: Some(m),
                 light: None,
-            } => Ok(solstrale::material::Metal::new(m.texture.create()?, m.fuzz)),
+            } => Ok(solstrale::material::Metal::new(
+                m.albedo.create()?,
+                match m.normal.as_ref() {
+                    None => None,
+                    Some(n) => Some(n.create()?),
+                },
+                m.fuzz,
+            )),
             Material {
                 lambertian: None,
                 glass: None,
@@ -644,7 +669,7 @@ mod test {
                     radius: 1.0,
                     material: Material {
                         lambertian: Some(Lambertian {
-                            texture: Texture {
+                            albedo: Texture {
                                 color: Some(Rgb {
                                     r: 0.0,
                                     g: 0.0,
@@ -652,6 +677,7 @@ mod test {
                                 }),
                                 image: None,
                             },
+                            normal: None,
                         }),
                         glass: None,
                         metal: None,
@@ -667,7 +693,6 @@ mod test {
             camera: CameraConfig {
                 vertical_fov_degrees: 0.0,
                 aperture_size: 0.0,
-                focus_distance: 0.0,
                 look_from: Pos {
                     x: 0.0,
                     y: 0.0,
@@ -711,7 +736,6 @@ background_color: 0, 0, 0
 camera:
   vertical_fov_degrees: 0.0
   aperture_size: 0.0
-  focus_distance: 0.0
   look_from: 0, 0, 0
   look_at: 0, 0, 0
 world:
@@ -720,7 +744,7 @@ world:
     radius: 1.0
     material:
       lambertian:
-        texture:
+        albedo:
           color: 0, 0, 0
 ",
             yaml

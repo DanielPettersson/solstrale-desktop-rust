@@ -9,7 +9,6 @@ background_color: 0, 0, 0
 camera:
   vertical_fov_degrees: 35.0
   aperture_size: 0
-  focus_distance: 10
   look_from: 278, 278, -800
   look_at: 278, 278, 0
 world:
@@ -19,7 +18,7 @@ world:
       v: 0, 0, 555
       material:
         lambertian:
-          texture:
+          albedo:
             color: 0.12, 0.45, 0.15
   - quad:
       q: 0, 0, 0
@@ -27,7 +26,7 @@ world:
       v: 0, 0, 555
       material:
         lambertian:
-          texture:
+          albedo:
             color: 0.65, 0.05, 0.05
   - quad:
       q: 408, 554, 383
@@ -42,7 +41,7 @@ world:
       v: 0, 0, 555
       material:
         lambertian:
-          texture:
+          albedo:
             color: 0.73, 0.73, 0.73
   - quad:
       q: 555, 555, 555
@@ -50,7 +49,7 @@ world:
       v: 0, 0, -555
       material:
         lambertian:
-          texture:
+          albedo:
             color: 0.73, 0.73, 0.73
   - quad:
       q: 0, 0, 555
@@ -58,7 +57,7 @@ world:
       v: 0, 555, 0
       material:
         lambertian:
-          texture:
+          albedo:
             color: 0.73, 0.73, 0.73
   - translation:
       offset: 265, 0, 295
@@ -71,7 +70,7 @@ world:
               b: 165, 330, 165
               material:
                 lambertian:
-                  texture:
+                  albedo:
                     color: 0.73, 0.73, 0.73
   - translation:
       offset: 130, 0, 65
@@ -84,5 +83,5 @@ world:
               b: 165, 165, 165
               material:
                 lambertian:
-                  texture:
+                  albedo:
                     color: 0.73, 0.73, 0.73
