@@ -10,7 +10,7 @@ use solstrale::hittable::load_obj_model_with_default_material;
 use solstrale::hittable::Hittable as HittableTrait;
 use solstrale::hittable::HittableList;
 use solstrale::hittable::Hittables;
-use solstrale::material::texture::{ImageTexture, SolidColor, Textures};
+use solstrale::material::texture::{ImageMap, SolidColor, Textures};
 use solstrale::material::{Dielectric, DiffuseLight, Materials};
 use solstrale::post::{OidnPostProcessor, PostProcessors};
 use solstrale::renderer::shader::{
@@ -526,6 +526,8 @@ struct Metal {
 #[serde(deny_unknown_fields)]
 struct Light {
     color: Rgb,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    attenuation_half_length: Option<f64>,
 }
 
 impl Creator<Materials> for Material {
@@ -574,7 +576,7 @@ impl Creator<Materials> for Material {
                 glass: None,
                 metal: None,
                 light: Some(l),
-            } => Ok(DiffuseLight::new(l.color.r, l.color.g, l.color.b)),
+            } => Ok(DiffuseLight::new(l.color.r, l.color.g, l.color.b, l.attenuation_half_length)),
             _ => Err(StdBox::try_from(ModelError::new(
                 "Material should have single field defined",
             ))
@@ -642,7 +644,7 @@ impl Creator<Textures> for Texture {
             Texture {
                 color: None,
                 image: Some(im),
-            } => ImageTexture::load(im.file.as_ref()),
+            } => ImageMap::load(im.file.as_ref()),
             _ => Err(
                 StdBox::try_from(ModelError::new("Texture should have single field defined"))
                     .unwrap(),
