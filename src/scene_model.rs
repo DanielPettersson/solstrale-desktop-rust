@@ -327,15 +327,21 @@ impl Creator<Hittables> for Model {
         )?;
 
         let key = format!("{:?}", self);
-        let model = MODEL_CACHE.get_with(key, || {
+        let model_result = MODEL_CACHE.get_with(key.to_owned(), || {
             load_obj_model_with_default_material(&self.path, &self.name, self.scale, pos, material)
                 .map_err(|err| ModelError::new_from_err(err))
-        })?;
+        });
 
-        Ok(match self.angle_y {
-            None => model,
-            Some(angle_y) => solstrale::hittable::RotationY::new(model, angle_y),
-        })
+        match model_result {
+            Ok(model) => Ok(match self.angle_y {
+                None => model,
+                Some(angle_y) => solstrale::hittable::RotationY::new(model, angle_y),
+            }),
+            Err(err) => {
+                MODEL_CACHE.remove(&key);
+                Err(StdBox::new(err))
+            }
+        }
     }
 }
 
@@ -576,7 +582,12 @@ impl Creator<Materials> for Material {
                 glass: None,
                 metal: None,
                 light: Some(l),
-            } => Ok(DiffuseLight::new(l.color.r, l.color.g, l.color.b, l.attenuation_half_length)),
+            } => Ok(DiffuseLight::new(
+                l.color.r,
+                l.color.g,
+                l.color.b,
+                l.attenuation_half_length,
+            )),
             _ => Err(StdBox::try_from(ModelError::new(
                 "Material should have single field defined",
             ))
