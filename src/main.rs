@@ -54,11 +54,20 @@ struct SolstraleApp {
     dialogs: Dialogs,
 }
 
-#[derive(Default)]
 pub struct Dialogs {
-    load_scene_dialog: Option<FileDialog>,
-    save_scene_dialog: Option<FileDialog>,
-    save_output_dialog: Option<FileDialog>,
+    load_scene_dialog: FileDialog,
+    save_scene_dialog: FileDialog,
+    save_output_dialog: FileDialog,
+}
+
+impl Default for Dialogs {
+    fn default() -> Self {
+        Dialogs {
+            load_scene_dialog: load_scene::create(),
+            save_scene_dialog: save_scene::create(None),
+            save_output_dialog: save_output::create(),
+        }
+    }
 }
 
 pub struct RenderControl {
@@ -127,11 +136,11 @@ impl App for SolstraleApp {
                     ui.menu_button("Scene", |ui| {
                         if ui.button("Load").clicked() {
                             ui.close_menu();
-                            load_scene::show(&mut self.dialogs);
+                            self.dialogs.load_scene_dialog.open();
                         }
                         if ui.button("Save").clicked() {
                             ui.close_menu();
-                            save_scene::show(&mut self.dialogs);
+                            self.dialogs.save_scene_dialog.open();
                         }
                     });
                     let save_output_button_clicked = ui
@@ -139,7 +148,7 @@ impl App for SolstraleApp {
                         .clicked();
                     if save_output_button_clicked {
                         ui.close_menu();
-                        save_output::show(&mut self.dialogs);
+                        self.dialogs.save_output_dialog.open();
                     }
                 });
 
@@ -160,7 +169,8 @@ impl App for SolstraleApp {
         });
 
         load_scene::handle_dialog(
-            &mut self.dialogs,
+            &mut self.dialogs.load_scene_dialog,
+            &mut self.dialogs.save_scene_dialog,
             &mut self.error_info,
             &mut self.scene_yaml,
             &mut self.render_control,
@@ -168,20 +178,18 @@ impl App for SolstraleApp {
         );
 
         save_scene::handle_dialog(
-            &mut self.dialogs,
+            &mut self.dialogs.save_scene_dialog,
             &mut self.error_info,
             &self.scene_yaml,
             ctx,
         );
 
-        if self.dialogs.save_output_dialog.is_some() {
-            save_output::handle_dialog(
-                &mut self.dialogs,
-                &mut self.error_info,
-                &self.rendered_image,
-                ctx,
-            );
-        }
+        save_output::handle_dialog(
+            &mut self.dialogs.save_output_dialog,
+            &mut self.error_info,
+            &self.rendered_image,
+            ctx,
+        );
 
         TopBottomPanel::bottom("bottom-panel")
             .frame(egui::Frame {
