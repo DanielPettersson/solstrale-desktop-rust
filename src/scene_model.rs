@@ -266,6 +266,8 @@ struct Hittable {
     rotation_y: Option<RotationY>,
     #[serde(skip_serializing_if = "Option::is_none")]
     translation: Option<Translation>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    constant_medium: Option<ConstantMedium>,
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
@@ -415,6 +417,24 @@ impl Creator<Hittables> for Translation {
     }
 }
 
+#[derive(Serialize, Deserialize, PartialEq, Debug)]
+#[serde(deny_unknown_fields)]
+struct ConstantMedium {
+    child: StdBox<Hittable>,
+    density: f64,
+    color: Rgb,
+}
+
+impl Creator<Hittables> for ConstantMedium {
+    fn create(&self) -> Result<Hittables, StdBox<dyn Error>> {
+        Ok(solstrale::hittable::ConstantMedium::new(
+            self.child.create()?,
+            self.density,
+            self.color.into(),
+        ))
+    }
+}
+
 impl Creator<Hittables> for Hittable {
     fn create(&self) -> Result<Hittables, StdBox<dyn Error>> {
         match self {
@@ -426,6 +446,7 @@ impl Creator<Hittables> for Hittable {
                 r#box: None,
                 rotation_y: None,
                 translation: None,
+                constant_medium: None,
             } => l.create(),
             Hittable {
                 list: None,
@@ -435,6 +456,7 @@ impl Creator<Hittables> for Hittable {
                 r#box: None,
                 rotation_y: None,
                 translation: None,
+                constant_medium: None,
             } => s.create(),
             Hittable {
                 list: None,
@@ -444,6 +466,7 @@ impl Creator<Hittables> for Hittable {
                 r#box: None,
                 rotation_y: None,
                 translation: None,
+                constant_medium: None,
             } => m.create(),
             Hittable {
                 list: None,
@@ -453,6 +476,7 @@ impl Creator<Hittables> for Hittable {
                 r#box: None,
                 rotation_y: None,
                 translation: None,
+                constant_medium: None,
             } => q.create(),
             Hittable {
                 list: None,
@@ -462,6 +486,7 @@ impl Creator<Hittables> for Hittable {
                 r#box: Some(b),
                 rotation_y: None,
                 translation: None,
+                constant_medium: None,
             } => b.create(),
             Hittable {
                 list: None,
@@ -471,6 +496,7 @@ impl Creator<Hittables> for Hittable {
                 r#box: None,
                 rotation_y: Some(ry),
                 translation: None,
+                constant_medium: None,
             } => ry.create(),
             Hittable {
                 list: None,
@@ -480,7 +506,18 @@ impl Creator<Hittables> for Hittable {
                 r#box: None,
                 rotation_y: None,
                 translation: Some(t),
+                constant_medium: None,
             } => t.create(),
+            Hittable {
+                list: None,
+                sphere: None,
+                model: None,
+                quad: None,
+                r#box: None,
+                rotation_y: None,
+                translation: None,
+                constant_medium: Some(cm),
+            } => cm.create(),
             _ => Err(StdBox::try_from(ModelError::new(
                 "Hittable should have single field defined",
             ))
@@ -605,7 +642,7 @@ struct Texture {
     image: Option<Image>,
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Copy, Clone)]
 struct Rgb {
     r: f64,
     g: f64,
@@ -636,6 +673,12 @@ impl<'de> Deserialize<'de> for Rgb {
         let g = parse_option::<D>(split.next(), G)?;
         let b = parse_option::<D>(split.next(), B)?;
         Ok(Rgb { r, g, b })
+    }
+}
+
+impl From<Rgb> for Vec3 {
+    fn from(value: Rgb) -> Self {
+        Vec3::new(value.r, value.g, value.b)
     }
 }
 
@@ -702,6 +745,7 @@ mod test {
                 r#box: None,
                 rotation_y: None,
                 translation: None,
+                constant_medium: None,
             }],
             camera: CameraConfig {
                 vertical_fov_degrees: 0.0,
