@@ -158,13 +158,13 @@ impl Creator<Shaders> for Shader {
 #[serde(deny_unknown_fields)]
 struct PostProcessor {
     #[serde(skip_serializing_if = "Option::is_none")]
-    oidn: Option<NoParamPostProcessor>,
+    denoise: Option<NoParamPostProcessor>,
 }
 
 impl Creator<PostProcessors> for PostProcessor {
     fn create(&self) -> Result<PostProcessors, StdBox<dyn Error>> {
         match self {
-            PostProcessor { oidn: Some(_) } => Ok(OidnPostProcessor::new()),
+            PostProcessor { denoise: Some(_) } => Ok(OidnPostProcessor::new()),
             _ => Err(StdBox::try_from(ModelError::new(
                 "PostProcessor should have single field defined",
             ))
@@ -731,7 +731,7 @@ mod test {
                     normal: None,
                 },
                 post_processor: Some(PostProcessor {
-                    oidn: Some(NoParamPostProcessor {}),
+                    denoise: Some(NoParamPostProcessor {}),
                 }),
             },
         };
@@ -744,7 +744,7 @@ mod test {
     path_tracing:
       max_depth: 50
   post_processor:
-    oidn: {}
+    denoise: {}
 background_color: 0, 0, 0
 camera:
   vertical_fov_degrees: 0.0

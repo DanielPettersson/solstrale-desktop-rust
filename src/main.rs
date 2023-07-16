@@ -24,7 +24,7 @@ mod scene_model;
 mod yaml_editor;
 
 fn main() -> eframe::Result<()> {
-    let icon_bytes = include_bytes!("icon.png");
+    let icon_bytes = include_bytes!("../resources/icon.png");
     let icon = IconData::try_from_png_bytes(icon_bytes).expect("Failed to load application icon");
 
     let native_options = NativeOptions {
@@ -119,7 +119,7 @@ impl ErrorInfo {
 
 impl SolstraleApp {
     fn new(_: &eframe::CreationContext<'_>) -> Self {
-        let yaml = include_str!("scene.yaml");
+        let yaml = include_str!("../resources/scene.yaml");
 
         SolstraleApp {
             scene_yaml: yaml.parse().unwrap(),

@@ -4,7 +4,7 @@ render_configuration:
     path_tracing:
       max_depth: 50
   post_processor:
-    oidn: {}
+    denoise: {}
 background_color: 0, 0, 0
 camera:
   vertical_fov_degrees: 35.0
