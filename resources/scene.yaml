@@ -59,29 +59,23 @@ world:
         lambertian:
           albedo:
             color: 0.73, 0.73, 0.73
-  - translation:
-      offset: 265, 0, 295
-      child:
-        rotation_y:
-          angle: 15
-          child:
-            box:
-              a: 0, 0, 0
-              b: 165, 330, 165
-              material:
-                lambertian:
-                  albedo:
-                    color: 0.73, 0.73, 0.73
-  - translation:
-      offset: 130, 0, 65
-      child:
-        rotation_y:
-          angle: -18
-          child:
-            box:
-              a: 0, 0, 0
-              b: 165, 165, 165
-              material:
-                lambertian:
-                  albedo:
-                    color: 0.73, 0.73, 0.73
+  - box:
+      a: 0, 0, 0
+      b: 165, 330, 165
+      material:
+        lambertian:
+          albedo:
+            color: 0.73, 0.73, 0.73
+      transformations:
+        - rotation_y: 15
+        - translation: 265, 0, 295
+  - box:
+      a: 0, 0, 0
+      b: 165, 165, 165
+      material:
+        lambertian:
+          albedo:
+            color: 0.73, 0.73, 0.73
+      transformations:
+        - rotation_y: -18
+        - translation: 130, 0, 65

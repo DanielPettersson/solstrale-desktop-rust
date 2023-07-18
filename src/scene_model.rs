@@ -5,11 +5,15 @@ use derive_more::Display;
 use moka::sync::Cache;
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
+use solstrale::geo::transformation::{
+    RotationX, RotationY, RotationZ, Scale, Transformations, Transformer, Translation,
+};
 use solstrale::geo::vec3::Vec3;
-use solstrale::hittable::load_obj_model_with_default_material;
 use solstrale::hittable::Hittable as HittableTrait;
 use solstrale::hittable::HittableList;
 use solstrale::hittable::Hittables;
+use solstrale::loader::obj::Obj;
+use solstrale::loader::Loader;
 use solstrale::material::texture::{ImageMap, SolidColor, Textures};
 use solstrale::material::{Dielectric, DiffuseLight, Materials};
 use solstrale::post::{OidnPostProcessor, PostProcessors};
@@ -233,6 +237,12 @@ impl<'de> Deserialize<'de> for Pos {
     }
 }
 
+impl From<&Pos> for Vec3 {
+    fn from(value: &Pos) -> Self {
+        Vec3::new(value.x, value.y, value.z)
+    }
+}
+
 fn parse_option<'de, D>(a: Option<&str>, expected_field: &'static str) -> Result<f64, D::Error>
 where
     D: serde::de::Deserializer<'de>,
@@ -262,10 +272,6 @@ struct Hittable {
     quad: Option<Quad>,
     #[serde(skip_serializing_if = "Option::is_none")]
     r#box: Option<Box>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    rotation_y: Option<RotationY>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    translation: Option<Translation>,
     #[serde(skip_serializing_if = "Option::is_none")]
     constant_medium: Option<ConstantMedium>,
 }
@@ -309,17 +315,14 @@ impl Creator<Hittables> for Sphere {
 struct Model {
     path: String,
     name: String,
-    pos: Pos,
-    scale: f64,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    angle_y: Option<f64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     material: Option<Material>,
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
+    transformations: Vec<Transformation>,
 }
 
 impl Creator<Hittables> for Model {
     fn create(&self) -> Result<Hittables, StdBox<dyn Error>> {
-        let pos = self.pos.create()?;
         let material = self.material.as_ref().map_or(
             Ok(solstrale::material::Lambertian::new(
                 SolidColor::new(1., 1., 1.),
@@ -327,18 +330,17 @@ impl Creator<Hittables> for Model {
             )),
             |m| m.create(),
         )?;
+        let transformation = create_transformation(&self.transformations)?;
 
         let key = format!("{:?}", self);
         let model_result = MODEL_CACHE.get_with(key.to_owned(), || {
-            load_obj_model_with_default_material(&self.path, &self.name, self.scale, pos, material)
+            Obj::new(&self.path, &self.name)
+                .load(&transformation, Some(material))
                 .map_err(|err| ModelError::new_from_err(err))
         });
 
         match model_result {
-            Ok(model) => Ok(match self.angle_y {
-                None => model,
-                Some(angle_y) => solstrale::hittable::RotationY::new(model, angle_y),
-            }),
+            Ok(model) => Ok(model),
             Err(err) => {
                 MODEL_CACHE.remove(&key);
                 Err(StdBox::new(err))
@@ -354,6 +356,8 @@ struct Quad {
     u: Pos,
     v: Pos,
     material: Material,
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
+    transformations: Vec<Transformation>,
 }
 
 impl Creator<Hittables> for Quad {
@@ -363,6 +367,7 @@ impl Creator<Hittables> for Quad {
             self.u.create()?,
             self.v.create()?,
             self.material.create()?,
+            &create_transformation(&self.transformations)?,
         ))
     }
 }
@@ -373,6 +378,8 @@ struct Box {
     a: Pos,
     b: Pos,
     material: Material,
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
+    transformations: Vec<Transformation>,
 }
 
 impl Creator<Hittables> for Box {
@@ -381,38 +388,7 @@ impl Creator<Hittables> for Box {
             self.a.create()?,
             self.b.create()?,
             self.material.create()?,
-        ))
-    }
-}
-
-#[derive(Serialize, Deserialize, PartialEq, Debug)]
-#[serde(deny_unknown_fields)]
-struct RotationY {
-    child: StdBox<Hittable>,
-    angle: f64,
-}
-
-impl Creator<Hittables> for RotationY {
-    fn create(&self) -> Result<Hittables, StdBox<dyn Error>> {
-        Ok(solstrale::hittable::RotationY::new(
-            self.child.create()?,
-            self.angle,
-        ))
-    }
-}
-
-#[derive(Serialize, Deserialize, PartialEq, Debug)]
-#[serde(deny_unknown_fields)]
-struct Translation {
-    child: StdBox<Hittable>,
-    offset: Pos,
-}
-
-impl Creator<Hittables> for Translation {
-    fn create(&self) -> Result<Hittables, StdBox<dyn Error>> {
-        Ok(solstrale::hittable::Translation::new(
-            self.child.create()?,
-            self.offset.create()?,
+            &create_transformation(&self.transformations)?,
         ))
     }
 }
@@ -444,8 +420,6 @@ impl Creator<Hittables> for Hittable {
                 model: None,
                 quad: None,
                 r#box: None,
-                rotation_y: None,
-                translation: None,
                 constant_medium: None,
             } => l.create(),
             Hittable {
@@ -454,8 +428,6 @@ impl Creator<Hittables> for Hittable {
                 model: None,
                 quad: None,
                 r#box: None,
-                rotation_y: None,
-                translation: None,
                 constant_medium: None,
             } => s.create(),
             Hittable {
@@ -464,8 +436,6 @@ impl Creator<Hittables> for Hittable {
                 model: Some(m),
                 quad: None,
                 r#box: None,
-                rotation_y: None,
-                translation: None,
                 constant_medium: None,
             } => m.create(),
             Hittable {
@@ -474,8 +444,6 @@ impl Creator<Hittables> for Hittable {
                 model: None,
                 quad: Some(q),
                 r#box: None,
-                rotation_y: None,
-                translation: None,
                 constant_medium: None,
             } => q.create(),
             Hittable {
@@ -484,8 +452,6 @@ impl Creator<Hittables> for Hittable {
                 model: None,
                 quad: None,
                 r#box: Some(b),
-                rotation_y: None,
-                translation: None,
                 constant_medium: None,
             } => b.create(),
             Hittable {
@@ -494,28 +460,6 @@ impl Creator<Hittables> for Hittable {
                 model: None,
                 quad: None,
                 r#box: None,
-                rotation_y: Some(ry),
-                translation: None,
-                constant_medium: None,
-            } => ry.create(),
-            Hittable {
-                list: None,
-                sphere: None,
-                model: None,
-                quad: None,
-                r#box: None,
-                rotation_y: None,
-                translation: Some(t),
-                constant_medium: None,
-            } => t.create(),
-            Hittable {
-                list: None,
-                sphere: None,
-                model: None,
-                quad: None,
-                r#box: None,
-                rotation_y: None,
-                translation: None,
                 constant_medium: Some(cm),
             } => cm.create(),
             _ => Err(StdBox::try_from(ModelError::new(
@@ -707,6 +651,77 @@ impl Creator<Textures> for Texture {
     }
 }
 
+#[derive(Serialize, Deserialize, PartialEq, Debug)]
+#[serde(deny_unknown_fields)]
+struct Transformation {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    translation: Option<Pos>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    scale: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    rotation_x: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    rotation_y: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    rotation_z: Option<f64>,
+}
+
+impl Creator<StdBox<dyn Transformer>> for Transformation {
+    fn create(&self) -> Result<StdBox<dyn Transformer>, StdBox<dyn Error>> {
+        match self {
+            Transformation {
+                translation: Some(p),
+                scale: None,
+                rotation_x: None,
+                rotation_y: None,
+                rotation_z: None,
+            } => Ok(StdBox::new(Translation::new(p.into()))),
+            Transformation {
+                translation: None,
+                scale: Some(s),
+                rotation_x: None,
+                rotation_y: None,
+                rotation_z: None,
+            } => Ok(StdBox::new(Scale::new(*s))),
+            Transformation {
+                translation: None,
+                scale: None,
+                rotation_x: Some(r),
+                rotation_y: None,
+                rotation_z: None,
+            } => Ok(StdBox::new(RotationX::new(*r))),
+            Transformation {
+                translation: None,
+                scale: None,
+                rotation_x: None,
+                rotation_y: Some(r),
+                rotation_z: None,
+            } => Ok(StdBox::new(RotationY::new(*r))),
+            Transformation {
+                translation: None,
+                scale: None,
+                rotation_x: None,
+                rotation_y: None,
+                rotation_z: Some(r),
+            } => Ok(StdBox::new(RotationZ::new(*r))),
+            _ => Err(StdBox::try_from(ModelError::new(
+                "Transformation should have single field defined",
+            ))
+            .unwrap()),
+        }
+    }
+}
+
+fn create_transformation(
+    transformations: &Vec<Transformation>,
+) -> Result<Transformations, StdBox<dyn Error>> {
+    let mut trans: Vec<StdBox<dyn Transformer>> = Vec::with_capacity(transformations.len());
+    for t in transformations {
+        trans.push(t.create()?);
+    }
+    Ok(Transformations::new(trans))
+}
+
 #[cfg(test)]
 mod test {
     use crate::scene_model::*;
@@ -716,13 +731,20 @@ mod test {
         let scene = SceneModel {
             world: vec![Hittable {
                 list: None,
-                sphere: Some(Sphere {
-                    center: Pos {
-                        x: 0.0,
-                        y: 0.0,
-                        z: 0.0,
+                sphere: None,
+                model: None,
+                quad: None,
+                r#box: Some(Box {
+                    a: Pos {
+                        x: 1.,
+                        y: 2.,
+                        z: 3.,
                     },
-                    radius: 1.0,
+                    b: Pos {
+                        x: 4.,
+                        y: 5.,
+                        z: 6.,
+                    },
                     material: Material {
                         lambertian: Some(Lambertian {
                             albedo: Texture {
@@ -739,12 +761,14 @@ mod test {
                         metal: None,
                         light: None,
                     },
+                    transformations: vec![Transformation {
+                        translation: None,
+                        scale: None,
+                        rotation_x: Some(30.),
+                        rotation_y: None,
+                        rotation_z: None,
+                    }],
                 }),
-                model: None,
-                quad: None,
-                r#box: None,
-                rotation_y: None,
-                translation: None,
                 constant_medium: None,
             }],
             camera: CameraConfig {
@@ -796,13 +820,15 @@ camera:
   look_from: 0, 0, 0
   look_at: 0, 0, 0
 world:
-- sphere:
-    center: 0, 0, 0
-    radius: 1.0
+- box:
+    a: 1, 2, 3
+    b: 4, 5, 6
     material:
       lambertian:
         albedo:
           color: 0, 0, 0
+    transformations:
+    - rotation_x: 30.0
 ",
             yaml
         );
