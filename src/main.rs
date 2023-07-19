@@ -98,6 +98,7 @@ pub struct RenderedImage {
     pub texture_handle: Option<TextureHandle>,
     pub rgb_image: Option<RgbImage>,
     pub progress: f64,
+    pub fps: f64,
 }
 
 #[derive(Default)]
@@ -202,7 +203,13 @@ impl App for SolstraleApp {
                 ..Default::default()
             })
             .show(ctx, |ui| {
-                ui.add(ProgressBar::new(self.rendered_image.progress as f32));
+                ui.add(
+                    ProgressBar::new(self.rendered_image.progress as f32).text(format!(
+                        "{:.0}% {:.1}FPS",
+                        self.rendered_image.progress * 100.,
+                        self.rendered_image.fps
+                    )),
+                );
             });
 
         SidePanel::left("code-panel")

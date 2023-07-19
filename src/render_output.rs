@@ -40,6 +40,9 @@ pub fn render_output(
                         fs.as_slice(),
                     );
                     rendered_image.progress = render_progress.progress;
+                    if let Some(fps) = render_progress.fps {
+                        rendered_image.fps = fps;
+                    }
                     rendered_image.rgb_image = Some(image);
                     match rendered_image.texture_handle.as_mut() {
                         None => {
