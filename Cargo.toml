@@ -8,7 +8,7 @@ lto = true
 codegen-units = 1
 
 [dependencies]
-solstrale = "0.1.0"
+solstrale = "0.1.1"
 eframe = "0.22.0"
 egui_file = "0.9.0"
 image = "0.24.5"
@@ -21,3 +21,4 @@ syntect = { version = "5.0.0", default-features = false, features = [
 moka = "0.11.0"
 once_cell = "1.17.1"
 derive_more = "0.99.17"
+hhmmss = "0.1.0"

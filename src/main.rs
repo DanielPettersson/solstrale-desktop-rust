@@ -1,11 +1,13 @@
 use std::error::Error;
 use std::sync::mpsc::{Receiver, Sender};
+use std::time::Duration;
 
 use eframe::egui::{Button, Context, Margin, ProgressBar, SidePanel, TopBottomPanel, Vec2};
 use eframe::epaint::TextureHandle;
 use eframe::{egui, run_native, App, Frame, IconData, NativeOptions};
 use egui::{CentralPanel, ScrollArea, Window};
 use egui_file::FileDialog;
+use hhmmss::Hhmmss;
 use image::RgbImage;
 use solstrale::renderer::RenderProgress;
 
@@ -99,6 +101,7 @@ pub struct RenderedImage {
     pub rgb_image: Option<RgbImage>,
     pub progress: f64,
     pub fps: f64,
+    pub estimated_time_left: Duration,
 }
 
 #[derive(Default)]
@@ -205,9 +208,10 @@ impl App for SolstraleApp {
             .show(ctx, |ui| {
                 ui.add(
                     ProgressBar::new(self.rendered_image.progress as f32).text(format!(
-                        "{:.0}% {:.1}FPS",
+                        "{:.0}% {} {:.1}FPS",
                         self.rendered_image.progress * 100.,
-                        self.rendered_image.fps
+                        self.rendered_image.estimated_time_left.hhmmss(),
+                        self.rendered_image.fps,
                     )),
                 );
             });

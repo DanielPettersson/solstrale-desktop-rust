@@ -43,6 +43,7 @@ pub fn render_output(
                     if let Some(fps) = render_progress.fps {
                         rendered_image.fps = fps;
                     }
+                    rendered_image.estimated_time_left = render_progress.estimated_time_left;
                     rendered_image.rgb_image = Some(image);
                     match rendered_image.texture_handle.as_mut() {
                         None => {
