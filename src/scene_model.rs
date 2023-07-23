@@ -12,15 +12,15 @@ use solstrale::geo::vec3::Vec3;
 use solstrale::hittable::Hittable as HittableTrait;
 use solstrale::hittable::HittableList;
 use solstrale::hittable::Hittables;
-use solstrale::loader::obj::Obj;
 use solstrale::loader::Loader;
-use solstrale::material::texture::{ImageMap, SolidColor, Textures};
+use solstrale::loader::obj::Obj;
 use solstrale::material::{Dielectric, DiffuseLight, Materials};
+use solstrale::material::texture::{ImageMap, SolidColor, Textures};
 use solstrale::post::{OidnPostProcessor, PostProcessors};
+use solstrale::renderer::Scene;
 use solstrale::renderer::shader::{
     AlbedoShader, NormalShader, PathTracingShader, Shaders, SimpleShader,
 };
-use solstrale::renderer::Scene;
 
 static MODEL_CACHE: Lazy<Cache<String, Result<Hittables, ModelError>>> =
     Lazy::new(|| Cache::new(4));
@@ -162,18 +162,41 @@ impl Creator<Shaders> for Shader {
 #[serde(deny_unknown_fields)]
 struct PostProcessor {
     #[serde(skip_serializing_if = "Option::is_none")]
+    bloom: Option<BloomPostProcessor>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     denoise: Option<NoParamPostProcessor>,
 }
 
 impl Creator<PostProcessors> for PostProcessor {
     fn create(&self) -> Result<PostProcessors, StdBox<dyn Error>> {
         match self {
-            PostProcessor { denoise: Some(_) } => Ok(OidnPostProcessor::new()),
+            PostProcessor { bloom: Some(b), denoise: None } => b.create(),
+            PostProcessor { bloom: None, denoise: Some(_) } => Ok(OidnPostProcessor::new()),
             _ => Err(StdBox::try_from(ModelError::new(
                 "PostProcessor should have single field defined",
             ))
             .unwrap()),
         }
+    }
+}
+
+#[derive(Serialize, Deserialize, PartialEq, Debug)]
+#[serde(deny_unknown_fields)]
+struct BloomPostProcessor {
+    kernel_size_fraction: f64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    threshold: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    max_intensity: Option<f64>,
+}
+
+impl Creator<PostProcessors> for BloomPostProcessor {
+    fn create(&self) -> Result<PostProcessors, StdBox<dyn Error>> {
+        Ok(solstrale::post::BloomPostProcessor::new(
+            self.kernel_size_fraction,
+            self.threshold,
+            self.max_intensity)?
+        )
     }
 }
 
@@ -186,19 +209,23 @@ struct NoParamPostProcessor {}
 struct RenderConfig {
     samples_per_pixel: u32,
     shader: Shader,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    post_processor: Option<PostProcessor>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    post_processors: Vec<PostProcessor>,
 }
 
 impl Creator<solstrale::renderer::RenderConfig> for RenderConfig {
     fn create(&self) -> Result<solstrale::renderer::RenderConfig, StdBox<dyn Error>> {
+
+        let mut post_processors: Vec<PostProcessors> = Vec::new();
+
+        for p in &self.post_processors {
+            post_processors.push(p.create()?);
+        }
+
         Ok(solstrale::renderer::RenderConfig {
             samples_per_pixel: self.samples_per_pixel,
             shader: self.shader.create()?,
-            post_processor: match self.post_processor.as_ref() {
-                None => None,
-                Some(p) => Some(p.create()?),
-            },
+            post_processors,
         })
     }
 }
@@ -798,9 +825,16 @@ mod test {
                     albedo: None,
                     normal: None,
                 },
-                post_processor: Some(PostProcessor {
-                    denoise: Some(NoParamPostProcessor {}),
-                }),
+                post_processors: vec!(
+                    PostProcessor {
+                        bloom: Some(BloomPostProcessor { kernel_size_fraction: 0.1, threshold: Some(1.5), max_intensity: None }),
+                        denoise: None,
+                    },
+                    PostProcessor {
+                        bloom: None,
+                        denoise: Some(NoParamPostProcessor{}),
+                    }
+                ),
             },
         };
 
@@ -811,8 +845,11 @@ mod test {
   shader:
     path_tracing:
       max_depth: 50
-  post_processor:
-    denoise: {}
+  post_processors:
+  - bloom:
+      kernel_size_fraction: 0.1
+      threshold: 1.5
+  - denoise: {}
 background_color: 0, 0, 0
 camera:
   vertical_fov_degrees: 0.0
