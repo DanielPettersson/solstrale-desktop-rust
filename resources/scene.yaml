@@ -5,7 +5,7 @@ render_configuration:
       max_depth: 50
   post_processors:
     - bloom:
-        kernel_size_fraction: 0.05
+        kernel_size_fraction: 0.1
         max_intensity: 2
     - denoise: {}
 background_color: 0, 0, 0
