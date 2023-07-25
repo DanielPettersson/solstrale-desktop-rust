@@ -1,5 +1,6 @@
 use std::boxed::Box as StdBox;
 use std::error::Error;
+use std::time::Duration;
 
 use derive_more::Display;
 use moka::sync::Cache;
@@ -17,7 +18,7 @@ use solstrale::loader::obj::Obj;
 use solstrale::material::{Dielectric, DiffuseLight, Materials};
 use solstrale::material::texture::{ImageMap, SolidColor, Textures};
 use solstrale::post::{OidnPostProcessor, PostProcessors};
-use solstrale::renderer::Scene;
+use solstrale::renderer::{RenderImageStrategy, Scene};
 use solstrale::renderer::shader::{
     AlbedoShader, NormalShader, PathTracingShader, Shaders, SimpleShader,
 };
@@ -211,6 +212,7 @@ struct RenderConfig {
     shader: Shader,
     #[serde(skip_serializing_if = "Vec::is_empty")]
     post_processors: Vec<PostProcessor>,
+    preview_interval_ms: u64,
 }
 
 impl Creator<solstrale::renderer::RenderConfig> for RenderConfig {
@@ -226,6 +228,11 @@ impl Creator<solstrale::renderer::RenderConfig> for RenderConfig {
             samples_per_pixel: self.samples_per_pixel,
             shader: self.shader.create()?,
             post_processors,
+            render_image_strategy: if self.preview_interval_ms == 0 {
+                RenderImageStrategy::EverySample
+            } else {
+                RenderImageStrategy::Interval(Duration::from_millis(self.preview_interval_ms))
+            }
         })
     }
 }
@@ -835,6 +842,7 @@ mod test {
                         denoise: Some(NoParamPostProcessor{}),
                     }
                 ),
+                preview_interval_ms: 1000
             },
         };
 
@@ -850,6 +858,7 @@ mod test {
       kernel_size_fraction: 0.1
       threshold: 1.5
   - denoise: {}
+  preview_interval_ms: 1000
 background_color: 0, 0, 0
 camera:
   vertical_fov_degrees: 0.0

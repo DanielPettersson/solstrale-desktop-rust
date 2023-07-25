@@ -1,4 +1,5 @@
 render_configuration:
+  preview_interval_ms: 1000
   samples_per_pixel: 100
   shader:
     path_tracing:

@@ -33,28 +33,29 @@ pub fn render_output(
         match render_receiver.try_recv() {
             Ok(render_message) => match render_message {
                 RenderMessage::SampleRendered(render_progress) => {
-                    let image = render_progress.render_image;
-                    let fs = image.as_flat_samples();
-                    let color_image = ColorImage::from_rgb(
-                        [image.width() as usize, image.height() as usize],
-                        fs.as_slice(),
-                    );
+                    if let Some(image) = render_progress.render_image {
+                        let fs = image.as_flat_samples();
+                        let color_image = ColorImage::from_rgb(
+                            [image.width() as usize, image.height() as usize],
+                            fs.as_slice(),
+                        );
+                        rendered_image.rgb_image = Some(image);
+                        match rendered_image.texture_handle.as_mut() {
+                            None => {
+                                rendered_image.texture_handle = Some(ctx.load_texture(
+                                    "render_texture",
+                                    color_image,
+                                    TextureOptions::default(),
+                                ))
+                            }
+                            Some(handle) => handle.set(color_image, TextureOptions::default()),
+                        };
+                    }
                     rendered_image.progress = render_progress.progress;
                     if let Some(fps) = render_progress.fps {
                         rendered_image.fps = fps;
                     }
                     rendered_image.estimated_time_left = render_progress.estimated_time_left;
-                    rendered_image.rgb_image = Some(image);
-                    match rendered_image.texture_handle.as_mut() {
-                        None => {
-                            rendered_image.texture_handle = Some(ctx.load_texture(
-                                "render_texture",
-                                color_image,
-                                TextureOptions::default(),
-                            ))
-                        }
-                        Some(handle) => handle.set(color_image, TextureOptions::default()),
-                    };
                     render_control.loading_scene = false;
                 }
                 RenderMessage::Error(error_message) => {
