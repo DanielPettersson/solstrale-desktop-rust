@@ -2,9 +2,9 @@ use std::error::Error;
 use std::sync::mpsc::{Receiver, Sender};
 use std::time::Duration;
 
+use eframe::{App, egui, Frame, IconData, NativeOptions, run_native};
 use eframe::egui::{Button, Context, Margin, ProgressBar, SidePanel, TopBottomPanel, Vec2};
 use eframe::epaint::TextureHandle;
-use eframe::{egui, run_native, App, Frame, IconData, NativeOptions};
 use egui::{CentralPanel, ScrollArea, Window};
 use egui_file::FileDialog;
 use hhmmss::Hhmmss;
@@ -13,6 +13,7 @@ use solstrale::renderer::RenderProgress;
 
 use yaml_editor::yaml_editor;
 
+use crate::keyboard::is_enter;
 use crate::render_output::render_output;
 use crate::yaml_editor::create_layouter;
 
@@ -24,6 +25,7 @@ mod save_output;
 mod save_scene;
 mod scene_model;
 mod yaml_editor;
+mod keyboard;
 
 fn main() -> eframe::Result<()> {
     let icon_bytes = include_bytes!("../resources/icon.png");
@@ -223,7 +225,7 @@ impl App for SolstraleApp {
             })
             .show(ctx, |ui| {
                 ScrollArea::vertical().show(ui, |ui| {
-                    ui.add(yaml_editor(
+                    let response = ui.add(yaml_editor(
                         &mut self.scene_yaml,
                         &mut create_layouter(),
                         Vec2 {
@@ -231,6 +233,10 @@ impl App for SolstraleApp {
                             y: ui.available_height(),
                         },
                     ));
+
+                    if is_enter(ui) {
+                        yaml_editor::indent_new_line(&mut self.scene_yaml, ctx, response.id);
+                    }
                 });
             });
 

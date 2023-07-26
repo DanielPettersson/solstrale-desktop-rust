@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use eframe::egui;
 use eframe::egui::text::{LayoutJob, LayoutSection};
-use eframe::egui::{Galley, TextBuffer, TextEdit, TextFormat, Ui, Vec2};
+use eframe::egui::{Context, Galley, Id, TextBuffer, TextEdit, TextFormat, Ui, Vec2};
 use egui::util::cache::{ComputerMut, FrameCache};
 
 pub fn yaml_editor<'a, L>(text: &'a mut dyn TextBuffer, layouter: &'a mut L, min_size: Vec2) -> TextEdit<'a>
@@ -13,6 +13,26 @@ pub fn yaml_editor<'a, L>(text: &'a mut dyn TextBuffer, layouter: &'a mut L, min
         .layouter(layouter)
 }
 
+pub fn indent_new_line(text: &mut dyn TextBuffer, ctx: &Context, editor_id: Id) {
+    if let Some(mut state) = TextEdit::load_state(ctx, editor_id) {
+        if let Some(range) = state.ccursor_range() {
+            let idx = range.primary.index;
+
+            if let Some(last_line) = text.char_range(0..idx).lines().last() {
+                let num_spaces_at_start = last_line.chars().take_while(|ch| *ch == ' ').count();
+                let ends_with_colon = last_line.chars().last().unwrap_or(' ') == ':';
+                let space_indent = num_spaces_at_start + if ends_with_colon { 2 } else { 0 };
+
+                text.insert_text(&" ".repeat(space_indent), idx);
+
+                let cursor = egui::text::CCursor::new(idx + space_indent);
+                state.set_ccursor_range(Some(egui::text::CCursorRange::one(cursor)));
+                state.store(ctx, editor_id);
+            }
+        }
+    }
+}
+
 pub fn create_layouter() -> fn(&Ui, &str, f32) -> Arc<Galley> {
     |ui: &Ui, string: &str, _wrap_width: f32| {
         let layout_job = highlight(ui.ctx(), string);
@@ -20,7 +40,7 @@ pub fn create_layouter() -> fn(&Ui, &str, f32) -> Arc<Galley> {
     }
 }
 
-fn highlight(ctx: &egui::Context, code: &str) -> LayoutJob {
+fn highlight(ctx: &Context, code: &str) -> LayoutJob {
     impl ComputerMut<&str, LayoutJob> for Highlighter {
         fn compute(&mut self, code: &str) -> LayoutJob {
             self.highlight(code)

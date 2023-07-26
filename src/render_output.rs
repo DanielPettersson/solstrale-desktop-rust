@@ -104,7 +104,7 @@ fn render(
 
         // Not too fancy, solution. But adding a sleep here avoids flickering
         // when restarting rendering with a scene that loads really fast
-        thread::sleep(Duration::from_millis(500));
+        thread::sleep(Duration::from_millis(300));
 
         let res = (|| match create_scene(&scene_yaml_str)?.create() {
             Ok(scene) => ray_trace(
