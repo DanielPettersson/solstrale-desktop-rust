@@ -1,5 +1,6 @@
 use std::sync::mpsc::{channel, Receiver, Sender, TryRecvError};
 use std::thread;
+use std::time::Duration;
 
 use eframe::egui::{Color32, ColorImage, Context, Image, TextureOptions, Vec2};
 use solstrale::ray_trace;
@@ -100,6 +101,11 @@ fn render(
     let scene_yaml_str = scene_yaml.to_string();
 
     thread::spawn(move || {
+
+        // Not too fancy, solution. But adding a sleep here avoids flickering
+        // when restarting rendering with a scene that loads really fast
+        thread::sleep(Duration::from_millis(500));
+
         let res = (|| match create_scene(&scene_yaml_str)?.create() {
             Ok(scene) => ray_trace(
                 render_size.x as u32,
