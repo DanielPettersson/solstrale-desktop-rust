@@ -21,7 +21,7 @@ mod load_scene;
 mod loading_output;
 mod render_button;
 mod render_output;
-mod save_output;
+mod save_image;
 mod save_scene;
 mod scene_model;
 mod yaml_editor;
@@ -69,27 +69,19 @@ impl Default for Dialogs {
         Dialogs {
             load_scene_dialog: load_scene::create(),
             save_scene_dialog: save_scene::create(None),
-            save_output_dialog: save_output::create(),
+            save_output_dialog: save_image::create(),
         }
     }
 }
 
+#[derive(Default)]
 pub struct RenderControl {
     pub abort_sender: Option<Sender<bool>>,
     pub render_receiver: Option<Receiver<RenderMessage>>,
     pub render_requested: bool,
     pub loading_scene: bool,
-}
-
-impl Default for RenderControl {
-    fn default() -> Self {
-        Self {
-            abort_sender: None,
-            render_receiver: None,
-            render_requested: true,
-            loading_scene: true,
-        }
-    }
+    initial_render_started: bool,
+    previous_frame_render_size: Vec2,
 }
 
 pub enum RenderMessage {
@@ -158,19 +150,23 @@ impl App for SolstraleApp {
                     }
                 });
 
+                let render_button_enabled = render_button::is_enabled(&self.render_control);
+
                 let render_button_clicked = ui
                     .add_enabled(
-                        render_button::is_enabled(&self.render_control),
+                        render_button_enabled,
                         Button::new("Render"),
                     )
                     .clicked();
 
-                render_button::handle_click(
-                    render_button_clicked,
-                    &mut self.render_control,
-                    &mut self.error_info,
-                    ui,
-                );
+                if render_button_enabled {
+                    render_button::handle_click(
+                        render_button_clicked,
+                        &mut self.render_control,
+                        &mut self.error_info,
+                        ui,
+                    );
+                }
             });
         });
 
@@ -190,7 +186,7 @@ impl App for SolstraleApp {
             ctx,
         );
 
-        save_output::handle_dialog(
+        save_image::handle_dialog(
             &mut self.dialogs.save_output_dialog,
             &mut self.error_info,
             &self.rendered_image,
@@ -246,6 +242,18 @@ impl App for SolstraleApp {
                 ..Default::default()
             })
             .show(ctx, |ui| {
+
+                // When window is first displayed, the available size can change in the
+                // first few frames. So here we wait until the layout stabilizes until kicking off
+                // the initial rendering, as to get 1:1 match to display pixel size
+                if !self.render_control.initial_render_started {
+                    if self.render_control.previous_frame_render_size == ui.available_size() {
+                        self.render_control.render_requested = true;
+                        self.render_control.initial_render_started = true;
+                    }
+                    self.render_control.previous_frame_render_size = ui.available_size();
+                }
+
                 match render_output(
                     &mut self.render_control,
                     &mut self.rendered_image,

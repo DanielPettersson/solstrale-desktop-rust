@@ -79,7 +79,7 @@ pub fn render_output(
         let texture_handle = rendered_image.texture_handle.get_or_insert_with(|| {
             ctx.load_texture(
                 "",
-                ColorImage::new([1, 1], Color32::BLACK),
+                ColorImage::new([render_size.x as usize, render_size.y as usize], Color32::BLACK),
                 TextureOptions::default(),
             )
         });
