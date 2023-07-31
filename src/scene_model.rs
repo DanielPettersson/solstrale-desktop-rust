@@ -10,7 +10,7 @@ use solstrale::geo::transformation::{
     RotationX, RotationY, RotationZ, Scale, Transformations, Transformer, Translation,
 };
 use solstrale::geo::vec3::Vec3;
-use solstrale::hittable::Hittable as HittableTrait;
+use solstrale::hittable::Bvh;
 use solstrale::hittable::HittableList;
 use solstrale::hittable::Hittables;
 use solstrale::loader::Loader;
@@ -67,13 +67,13 @@ pub struct SceneModel {
 
 impl Creator<Scene> for SceneModel {
     fn create(&self) -> Result<Scene, StdBox<dyn Error>> {
-        let mut list = HittableList::new();
+        let mut list = Vec::new();
         for child in self.world.iter() {
-            list.add(child.create()?)
+            list.append(&mut child.create()?)
         }
 
         Ok(Scene {
-            world: list,
+            world: Bvh::new(list)?,
             camera: self.camera.create()?,
             background_color: self.background_color.create()?,
             render_config: self.render_configuration.create()?,
@@ -318,11 +318,11 @@ struct List {
 
 impl Creator<Hittables> for List {
     fn create(&self) -> Result<Hittables, StdBox<dyn Error>> {
-        let mut list = HittableList::new();
+        let mut list = Vec::new();
         for child in self.children.iter() {
-            list.add(child.create()?)
+            list.append(&mut child.create()?)
         }
-        Ok(list)
+        Ok(HittableList::new(list))
     }
 }
 
@@ -416,8 +416,8 @@ struct Box {
     transformations: Vec<Transformation>,
 }
 
-impl Creator<Hittables> for Box {
-    fn create(&self) -> Result<Hittables, StdBox<dyn Error>> {
+impl Creator<Vec<Hittables>> for Box {
+    fn create(&self) -> Result<Vec<Hittables>, StdBox<dyn Error>> {
         Ok(solstrale::hittable::Quad::new_box(
             self.a.create()?,
             self.b.create()?,
@@ -437,16 +437,24 @@ struct ConstantMedium {
 
 impl Creator<Hittables> for ConstantMedium {
     fn create(&self) -> Result<Hittables, StdBox<dyn Error>> {
+        let children = self.child.create()?;
+
+        let child = if children.len() == 1 {
+            children.get(0).unwrap().clone()
+        } else {
+            HittableList::new(children)
+        };
+
         Ok(solstrale::hittable::ConstantMedium::new(
-            self.child.create()?,
+            child,
             self.density,
             self.color.into(),
         ))
     }
 }
 
-impl Creator<Hittables> for Hittable {
-    fn create(&self) -> Result<Hittables, StdBox<dyn Error>> {
+impl Creator<Vec<Hittables>> for Hittable {
+    fn create(&self) -> Result<Vec<Hittables>, StdBox<dyn Error>> {
         match self {
             Hittable {
                 list: Some(l),
@@ -455,7 +463,7 @@ impl Creator<Hittables> for Hittable {
                 quad: None,
                 r#box: None,
                 constant_medium: None,
-            } => l.create(),
+            } => l.create().map(|h| vec![h]),
             Hittable {
                 list: None,
                 sphere: Some(s),
@@ -463,7 +471,7 @@ impl Creator<Hittables> for Hittable {
                 quad: None,
                 r#box: None,
                 constant_medium: None,
-            } => s.create(),
+            } => s.create().map(|h| vec![h]),
             Hittable {
                 list: None,
                 sphere: None,
@@ -471,7 +479,7 @@ impl Creator<Hittables> for Hittable {
                 quad: None,
                 r#box: None,
                 constant_medium: None,
-            } => m.create(),
+            } => m.create().map(|h| vec![h]),
             Hittable {
                 list: None,
                 sphere: None,
@@ -479,7 +487,7 @@ impl Creator<Hittables> for Hittable {
                 quad: Some(q),
                 r#box: None,
                 constant_medium: None,
-            } => q.create(),
+            } => q.create().map(|h| vec![h]),
             Hittable {
                 list: None,
                 sphere: None,
@@ -495,7 +503,7 @@ impl Creator<Hittables> for Hittable {
                 quad: None,
                 r#box: None,
                 constant_medium: Some(cm),
-            } => cm.create(),
+            } => cm.create().map(|h| vec![h]),
             _ => Err(StdBox::try_from(ModelError::new(
                 "Hittable should have single field defined",
             ))

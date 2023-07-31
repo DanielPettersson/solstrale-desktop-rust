@@ -33,6 +33,7 @@ pub fn handle_dialog(
                         Ok(_) => {
                             scene_yaml.replace(&file_content);
                             *save_scene_dialog = save_scene::create(Some(PathBuf::from(file_path)));
+                            error_info.show_error = false;
                             render_control.render_requested = true;
                         }
                         Err(err) => error_info.handle(Box::new(err)),
