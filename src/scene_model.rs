@@ -11,17 +11,16 @@ use solstrale::geo::transformation::{
 };
 use solstrale::geo::vec3::Vec3;
 use solstrale::hittable::Bvh;
-use solstrale::hittable::HittableList;
 use solstrale::hittable::Hittables;
-use solstrale::loader::Loader;
 use solstrale::loader::obj::Obj;
-use solstrale::material::{Dielectric, DiffuseLight, Materials};
+use solstrale::loader::Loader;
 use solstrale::material::texture::{ImageMap, SolidColor, Textures};
+use solstrale::material::{Dielectric, DiffuseLight, Materials};
 use solstrale::post::{OidnPostProcessor, PostProcessors};
-use solstrale::renderer::{RenderImageStrategy, Scene};
 use solstrale::renderer::shader::{
     AlbedoShader, NormalShader, PathTracingShader, Shaders, SimpleShader,
 };
+use solstrale::renderer::{RenderImageStrategy, Scene};
 
 static MODEL_CACHE: Lazy<Cache<String, Result<Hittables, ModelError>>> =
     Lazy::new(|| Cache::new(4));
@@ -73,7 +72,7 @@ impl Creator<Scene> for SceneModel {
         }
 
         Ok(Scene {
-            world: Bvh::new(list)?,
+            world: Bvh::new(list),
             camera: self.camera.create()?,
             background_color: self.background_color.create()?,
             render_config: self.render_configuration.create()?,
@@ -171,8 +170,14 @@ struct PostProcessor {
 impl Creator<PostProcessors> for PostProcessor {
     fn create(&self) -> Result<PostProcessors, StdBox<dyn Error>> {
         match self {
-            PostProcessor { bloom: Some(b), denoise: None } => b.create(),
-            PostProcessor { bloom: None, denoise: Some(_) } => Ok(OidnPostProcessor::new()),
+            PostProcessor {
+                bloom: Some(b),
+                denoise: None,
+            } => b.create(),
+            PostProcessor {
+                bloom: None,
+                denoise: Some(_),
+            } => Ok(OidnPostProcessor::new()),
             _ => Err(StdBox::try_from(ModelError::new(
                 "PostProcessor should have single field defined",
             ))
@@ -196,8 +201,8 @@ impl Creator<PostProcessors> for BloomPostProcessor {
         Ok(solstrale::post::BloomPostProcessor::new(
             self.kernel_size_fraction,
             self.threshold,
-            self.max_intensity)?
-        )
+            self.max_intensity,
+        )?)
     }
 }
 
@@ -217,7 +222,6 @@ struct RenderConfig {
 
 impl Creator<solstrale::renderer::RenderConfig> for RenderConfig {
     fn create(&self) -> Result<solstrale::renderer::RenderConfig, StdBox<dyn Error>> {
-
         let mut post_processors: Vec<PostProcessors> = Vec::new();
 
         for p in &self.post_processors {
@@ -232,7 +236,7 @@ impl Creator<solstrale::renderer::RenderConfig> for RenderConfig {
                 RenderImageStrategy::EverySample
             } else {
                 RenderImageStrategy::Interval(Duration::from_millis(self.preview_interval_ms))
-            }
+            },
         })
     }
 }
@@ -297,8 +301,6 @@ impl Creator<Vec3> for Pos {
 #[serde(deny_unknown_fields)]
 struct Hittable {
     #[serde(skip_serializing_if = "Option::is_none")]
-    list: Option<List>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     sphere: Option<Sphere>,
     #[serde(skip_serializing_if = "Option::is_none")]
     model: Option<Model>,
@@ -308,22 +310,6 @@ struct Hittable {
     r#box: Option<Box>,
     #[serde(skip_serializing_if = "Option::is_none")]
     constant_medium: Option<ConstantMedium>,
-}
-
-#[derive(Serialize, Deserialize, PartialEq, Debug)]
-#[serde(deny_unknown_fields)]
-struct List {
-    children: Vec<Hittable>,
-}
-
-impl Creator<Hittables> for List {
-    fn create(&self) -> Result<Hittables, StdBox<dyn Error>> {
-        let mut list = Vec::new();
-        for child in self.children.iter() {
-            list.append(&mut child.create()?)
-        }
-        Ok(HittableList::new(list))
-    }
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
@@ -442,7 +428,7 @@ impl Creator<Hittables> for ConstantMedium {
         let child = if children.len() == 1 {
             children.get(0).unwrap().clone()
         } else {
-            HittableList::new(children)
+            Bvh::new(children)
         };
 
         Ok(solstrale::hittable::ConstantMedium::new(
@@ -457,15 +443,6 @@ impl Creator<Vec<Hittables>> for Hittable {
     fn create(&self) -> Result<Vec<Hittables>, StdBox<dyn Error>> {
         match self {
             Hittable {
-                list: Some(l),
-                sphere: None,
-                model: None,
-                quad: None,
-                r#box: None,
-                constant_medium: None,
-            } => l.create().map(|h| vec![h]),
-            Hittable {
-                list: None,
                 sphere: Some(s),
                 model: None,
                 quad: None,
@@ -473,7 +450,6 @@ impl Creator<Vec<Hittables>> for Hittable {
                 constant_medium: None,
             } => s.create().map(|h| vec![h]),
             Hittable {
-                list: None,
                 sphere: None,
                 model: Some(m),
                 quad: None,
@@ -481,7 +457,6 @@ impl Creator<Vec<Hittables>> for Hittable {
                 constant_medium: None,
             } => m.create().map(|h| vec![h]),
             Hittable {
-                list: None,
                 sphere: None,
                 model: None,
                 quad: Some(q),
@@ -489,7 +464,6 @@ impl Creator<Vec<Hittables>> for Hittable {
                 constant_medium: None,
             } => q.create().map(|h| vec![h]),
             Hittable {
-                list: None,
                 sphere: None,
                 model: None,
                 quad: None,
@@ -497,7 +471,6 @@ impl Creator<Vec<Hittables>> for Hittable {
                 constant_medium: None,
             } => b.create(),
             Hittable {
-                list: None,
                 sphere: None,
                 model: None,
                 quad: None,
@@ -772,7 +745,6 @@ mod test {
     fn serde() {
         let scene = SceneModel {
             world: vec![Hittable {
-                list: None,
                 sphere: None,
                 model: None,
                 quad: None,
@@ -840,17 +812,21 @@ mod test {
                     albedo: None,
                     normal: None,
                 },
-                post_processors: vec!(
+                post_processors: vec![
                     PostProcessor {
-                        bloom: Some(BloomPostProcessor { kernel_size_fraction: 0.1, threshold: Some(1.5), max_intensity: None }),
+                        bloom: Some(BloomPostProcessor {
+                            kernel_size_fraction: 0.1,
+                            threshold: Some(1.5),
+                            max_intensity: None,
+                        }),
                         denoise: None,
                     },
                     PostProcessor {
                         bloom: None,
-                        denoise: Some(NoParamPostProcessor{}),
-                    }
-                ),
-                preview_interval_ms: 1000
+                        denoise: Some(NoParamPostProcessor {}),
+                    },
+                ],
+                preview_interval_ms: 1000,
             },
         };
 

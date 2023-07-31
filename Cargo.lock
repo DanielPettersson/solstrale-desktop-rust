@@ -2669,9 +2669,9 @@ dependencies = [
 
 [[package]]
 name = "solstrale"
-version = "0.1.4"
+version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b8d44e428965b32f4ceebd0fa5e1ad11d34ae9bf9249b43e928a1593afcbf423"
+checksum = "273081337b3d4109cdf51e9781ac53e1b38ad1aa2ea264b4870d01930e7ce5c2"
 dependencies = [
  "derive_more",
  "enum_dispatch",
