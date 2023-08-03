@@ -15,6 +15,7 @@ camera:
   aperture_size: 0
   look_from: 278, 278, -800
   look_at: 278, 278, 0
+  up: 0, 1, 0
 world:
   - quad:
       q: 555, 0, 0

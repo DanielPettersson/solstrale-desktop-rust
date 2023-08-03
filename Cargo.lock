@@ -2002,6 +2002,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "oidn"
+version = "1.4.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6f67268fd95dd8a3b3fbd4bb66f70fbd64a212d2e217ac86f6a7a093271bbd96"
+dependencies = [
+ "num_enum 0.5.11",
+]
+
+[[package]]
 name = "once_cell"
 version = "1.18.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2669,14 +2678,15 @@ dependencies = [
 
 [[package]]
 name = "solstrale"
-version = "0.1.5"
+version = "0.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "273081337b3d4109cdf51e9781ac53e1b38ad1aa2ea264b4870d01930e7ce5c2"
+checksum = "2ed7513375bebde28ca1a5451a2a70a7d1a84028016461133ae2ecc82ef16f18"
 dependencies = [
  "derive_more",
  "enum_dispatch",
  "fastrand 2.0.0",
  "image",
+ "oidn",
  "rayon",
  "simple-error",
  "tobj",

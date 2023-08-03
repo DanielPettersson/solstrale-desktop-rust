@@ -87,6 +87,7 @@ struct CameraConfig {
     aperture_size: f64,
     look_from: Pos,
     look_at: Pos,
+    up: Pos,
 }
 
 impl Creator<solstrale::camera::CameraConfig> for CameraConfig {
@@ -96,6 +97,7 @@ impl Creator<solstrale::camera::CameraConfig> for CameraConfig {
             aperture_size: self.aperture_size,
             look_from: self.look_from.create()?,
             look_at: self.look_at.create()?,
+            up: self.up.create()?,
         })
     }
 }
@@ -798,6 +800,11 @@ mod test {
                     y: 0.0,
                     z: 0.0,
                 },
+                up: Pos {
+                    x: 0.0,
+                    y: 1.0,
+                    z: 0.0,
+                }
             },
             background_color: Pos {
                 x: 0.0,
@@ -849,6 +856,7 @@ camera:
   aperture_size: 0.0
   look_from: 0, 0, 0
   look_at: 0, 0, 0
+  up: 0, 1, 0
 world:
 - box:
     a: 1, 2, 3
