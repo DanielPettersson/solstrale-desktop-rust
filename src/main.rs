@@ -26,6 +26,7 @@ mod save_scene;
 mod scene_model;
 mod yaml_editor;
 mod keyboard;
+mod help;
 
 fn main() -> eframe::Result<()> {
     let icon_bytes = include_bytes!("../resources/icon.png");
@@ -34,7 +35,7 @@ fn main() -> eframe::Result<()> {
     let native_options = NativeOptions {
         resizable: true,
         initial_window_size: Some(Vec2 {
-            x: 1100.0,
+            x: 1400.0,
             y: 800.0,
         }),
         icon_data: Some(icon),
@@ -214,6 +215,8 @@ impl App for SolstraleApp {
                 );
             });
 
+
+        let mut yaml_cursor_idx: Option<usize> = None;
         SidePanel::left("code-panel")
             .frame(egui::Frame {
                 inner_margin: Margin::same(2.),
@@ -229,12 +232,22 @@ impl App for SolstraleApp {
                             y: ui.available_height(),
                         },
                     ));
+                    yaml_cursor_idx = yaml_editor::cursor_char_offset(ctx, response.id);
 
                     if is_enter(ui) {
                         yaml_editor::indent_new_line(&mut self.scene_yaml, ctx, response.id);
                     }
                 });
             });
+
+        SidePanel::right("help-panel").frame(egui::Frame {
+            inner_margin: Margin::same(2.),
+            ..Default::default()
+        }).min_width(300.0).show(ctx, |ui| help::show(
+            ui,
+            yaml_cursor_idx,
+            &self.scene_yaml,
+        ));
 
         CentralPanel::default()
             .frame(egui::Frame {

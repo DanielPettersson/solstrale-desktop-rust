@@ -1,7 +1,8 @@
 use std::sync::Arc;
+
 use eframe::egui;
-use eframe::egui::text::{LayoutJob, LayoutSection};
 use eframe::egui::{Context, Galley, Id, TextBuffer, TextEdit, TextFormat, Ui, Vec2};
+use eframe::egui::text::{LayoutJob, LayoutSection};
 use egui::util::cache::{ComputerMut, FrameCache};
 
 pub fn yaml_editor<'a, L>(text: &'a mut dyn TextBuffer, layouter: &'a mut L, min_size: Vec2) -> TextEdit<'a>
@@ -11,6 +12,11 @@ pub fn yaml_editor<'a, L>(text: &'a mut dyn TextBuffer, layouter: &'a mut L, min
         .desired_width(f32::INFINITY)
         .min_size(min_size)
         .layouter(layouter)
+}
+
+pub fn cursor_char_offset(ctx: &Context, editor_id: Id) -> Option<usize> {
+    TextEdit::load_state(ctx, editor_id)
+        .and_then(|state| state.ccursor_range().map(|range| range.primary.index))
 }
 
 pub fn indent_new_line(text: &mut dyn TextBuffer, ctx: &Context, editor_id: Id) {
