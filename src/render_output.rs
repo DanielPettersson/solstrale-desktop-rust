@@ -5,7 +5,7 @@ use std::time::Duration;
 use eframe::egui::{Color32, ColorImage, Context, Image, TextureOptions, Vec2};
 use solstrale::ray_trace;
 
-use crate::scene_model::{create_scene, Creator};
+use crate::model::{parse_scene_yaml, Creator};
 use crate::{ErrorInfo, RenderControl, RenderMessage, RenderedImage};
 
 pub fn render_output(
@@ -106,7 +106,7 @@ fn render(
         // when restarting rendering with a scene that loads really fast
         thread::sleep(Duration::from_millis(300));
 
-        let res = (|| match create_scene(&scene_yaml_str)?.create() {
+        let res = (|| match parse_scene_yaml(&scene_yaml_str)?.create() {
             Ok(scene) => ray_trace(
                 render_size.x as u32,
                 render_size.y as u32,

@@ -23,10 +23,10 @@ mod render_button;
 mod render_output;
 mod save_image;
 mod save_scene;
-mod scene_model;
 mod yaml_editor;
 mod keyboard;
 mod help;
+mod model;
 
 fn main() -> eframe::Result<()> {
     let icon_bytes = include_bytes!("../resources/icon.png");
