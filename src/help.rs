@@ -1,12 +1,15 @@
 use eframe::egui::{TextBuffer, Ui};
+use once_cell::sync::Lazy;
 use regex::Regex;
-use crate::model::{FieldInfo, FieldType, get_documentation_by_path};
+use crate::model::{DocumentationStructure, FieldInfo, FieldType, get_documentation_structure_by_path, HelpDocumentation};
 use crate::model::scene::Scene;
+
+static DOCUMENTATION_STRUCTURE: Lazy<DocumentationStructure> = Lazy::new(Scene::get_documentation_structure);
 
 pub fn show(ui: &mut Ui, yaml_cursor_idx: Option<usize>, yaml: &dyn TextBuffer) {
     if let Some(idx) = yaml_cursor_idx {
         let help_path = get_help_identifier(idx, yaml);
-        if let Some(doc) = get_documentation_by_path::<Scene>(&help_path) {
+        if let Some(doc) = get_documentation_structure_by_path(&DOCUMENTATION_STRUCTURE, &help_path) {
             ui.heading(doc.description);
 
             let mut fields: Vec<(&String, &FieldInfo)> = doc.fields.iter().to_owned().collect();

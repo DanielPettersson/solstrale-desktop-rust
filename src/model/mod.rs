@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 use std::error::Error;
-use std::ops::Deref;
 
 use derive_more::Display;
 
@@ -110,14 +109,9 @@ impl FieldInfo {
     }
 }
 
-
-pub fn get_documentation_by_path<T: HelpDocumentation>(path: &[String]) -> Option<DocumentationStructure> {
-    get_documentation_structure_by_path(&T::get_documentation_structure(), path)
-}
-
-fn get_documentation_structure_by_path(info: &DocumentationStructure, path: &[String]) -> Option<DocumentationStructure> {
+pub fn get_documentation_structure_by_path(info: &DocumentationStructure, path: &[String]) -> Option<DocumentationStructure> {
     if path.is_empty() {
-        Some(info.deref().clone())
+        Some(info.clone())
     } else {
         match path.split_first() {
             None => None,
