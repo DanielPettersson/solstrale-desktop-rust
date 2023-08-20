@@ -1,11 +1,14 @@
+use std::collections::HashMap;
 use std::error::Error;
+use std::ops::Deref;
 
 use derive_more::Display;
+
 use crate::model::pos::Pos;
 use crate::model::scene::Scene;
 
 mod camera_config;
-mod scene;
+pub mod scene;
 mod shader;
 mod path_tracing_shader;
 mod simple_shader;
@@ -55,6 +58,77 @@ impl Error for ModelError {}
 
 pub trait Creator<T> {
     fn create(&self) -> Result<T, Box<dyn Error>>;
+}
+
+pub trait HelpDocumentation {
+    fn get_documentation_structure() -> DocumentationStructure;
+}
+
+#[derive(Clone)]
+pub struct DocumentationStructure {
+    pub description: String,
+    pub fields: HashMap<String, FieldInfo>,
+}
+
+impl DocumentationStructure {
+    pub fn new_simple(description: &str) -> DocumentationStructure {
+        DocumentationStructure {
+            description: description.to_string(),
+            fields: Default::default(),
+        }
+    }
+}
+
+#[derive(Clone)]
+pub enum FieldType {
+    Normal,
+    Optional,
+    List,
+}
+
+#[derive(Clone)]
+pub struct FieldInfo {
+    pub description: String,
+    pub field_type: FieldType,
+    pub documentation_structure: DocumentationStructure
+}
+
+impl FieldInfo {
+    pub fn new(field_description: &str, field_type: FieldType, documentation_structure: DocumentationStructure) -> FieldInfo {
+        FieldInfo {
+            description: field_description.to_string(),
+            field_type,
+            documentation_structure,
+        }
+    }
+    pub fn new_simple(field_description: &str, field_type: FieldType, description: &str) -> FieldInfo {
+        FieldInfo {
+            description: field_description.to_string(),
+            field_type,
+            documentation_structure: DocumentationStructure::new_simple(description),
+        }
+    }
+}
+
+
+pub fn get_documentation_by_path<T: HelpDocumentation>(path: &[String]) -> Option<DocumentationStructure> {
+    get_documentation_structure_by_path(&T::get_documentation_structure(), path)
+}
+
+fn get_documentation_structure_by_path(info: &DocumentationStructure, path: &[String]) -> Option<DocumentationStructure> {
+    if path.is_empty() {
+        Some(info.deref().clone())
+    } else {
+        match path.split_first() {
+            None => None,
+            Some((first, rest)) => {
+                match info.fields.get(first) {
+                    None => None,
+                    Some(child_info) => get_documentation_structure_by_path(&child_info.documentation_structure, rest)
+                }
+            }
+        }
+    }
 }
 
 pub fn parse_scene_yaml(yaml: &str) -> Result<Scene, Box<dyn Error>> {
@@ -150,12 +224,12 @@ mod test {
                     x: 0.0,
                     y: 1.0,
                     z: 0.0,
-                }
+                },
             },
-            background_color: Pos {
-                x: 0.0,
-                y: 0.0,
-                z: 0.0,
+            background_color: Rgb {
+                r: 0.0,
+                g: 0.0,
+                b: 0.0,
             },
             render_configuration: RenderConfig {
                 samples_per_pixel: 50,

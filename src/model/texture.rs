@@ -1,7 +1,9 @@
+use std::collections::HashMap;
 use std::error::Error;
 use serde::{Deserialize, Serialize};
 use solstrale::material::texture::{SolidColor, Textures};
-use crate::model::{Creator, ModelError};
+use crate::model::{Creator, DocumentationStructure, FieldInfo, HelpDocumentation, ModelError};
+use crate::model::FieldType::Optional;
 use crate::model::image::Image;
 use crate::model::rgb::Rgb;
 
@@ -29,6 +31,18 @@ impl Creator<Textures> for Texture {
                 Box::try_from(ModelError::new("Texture should have single field defined"))
                     .unwrap(),
             ),
+        }
+    }
+}
+
+impl HelpDocumentation for Texture {
+    fn get_documentation_structure() -> DocumentationStructure {
+        DocumentationStructure {
+            description: "<<Texture>>".to_string(),
+            fields: HashMap::from([
+                ("color".to_string(), FieldInfo::new("<<color>>", Optional, Rgb::get_documentation_structure())),
+                ("image".to_string(), FieldInfo::new("<<image>>", Optional, Image::get_documentation_structure())),
+            ]),
         }
     }
 }

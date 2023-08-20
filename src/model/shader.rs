@@ -1,8 +1,10 @@
+use std::collections::HashMap;
 use std::error::Error;
 use serde::{Deserialize, Serialize};
 use solstrale::renderer::shader::Shaders;
-use crate::model::{Creator, ModelError};
+use crate::model::{Creator, DocumentationStructure, FieldInfo, HelpDocumentation, ModelError};
 use crate::model::albedo_shader::AlbedoShader;
+use crate::model::FieldType::Optional;
 use crate::model::normal_shader::NormalShader;
 use crate::model::path_tracing_shader::PathTracingShader;
 use crate::model::simple_shader::SimpleShader;
@@ -51,6 +53,20 @@ impl Creator<Shaders> for Shader {
                 Box::try_from(ModelError::new("Shader should have single field defined"))
                     .unwrap(),
             ),
+        }
+    }
+}
+
+impl HelpDocumentation for Shader {
+    fn get_documentation_structure() -> DocumentationStructure {
+        DocumentationStructure {
+            description: "<<Shader>>".to_string(),
+            fields: HashMap::from([
+                ("path_tracing".to_string(), FieldInfo::new("<<path_tracing>>", Optional, PathTracingShader::get_documentation_structure())),
+                ("simple".to_string(), FieldInfo::new("<<simple>>", Optional, SimpleShader::get_documentation_structure())),
+                ("albedo".to_string(), FieldInfo::new("<<albedo>>", Optional, AlbedoShader::get_documentation_structure())),
+                ("normal".to_string(), FieldInfo::new("<<normal>>", Optional, NormalShader::get_documentation_structure())),
+            ]),
         }
     }
 }

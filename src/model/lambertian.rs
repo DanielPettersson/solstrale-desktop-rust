@@ -1,7 +1,9 @@
+use std::collections::HashMap;
 use std::error::Error;
 use serde::{Deserialize, Serialize};
 use solstrale::material::Materials;
-use crate::model::Creator;
+use crate::model::{Creator, DocumentationStructure, FieldInfo, HelpDocumentation};
+use crate::model::FieldType::{Normal, Optional};
 use crate::model::texture::Texture;
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
@@ -21,5 +23,17 @@ impl Creator<Materials> for Lambertian {
                 Some(n) => Some(n.create()?),
             },
         ))
+    }
+}
+
+impl HelpDocumentation for Lambertian {
+    fn get_documentation_structure() -> DocumentationStructure {
+        DocumentationStructure {
+            description: "<<Lambertian>>".to_string(),
+            fields: HashMap::from([
+                ("albedo".to_string(), FieldInfo::new("<<albedo>>", Normal, Texture::get_documentation_structure())),
+                ("normal".to_string(), FieldInfo::new("<<normal>>", Optional, Texture::get_documentation_structure())),
+            ]),
+        }
     }
 }

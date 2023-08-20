@@ -1,7 +1,9 @@
+use std::collections::HashMap;
 use std::error::Error;
 use serde::{Deserialize, Serialize};
 use solstrale::hittable::Hittables;
-use crate::model::Creator;
+use crate::model::{Creator, DocumentationStructure, FieldInfo, HelpDocumentation};
+use crate::model::FieldType::{List, Normal};
 use crate::model::material::Material;
 use crate::model::pos::Pos;
 use crate::model::transformation::{create_transformation, Transformation};
@@ -24,5 +26,19 @@ impl Creator<Vec<Hittables>> for Box {
             self.material.create()?,
             &create_transformation(&self.transformations)?,
         ))
+    }
+}
+
+impl HelpDocumentation for Box {
+    fn get_documentation_structure() -> DocumentationStructure {
+        DocumentationStructure {
+            description: "<<Box>>".to_string(),
+            fields: HashMap::from([
+                ("a".to_string(), FieldInfo::new("<<a>>",Normal, Pos::get_documentation_structure())),
+                ("b".to_string(), FieldInfo::new("<<b>>", Normal, Pos::get_documentation_structure())),
+                ("material".to_string(), FieldInfo::new("<<material>>", Normal, Material::get_documentation_structure())),
+                ("transformations".to_string(), FieldInfo::new("<<transformations>>", List, Transformation::get_documentation_structure()))
+            ]),
+        }
     }
 }

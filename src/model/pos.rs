@@ -1,7 +1,7 @@
 use std::error::Error;
 use serde::{Deserialize, Serialize};
 use solstrale::geo::vec3::Vec3;
-use crate::model::{Creator, parse_option};
+use crate::model::{Creator, DocumentationStructure, HelpDocumentation, parse_option};
 
 #[derive(PartialEq, Debug)]
 pub struct Pos {
@@ -46,5 +46,11 @@ impl From<&Pos> for Vec3 {
 impl Creator<Vec3> for Pos {
     fn create(&self) -> Result<Vec3, Box<dyn Error>> {
         Ok(Vec3::new(self.x, self.y, self.z))
+    }
+}
+
+impl HelpDocumentation for Pos {
+    fn get_documentation_structure() -> DocumentationStructure {
+        DocumentationStructure::new_simple("<<Pos>>")
     }
 }

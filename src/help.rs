@@ -1,15 +1,30 @@
 use eframe::egui::{TextBuffer, Ui};
 use regex::Regex;
+use crate::model::{FieldInfo, FieldType, get_documentation_by_path};
+use crate::model::scene::Scene;
 
 pub fn show(ui: &mut Ui, yaml_cursor_idx: Option<usize>, yaml: &dyn TextBuffer) {
     if let Some(idx) = yaml_cursor_idx {
-        if let Some(identifier) = get_help_identifier(idx, yaml) {
-            ui.label(identifier);
+        let help_path = get_help_identifier(idx, yaml);
+        if let Some(doc) = get_documentation_by_path::<Scene>(&help_path) {
+            ui.heading(doc.description);
+
+            let mut fields: Vec<(&String, &FieldInfo)> = doc.fields.iter().to_owned().collect();
+            fields.sort_by_key(|f| f.0);
+            for f in fields {
+                let field_type_descr = match f.1.field_type {
+                    FieldType::Normal => "",
+                    FieldType::Optional => "(optional)",
+                    FieldType::List => "(list)",
+                };
+
+                ui.label(format!("{} {}: {}", f.0, field_type_descr, f.1.description));
+            }
         }
     }
 }
 
-fn get_help_identifier(idx: usize, yaml: &dyn TextBuffer) -> Option<String> {
+fn get_help_identifier(idx: usize, yaml: &dyn TextBuffer) -> Vec<String> {
     let indentation_regex = Regex::new("^[\\s-]*").unwrap();
     let regex = Regex::new("^([\\s-]*)([\\w_]+):").unwrap();
     let mut max_indentation: usize = usize::MAX;
@@ -31,10 +46,6 @@ fn get_help_identifier(idx: usize, yaml: &dyn TextBuffer) -> Option<String> {
             }
         }
     }
-    if ret.is_empty() {
-        None
-    } else {
-        ret.reverse();
-        Some(ret.join("."))
-    }
+    ret.reverse();
+    ret
 }

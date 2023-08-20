@@ -1,7 +1,9 @@
+use std::collections::HashMap;
 use std::error::Error;
 use serde::{Deserialize, Serialize};
 use solstrale::geo::transformation::{RotationX, RotationY, RotationZ, Scale, Transformations, Transformer, Translation};
-use crate::model::{Creator, ModelError};
+use crate::model::{Creator, DocumentationStructure, FieldInfo, HelpDocumentation, ModelError};
+use crate::model::FieldType::Optional;
 use crate::model::pos::Pos;
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
@@ -65,10 +67,6 @@ impl Creator<Box<dyn Transformer>> for Transformation {
     }
 }
 
-
-
-
-
 pub fn create_transformation(
     transformations: &Vec<Transformation>,
 ) -> Result<Transformations, Box<dyn Error>> {
@@ -79,3 +77,17 @@ pub fn create_transformation(
     Ok(Transformations::new(trans))
 }
 
+impl HelpDocumentation for Transformation {
+    fn get_documentation_structure() -> DocumentationStructure {
+        DocumentationStructure {
+            description: "<<Transformation>>".to_string(),
+            fields: HashMap::from([
+                ("translation".to_string(), FieldInfo::new("<<translation>>", Optional, Pos::get_documentation_structure())),
+                ("scale".to_string(), FieldInfo::new_simple("<<scale>>", Optional, "<<f64>>")),
+                ("rotation_x".to_string(), FieldInfo::new_simple("<<rotation_x>>", Optional, "<<f64>>")),
+                ("rotation_y".to_string(), FieldInfo::new_simple("<<rotation_y>>", Optional, "<<f64>>")),
+                ("rotation_z".to_string(), FieldInfo::new_simple("<<rotation_z>>", Optional, "<<f64>>")),
+            ]),
+        }
+    }
+}

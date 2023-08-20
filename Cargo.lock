@@ -2002,15 +2002,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "oidn"
-version = "1.4.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6f67268fd95dd8a3b3fbd4bb66f70fbd64a212d2e217ac86f6a7a093271bbd96"
-dependencies = [
- "num_enum 0.5.11",
-]
-
-[[package]]
 name = "once_cell"
 version = "1.18.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2686,7 +2677,6 @@ dependencies = [
  "enum_dispatch",
  "fastrand 2.0.0",
  "image",
- "oidn",
  "rayon",
  "simple-error",
  "tobj",

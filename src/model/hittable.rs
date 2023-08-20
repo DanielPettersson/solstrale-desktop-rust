@@ -1,8 +1,10 @@
+use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 use std::error::Error;
 use solstrale::hittable::{Hittables};
-use crate::model::{Creator, ModelError};
+use crate::model::{Creator, DocumentationStructure, FieldInfo, HelpDocumentation, ModelError};
 use crate::model::constant_medium::ConstantMedium;
+use crate::model::FieldType::Optional;
 use crate::model::r#box::Box;
 use crate::model::obj_model::ObjModel;
 use crate::model::quad::Quad;
@@ -65,6 +67,21 @@ impl Creator<Vec<Hittables>> for Hittable {
                 "Hittable should have single field defined",
             ))
                 .unwrap()),
+        }
+    }
+}
+
+impl HelpDocumentation for Hittable {
+    fn get_documentation_structure() -> DocumentationStructure {
+        DocumentationStructure {
+            description: "<<Hittable>>".to_string(),
+            fields: HashMap::from([
+                ("albedo".to_string(), FieldInfo::new("<<albedo>>", Optional, Sphere::get_documentation_structure())),
+                ("model".to_string(), FieldInfo::new("<<model>>", Optional, ObjModel::get_documentation_structure())),
+                ("quad".to_string(), FieldInfo::new("<<quad>>", Optional, Quad::get_documentation_structure())),
+                ("box".to_string(), FieldInfo::new("<<box>>", Optional, Box::get_documentation_structure())),
+                ("constant_medium".to_string(), FieldInfo::new("<<constant_medium>>", Optional, ConstantMedium::get_documentation_structure())),
+            ]),
         }
     }
 }

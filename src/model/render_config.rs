@@ -1,9 +1,11 @@
+use std::collections::HashMap;
 use std::error::Error;
 use std::time::Duration;
 use serde::{Deserialize, Serialize};
 use solstrale::post::PostProcessors;
 use solstrale::renderer::RenderImageStrategy;
-use crate::model::Creator;
+use crate::model::{Creator, DocumentationStructure, FieldInfo, HelpDocumentation};
+use crate::model::FieldType::{List, Normal};
 use crate::model::post_processor::PostProcessor;
 use crate::model::shader::Shader;
 
@@ -35,5 +37,19 @@ impl Creator<solstrale::renderer::RenderConfig> for RenderConfig {
                 RenderImageStrategy::Interval(Duration::from_millis(self.preview_interval_ms))
             },
         })
+    }
+}
+
+impl HelpDocumentation for RenderConfig {
+    fn get_documentation_structure() -> DocumentationStructure {
+        DocumentationStructure {
+            description: "<<RenderConfig>>".to_string(),
+            fields: HashMap::from([
+                ("samples_per_pixel".to_string(), FieldInfo::new_simple("<<q>>", Normal, "<<u32>>")),
+                ("shader".to_string(), FieldInfo::new("<<u>>", Normal, Shader::get_documentation_structure())),
+                ("post_processors".to_string(), FieldInfo::new("<<material>>", List, PostProcessor::get_documentation_structure())),
+                ("preview_interval_ms".to_string(), FieldInfo::new_simple("<<transformations>>", Normal, "<<u64>>")),
+            ]),
+        }
     }
 }

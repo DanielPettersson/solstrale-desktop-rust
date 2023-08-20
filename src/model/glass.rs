@@ -1,7 +1,9 @@
+use std::collections::HashMap;
 use std::error::Error;
 use serde::{Deserialize, Serialize};
 use solstrale::material::{Dielectric, Materials};
-use crate::model::Creator;
+use crate::model::{Creator, DocumentationStructure, FieldInfo, HelpDocumentation};
+use crate::model::FieldType::{Normal, Optional};
 use crate::model::texture::Texture;
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
@@ -23,5 +25,18 @@ impl Creator<Materials> for Glass {
             },
             self.index_of_refraction,
         ))
+    }
+}
+
+impl HelpDocumentation for Glass {
+    fn get_documentation_structure() -> DocumentationStructure {
+        DocumentationStructure {
+            description: "<<Glass>>".to_string(),
+            fields: HashMap::from([
+                ("albedo".to_string(), FieldInfo::new("<<albedo>>", Normal, Texture::get_documentation_structure())),
+                ("normal".to_string(), FieldInfo::new("<<normal>>", Optional, Texture::get_documentation_structure())),
+                ("index_of_refraction".to_string(), FieldInfo::new_simple("<<index_of_refraction>>", Normal, "<<f64>>")),
+            ]),
+        }
     }
 }

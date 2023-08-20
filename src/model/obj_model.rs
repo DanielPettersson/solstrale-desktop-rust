@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::error::Error;
 use moka::sync::Cache;
 use once_cell::sync::Lazy;
@@ -6,7 +7,8 @@ use solstrale::hittable::Hittables;
 use solstrale::loader::Loader;
 use solstrale::loader::obj::Obj;
 use solstrale::material::texture::SolidColor;
-use crate::model::{Creator, ModelError};
+use crate::model::{Creator, DocumentationStructure, FieldInfo, HelpDocumentation, ModelError};
+use crate::model::FieldType::{List, Normal, Optional};
 use crate::model::material::Material;
 use crate::model::transformation::{create_transformation, Transformation};
 
@@ -49,6 +51,20 @@ impl Creator<Hittables> for ObjModel {
                 MODEL_CACHE.remove(&key);
                 Err(Box::new(err))
             }
+        }
+    }
+}
+
+impl HelpDocumentation for ObjModel {
+    fn get_documentation_structure() -> DocumentationStructure {
+        DocumentationStructure {
+            description: "<<ObjModel>>".to_string(),
+            fields: HashMap::from([
+                ("path".to_string(), FieldInfo::new_simple("<<albedo>>", Normal, "<<String>>")),
+                ("name".to_string(), FieldInfo::new_simple("<<normal>>", Normal, "<<String>>")),
+                ("material".to_string(), FieldInfo::new("<<metal>>", Optional, Material::get_documentation_structure())),
+                ("transformations".to_string(), FieldInfo::new("<<metal>>", List, Transformation::get_documentation_structure())),
+            ]),
         }
     }
 }

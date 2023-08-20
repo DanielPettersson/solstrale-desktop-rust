@@ -1,6 +1,7 @@
+use std::error::Error;
 use serde::{Deserialize, Serialize};
 use solstrale::geo::vec3::Vec3;
-use crate::model::parse_option;
+use crate::model::{Creator, DocumentationStructure, HelpDocumentation, parse_option};
 
 #[derive(PartialEq, Debug, Copy, Clone)]
 pub struct Rgb {
@@ -39,5 +40,17 @@ impl<'de> Deserialize<'de> for Rgb {
 impl From<Rgb> for Vec3 {
     fn from(value: Rgb) -> Self {
         Vec3::new(value.r, value.g, value.b)
+    }
+}
+
+impl Creator<Vec3> for Rgb {
+    fn create(&self) -> Result<Vec3, Box<dyn Error>> {
+        Ok(Vec3::new(self.r, self.g, self.b))
+    }
+}
+
+impl HelpDocumentation for Rgb {
+    fn get_documentation_structure() -> DocumentationStructure {
+        DocumentationStructure::new_simple("<<Rgb>>")
     }
 }
