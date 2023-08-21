@@ -14,7 +14,7 @@ pub fn render_output(
     error_info: &mut ErrorInfo,
     scene_yaml: &str,
     render_size: Vec2,
-    ctx: Context,
+    ctx: &Context,
 ) -> Option<Image> {
     if render_control.render_requested {
         if let Some(sender) = &render_control.abort_sender {
@@ -23,7 +23,7 @@ pub fn render_output(
     }
 
     if render_control.abort_sender.is_none() && render_control.render_requested {
-        let res = render(scene_yaml, render_size);
+        let res = render(scene_yaml, render_size, ctx);
         render_control.render_receiver = Some(res.0);
         render_control.abort_sender = Some(res.1);
         render_control.render_requested = false;
@@ -58,7 +58,6 @@ pub fn render_output(
                     }
                     rendered_image.estimated_time_left = render_progress.estimated_time_left;
                     render_control.loading_scene = false;
-                    ctx.request_repaint();
                 }
                 RenderMessage::Error(error_message) => {
                     error_info.handle_str(&error_message);
@@ -92,6 +91,7 @@ pub fn render_output(
 fn render(
     scene_yaml: &str,
     render_size: Vec2,
+    ctx: &Context,
 ) -> (Receiver<RenderMessage>, Sender<bool>) {
     let (output_sender, output_receiver) = channel();
     let (abort_sender, abort_receiver) = channel();
@@ -99,6 +99,8 @@ fn render(
 
     let render_sender_clone = render_sender.clone();
     let scene_yaml_str = scene_yaml.to_string();
+    let ctx1 = ctx.clone();
+    let ctx2 = ctx.clone();
 
     thread::spawn(move || {
 
@@ -121,6 +123,7 @@ fn render(
             render_sender_clone
                 .send(RenderMessage::Error(format!("{}", err)))
                 .unwrap();
+            ctx1.request_repaint();
         };
     });
 
@@ -129,6 +132,7 @@ fn render(
             render_sender
                 .send(RenderMessage::SampleRendered(render_output))
                 .unwrap();
+            ctx2.request_repaint();
         }
     });
 

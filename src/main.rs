@@ -273,7 +273,7 @@ impl App for SolstraleApp {
                     &mut self.error_info,
                     &self.scene_yaml,
                     ui.available_size(),
-                    ui.ctx().clone(),
+                    ui.ctx(),
                 ) {
                     None => {
                         loading_output::show(ui);

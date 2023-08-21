@@ -9,7 +9,6 @@ pub fn yaml_editor<'a, L>(text: &'a mut dyn TextBuffer, layouter: &'a mut L, min
     where L: Fn(&Ui, &str, f32) -> Arc<Galley> {
     TextEdit::multiline(text)
         .code_editor()
-        .desired_width(f32::INFINITY)
         .min_size(min_size)
         .layouter(layouter)
 }
