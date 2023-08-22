@@ -9,11 +9,14 @@ use egui::{CentralPanel, ScrollArea, Window};
 use egui_file::FileDialog;
 use hhmmss::Hhmmss;
 use image::RgbImage;
+use once_cell::sync::Lazy;
 use solstrale::renderer::RenderProgress;
 
 use yaml_editor::yaml_editor;
 
-use crate::keyboard::is_enter;
+use crate::keyboard::{is_ctrl_space, is_enter};
+use crate::model::{DocumentationStructure, get_documentation_structure_by_yaml_path, HelpDocumentation};
+use crate::model::scene::Scene;
 use crate::render_output::render_output;
 use crate::yaml_editor::create_layouter;
 
@@ -27,6 +30,8 @@ mod yaml_editor;
 mod keyboard;
 mod help;
 mod model;
+
+static ROOT_DOCUMENTATION_STRUCTURE: Lazy<DocumentationStructure> = Lazy::new(Scene::get_documentation_structure);
 
 fn main() -> eframe::Result<()> {
     let icon_bytes = include_bytes!("../resources/icon.png");
@@ -216,7 +221,11 @@ impl App for SolstraleApp {
             });
 
 
-        let mut yaml_cursor_idx: Option<usize> = None;
+        let documentation_structure = get_documentation_structure_by_yaml_path(
+            &ROOT_DOCUMENTATION_STRUCTURE,
+            &yaml_editor::get_yaml_path(&self.scene_yaml, ctx),
+        );
+
         SidePanel::left("code-panel")
             .frame(egui::Frame {
                 inner_margin: Margin::same(2.),
@@ -224,7 +233,7 @@ impl App for SolstraleApp {
             })
             .show(ctx, |ui| {
                 ScrollArea::vertical().show(ui, |ui| {
-                    let response = ui.add(yaml_editor(
+                    ui.add(yaml_editor(
                         &mut self.scene_yaml,
                         &mut create_layouter(),
                         Vec2 {
@@ -232,10 +241,15 @@ impl App for SolstraleApp {
                             y: ui.available_height(),
                         },
                     ));
-                    yaml_cursor_idx = yaml_editor::cursor_char_offset(ctx, response.id);
+
+                    if is_ctrl_space(ui) {
+                        if let Some(doc) = &documentation_structure {
+                            yaml_editor::autocomplete(&mut self.scene_yaml, doc, ctx);
+                        }
+                    }
 
                     if is_enter(ui) {
-                        yaml_editor::indent_new_line(&mut self.scene_yaml, ctx, response.id);
+                        yaml_editor::indent_new_line(&mut self.scene_yaml, ctx);
                     }
                 });
             });
@@ -243,11 +257,7 @@ impl App for SolstraleApp {
         SidePanel::right("help-panel").frame(egui::Frame {
             inner_margin: Margin::same(2.),
             ..Default::default()
-        }).min_width(300.0).show(ctx, |ui| help::show(
-            ui,
-            yaml_cursor_idx,
-            &self.scene_yaml,
-        ));
+        }).min_width(300.0).show(ctx, |ui| help::show(ui, &documentation_structure));
 
         CentralPanel::default()
             .frame(egui::Frame {

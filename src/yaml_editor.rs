@@ -4,22 +4,90 @@ use eframe::egui;
 use eframe::egui::{Context, Galley, Id, TextBuffer, TextEdit, TextFormat, Ui, Vec2};
 use eframe::egui::text::{LayoutJob, LayoutSection};
 use egui::util::cache::{ComputerMut, FrameCache};
+use once_cell::sync::Lazy;
+use regex::Regex;
+use crate::model::DocumentationStructure;
+
+pub static YAML_EDITOR_ID: Lazy<Id> = Lazy::new(|| Id::from("yaml_editor"));
+static INDENTATION_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new("^[\\s-]*").unwrap());
+static YAML_KEY_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new("^([\\s-]*)([\\w_]+):").unwrap());
+static AUTOCOMPLETE_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new("^[\\s-]*([\\w_]+)$").unwrap());
 
 pub fn yaml_editor<'a, L>(text: &'a mut dyn TextBuffer, layouter: &'a mut L, min_size: Vec2) -> TextEdit<'a>
     where L: Fn(&Ui, &str, f32) -> Arc<Galley> {
     TextEdit::multiline(text)
+        .id(*YAML_EDITOR_ID)
         .code_editor()
         .min_size(min_size)
         .layouter(layouter)
 }
 
-pub fn cursor_char_offset(ctx: &Context, editor_id: Id) -> Option<usize> {
-    TextEdit::load_state(ctx, editor_id)
+fn cursor_char_offset(ctx: &Context) -> Option<usize> {
+    TextEdit::load_state(ctx, *YAML_EDITOR_ID)
         .and_then(|state| state.ccursor_range().map(|range| range.primary.index))
 }
 
-pub fn indent_new_line(text: &mut dyn TextBuffer, ctx: &Context, editor_id: Id) {
-    if let Some(mut state) = TextEdit::load_state(ctx, editor_id) {
+pub fn get_yaml_path(yaml: &dyn TextBuffer, ctx: &Context) -> Vec<String> {
+    match cursor_char_offset(ctx) {
+        None => vec!(),
+        Some(idx) => {
+            let mut max_indentation: usize = usize::MAX;
+            let mut ret = Vec::new();
+
+            for line in yaml.char_range(0..idx).lines().rev() {
+                if let Some(cap) = YAML_KEY_REGEX.captures(line) {
+                    let indentation = cap.get(1).unwrap().len();
+                    if indentation < max_indentation {
+                        ret.push(cap.get(2).unwrap().as_str().to_owned());
+                    }
+                }
+
+                if let Some(m) = INDENTATION_REGEX.find(line) {
+                    let indentation = m.as_str().len();
+                    if indentation < max_indentation {
+                        max_indentation = indentation;
+                    }
+                }
+            }
+            ret.reverse();
+            ret
+        }
+    }
+}
+
+pub fn autocomplete(text: &mut dyn TextBuffer, doc: &DocumentationStructure, ctx: &Context) {
+    if doc.fields.is_empty() {
+        return;
+    }
+
+    if let Some(mut state) = TextEdit::load_state(ctx, *YAML_EDITOR_ID) {
+        if let Some(range) = state.ccursor_range() {
+            let idx = range.primary.index;
+
+            if let Some(last_line) = text.char_range(0..idx).lines().last() {
+                if let Some(cap) = AUTOCOMPLETE_REGEX.captures(last_line) {
+                    let autocomplete_key = cap.get(1).unwrap().as_str().to_owned();
+
+                    if let Some(autocomplete_val) =
+                        doc.fields.iter()
+                            .find(|f| f.0.starts_with(&autocomplete_key))
+                            .map(|f| f.0[autocomplete_key.len()..].to_owned()) {
+
+                        let ins = format!("{}: ", autocomplete_val);
+                        text.insert_text(&ins, idx);
+
+                        let cursor = egui::text::CCursor::new(idx + ins.len());
+                        state.set_ccursor_range(Some(egui::text::CCursorRange::one(cursor)));
+                        state.store(ctx, *YAML_EDITOR_ID);
+                    }
+                }
+            }
+        }
+    }
+}
+
+pub fn indent_new_line(text: &mut dyn TextBuffer, ctx: &Context) {
+    if let Some(mut state) = TextEdit::load_state(ctx, *YAML_EDITOR_ID) {
         if let Some(range) = state.ccursor_range() {
             let idx = range.primary.index;
 
@@ -32,7 +100,7 @@ pub fn indent_new_line(text: &mut dyn TextBuffer, ctx: &Context, editor_id: Id) 
 
                 let cursor = egui::text::CCursor::new(idx + space_indent);
                 state.set_ccursor_range(Some(egui::text::CCursorRange::one(cursor)));
-                state.store(ctx, editor_id);
+                state.store(ctx, *YAML_EDITOR_ID);
             }
         }
     }

@@ -76,7 +76,7 @@ impl HelpDocumentation for Hittable {
         DocumentationStructure {
             description: "<<Hittable>>".to_string(),
             fields: HashMap::from([
-                ("albedo".to_string(), FieldInfo::new("<<albedo>>", Optional, Sphere::get_documentation_structure())),
+                ("sphere".to_string(), FieldInfo::new("<<sphere>>", Optional, Sphere::get_documentation_structure())),
                 ("model".to_string(), FieldInfo::new("<<model>>", Optional, ObjModel::get_documentation_structure())),
                 ("quad".to_string(), FieldInfo::new("<<quad>>", Optional, Quad::get_documentation_structure())),
                 ("box".to_string(), FieldInfo::new("<<box>>", Optional, Box::get_documentation_structure())),

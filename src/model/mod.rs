@@ -109,7 +109,7 @@ impl FieldInfo {
     }
 }
 
-pub fn get_documentation_structure_by_path(info: &DocumentationStructure, path: &[String]) -> Option<DocumentationStructure> {
+pub fn get_documentation_structure_by_yaml_path(info: &DocumentationStructure, path: &[String]) -> Option<DocumentationStructure> {
     if path.is_empty() {
         Some(info.clone())
     } else {
@@ -118,7 +118,7 @@ pub fn get_documentation_structure_by_path(info: &DocumentationStructure, path: 
             Some((first, rest)) => {
                 match info.fields.get(first) {
                     None => None,
-                    Some(child_info) => get_documentation_structure_by_path(&child_info.documentation_structure, rest)
+                    Some(child_info) => get_documentation_structure_by_yaml_path(&child_info.documentation_structure, rest)
                 }
             }
         }
