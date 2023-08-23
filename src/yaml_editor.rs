@@ -92,7 +92,7 @@ pub fn indent_new_line(text: &mut dyn TextBuffer, ctx: &Context) {
             let idx = range.primary.index;
 
             if let Some(last_line) = text.char_range(0..idx).lines().last() {
-                let num_spaces_at_start = last_line.chars().take_while(|ch| *ch == ' ').count();
+                let num_spaces_at_start = INDENTATION_REGEX.find(last_line).map(|m| m.len()).unwrap_or(0);
                 let ends_with_colon = last_line.chars().last().unwrap_or(' ') == ':';
                 let space_indent = num_spaces_at_start + if ends_with_colon { 2 } else { 0 };
 

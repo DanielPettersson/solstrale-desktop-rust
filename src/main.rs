@@ -4,6 +4,7 @@ use std::time::Duration;
 
 use eframe::{App, egui, Frame, IconData, NativeOptions, run_native};
 use eframe::egui::{Button, Context, Margin, ProgressBar, SidePanel, TopBottomPanel, Vec2};
+use eframe::egui::Event::CompositionUpdate;
 use eframe::epaint::TextureHandle;
 use egui::{CentralPanel, ScrollArea, Window};
 use egui_file::FileDialog;
@@ -301,5 +302,17 @@ impl App for SolstraleApp {
                     ui.label(&self.error_info.error_message);
                 });
         }
+
+        // Work around suspected eframe bug that caused new frames to be requested
+        // all the time when yaml editor had focused caused by there always being
+        // and empty IME composition update event. So just delete it here seems to work
+        // without any noticeable side effects.
+        ctx.input_mut(|i| {
+            i.events.retain(|e| if let CompositionUpdate(s) = e {
+                !s.eq("")
+            } else {
+                true
+            })
+        });
     }
 }
