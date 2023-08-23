@@ -45,10 +45,10 @@ impl HelpDocumentation for RenderConfig {
         DocumentationStructure {
             description: "<<RenderConfig>>".to_string(),
             fields: HashMap::from([
-                ("samples_per_pixel".to_string(), FieldInfo::new_simple("<<q>>", Normal, "<<u32>>")),
-                ("shader".to_string(), FieldInfo::new("<<u>>", Normal, Shader::get_documentation_structure())),
-                ("post_processors".to_string(), FieldInfo::new("<<material>>", List, PostProcessor::get_documentation_structure())),
-                ("preview_interval_ms".to_string(), FieldInfo::new_simple("<<transformations>>", Normal, "<<u64>>")),
+                ("samples_per_pixel".to_string(), FieldInfo::new_simple("<<samples_per_pixel>>", Normal, "<<u32>>")),
+                ("shader".to_string(), FieldInfo::new("<<shader>>", Normal, Shader::get_documentation_structure())),
+                ("post_processors".to_string(), FieldInfo::new("<<post_processors>>", List, PostProcessor::get_documentation_structure())),
+                ("preview_interval_ms".to_string(), FieldInfo::new_simple("<<preview_interval_ms>>", Normal, "<<u64>>")),
             ]),
         }
     }
