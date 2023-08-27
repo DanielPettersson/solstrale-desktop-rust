@@ -58,12 +58,28 @@ impl Creator<Hittables> for ObjModel {
 impl HelpDocumentation for ObjModel {
     fn get_documentation_structure() -> DocumentationStructure {
         DocumentationStructure {
-            description: "<<ObjModel>>".to_string(),
+            description: "A model is loaded from an .obj file. And contains a 3d model composed by triangles with materials".to_string(),
             fields: HashMap::from([
-                ("path".to_string(), FieldInfo::new_simple("<<albedo>>", Normal, "<<String>>")),
-                ("name".to_string(), FieldInfo::new_simple("<<normal>>", Normal, "<<String>>")),
-                ("material".to_string(), FieldInfo::new("<<metal>>", Optional, Material::get_documentation_structure())),
-                ("transformations".to_string(), FieldInfo::new("<<metal>>", List, Transformation::get_documentation_structure())),
+                ("path".to_string(), FieldInfo::new_simple(
+                    "Path to the folder containing the .obj file",
+                    Normal,
+                    "Absolute path to the folder containing the .obj file"
+                )),
+                ("name".to_string(), FieldInfo::new_simple(
+                    "File name of the .obj file",
+                    Normal,
+                    "File name of the .obj file"
+                )),
+                ("material".to_string(), FieldInfo::new(
+                    "The default material used on the model when no material exists in the file",
+                    Optional,
+                    Material::get_documentation_structure()
+                )),
+                ("transformations".to_string(), FieldInfo::new(
+                    "Transformations to be applied to the position and size of the model",
+                    List,
+                    Transformation::get_documentation_structure()
+                )),
             ]),
         }
     }

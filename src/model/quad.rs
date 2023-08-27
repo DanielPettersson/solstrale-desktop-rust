@@ -34,7 +34,7 @@ impl Creator<Hittables> for Quad {
 impl HelpDocumentation for Quad {
     fn get_documentation_structure() -> DocumentationStructure {
         DocumentationStructure {
-            description: "<<Quad>>".to_string(),
+            description: "A flat rectangular hittable object".to_string(),
             fields: HashMap::from([
                 ("q".to_string(), FieldInfo::new("<<q>>", Normal, Pos::get_documentation_structure())),
                 ("u".to_string(), FieldInfo::new("<<u>>", Normal, Pos::get_documentation_structure())),

@@ -28,10 +28,18 @@ impl Creator<Materials> for Light {
 impl HelpDocumentation for Light {
     fn get_documentation_structure() -> DocumentationStructure {
         DocumentationStructure {
-            description: "<<Light>>".to_string(),
+            description: "A material that emits light".to_string(),
             fields: HashMap::from([
-                ("color".to_string(), FieldInfo::new("<<color>>", Normal, Rgb::get_documentation_structure())),
-                ("attenuation_half_length".to_string(), FieldInfo::new_simple("<<attenuation_half_length>>", Optional, "Option<f64>")),
+                ("color".to_string(), FieldInfo::new(
+                    "The color of the light being emitted. The intensity of color is normally way over 1",
+                    Normal,
+                    Rgb::get_documentation_structure()
+                )),
+                ("attenuation_half_length".to_string(), FieldInfo::new_simple(
+                    "Attenuation is the amount of intensity lost the further away from the light source",
+                    Optional,
+                    "The length at which the light has lost half it's intensity"
+                )),
             ]),
         }
     }

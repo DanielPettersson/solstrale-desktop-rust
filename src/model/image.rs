@@ -20,9 +20,13 @@ impl Creator<Textures> for Image {
 impl HelpDocumentation for Image {
     fn get_documentation_structure() -> DocumentationStructure {
         DocumentationStructure {
-            description: "<<Image>>".to_string(),
+            description: "A texture where the colors for a coordinate is looked up from an image file".to_string(),
             fields: HashMap::from([
-                ("file".to_string(), FieldInfo::new_simple("<<file>>", Normal, "<<String>>")),
+                ("file".to_string(), FieldInfo::new_simple(
+                    "Path to the image file",
+                    Normal,
+                    "An absolute path to the texture image file"
+                )),
             ]),
         }
     }

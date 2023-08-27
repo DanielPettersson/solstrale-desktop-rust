@@ -29,10 +29,18 @@ impl Creator<Materials> for Lambertian {
 impl HelpDocumentation for Lambertian {
     fn get_documentation_structure() -> DocumentationStructure {
         DocumentationStructure {
-            description: "<<Lambertian>>".to_string(),
+            description: "A material with the appearance of a matte surface".to_string(),
             fields: HashMap::from([
-                ("albedo".to_string(), FieldInfo::new("<<albedo>>", Normal, Texture::get_documentation_structure())),
-                ("normal".to_string(), FieldInfo::new("<<normal>>", Optional, Texture::get_documentation_structure())),
+                ("albedo".to_string(), FieldInfo::new(
+                    "Texture for the material's albedo color",
+                    Normal,
+                    Texture::get_documentation_structure()
+                )),
+                ("normal".to_string(), FieldInfo::new(
+                    "Texture for the material's normals. Used to give the illusion of fine structure of the hittable",
+                    Optional,
+                    Texture::get_documentation_structure()
+                )),
             ]),
         }
     }

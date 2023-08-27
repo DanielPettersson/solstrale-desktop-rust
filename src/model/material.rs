@@ -60,12 +60,28 @@ impl Creator<Materials> for Material {
 impl HelpDocumentation for Material {
     fn get_documentation_structure() -> DocumentationStructure {
         DocumentationStructure {
-            description: "<<Material>>".to_string(),
+            description: "A material gives hittable objects it's looks as they scatter the light differently".to_string(),
             fields: HashMap::from([
-                ("lambertian".to_string(), FieldInfo::new("<<lambertian>>", Optional, Lambertian::get_documentation_structure())),
-                ("glass".to_string(), FieldInfo::new("<<glass>>", Optional, Glass::get_documentation_structure())),
-                ("metal".to_string(), FieldInfo::new("<<metal>>", Optional, Metal::get_documentation_structure())),
-                ("light".to_string(), FieldInfo::new("<<light>>", Optional, Light::get_documentation_structure())),
+                ("lambertian".to_string(), FieldInfo::new(
+                    "A material with the appearance of a matte surface",
+                    Optional,
+                    Lambertian::get_documentation_structure()
+                )),
+                ("glass".to_string(), FieldInfo::new(
+                    "A dielectric material which has a glass-like appearance",
+                    Optional,
+                    Glass::get_documentation_structure()
+                )),
+                ("metal".to_string(), FieldInfo::new(
+                    "A reflective material that gives a metallic appearance",
+                    Optional,
+                    Metal::get_documentation_structure()
+                )),
+                ("light".to_string(), FieldInfo::new(
+                    "A material that emits light",
+                    Optional,
+                    Light::get_documentation_structure()
+                )),
             ]),
         }
     }

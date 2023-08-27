@@ -28,11 +28,23 @@ impl Creator<PostProcessors> for BloomPostProcessor {
 impl HelpDocumentation for BloomPostProcessor {
     fn get_documentation_structure() -> DocumentationStructure {
         DocumentationStructure {
-            description: "<<BloomPostProcessor>>".to_string(),
+            description: "A post processor that applies a bloom effect to bright areas of the image".to_string(),
             fields: HashMap::from([
-                ("kernel_size_fraction".to_string(), FieldInfo::new_simple("<<kernel_size_fraction>>", Normal, "<<f64>>")),
-                ("threshold".to_string(), FieldInfo::new_simple("<<threshold>>", Optional, "<<Option<f64>>>")),
-                ("max_intensity".to_string(), FieldInfo::new_simple("<<max_intensity>>", Optional,"<<Option<f64>>>"))
+                ("kernel_size_fraction".to_string(), FieldInfo::new_simple(
+                    "Size of the convolution filter applied to create the bloom effect",
+                    Normal,
+                    "A float number expressed as a fraction of the image width"
+                )),
+                ("threshold".to_string(), FieldInfo::new_simple(
+                    "Amount of brightness needed for bloom effect to be applied to a pixel",
+                    Optional,
+                    "The threshold as the length of the color as a vector"
+                )),
+                ("max_intensity".to_string(), FieldInfo::new_simple(
+                    "Used to limit the intensity of the bloom effect",
+                    Optional,
+                    "When applying the bloom effect pixels will be normalized to maximum this value"
+                ))
             ]),
         }
     }

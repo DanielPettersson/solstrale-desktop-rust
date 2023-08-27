@@ -51,6 +51,6 @@ impl Creator<Vec3> for Pos {
 
 impl HelpDocumentation for Pos {
     fn get_documentation_structure() -> DocumentationStructure {
-        DocumentationStructure::new_simple("<<Pos>>")
+        DocumentationStructure::new_simple("Value describing an X, Y, Z position in space. For example: 1.0, 2.0, -3.0")
     }
 }

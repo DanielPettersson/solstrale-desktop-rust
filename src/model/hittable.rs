@@ -74,13 +74,33 @@ impl Creator<Vec<Hittables>> for Hittable {
 impl HelpDocumentation for Hittable {
     fn get_documentation_structure() -> DocumentationStructure {
         DocumentationStructure {
-            description: "<<Hittable>>".to_string(),
+            description: "Objects that are hittable by rays shot by the ray tracer".to_string(),
             fields: HashMap::from([
-                ("sphere".to_string(), FieldInfo::new("<<sphere>>", Optional, Sphere::get_documentation_structure())),
-                ("model".to_string(), FieldInfo::new("<<model>>", Optional, ObjModel::get_documentation_structure())),
-                ("quad".to_string(), FieldInfo::new("<<quad>>", Optional, Quad::get_documentation_structure())),
-                ("box".to_string(), FieldInfo::new("<<box>>", Optional, Box::get_documentation_structure())),
-                ("constant_medium".to_string(), FieldInfo::new("<<constant_medium>>", Optional, ConstantMedium::get_documentation_structure())),
+                ("sphere".to_string(), FieldInfo::new(
+                    "A sphere object",
+                    Optional,
+                    Sphere::get_documentation_structure()
+                )),
+                ("model".to_string(), FieldInfo::new(
+                    "A model is loaded from an .obj file. And contains a 3d model composed by triangles with materials",
+                    Optional,
+                    ObjModel::get_documentation_structure()
+                )),
+                ("quad".to_string(), FieldInfo::new(
+                    "A quad is a flat rectangular object",
+                    Optional,
+                    Quad::get_documentation_structure()
+                )),
+                ("box".to_string(), FieldInfo::new(
+                    "A cuboid object consisting of 6 quads",
+                    Optional,
+                    Box::get_documentation_structure()
+                )),
+                ("constant_medium".to_string(), FieldInfo::new(
+                    "A box shaped hittable object with a fog-type material",
+                    Optional,
+                    ConstantMedium::get_documentation_structure()
+                )),
             ]),
         }
     }

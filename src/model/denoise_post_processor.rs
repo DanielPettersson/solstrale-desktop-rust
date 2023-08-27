@@ -17,6 +17,6 @@ impl Creator<PostProcessors> for DenoisePostProcessor {
 
 impl HelpDocumentation for DenoisePostProcessor {
     fn get_documentation_structure() -> DocumentationStructure {
-        DocumentationStructure::new_simple("<<DenoisePostProcessor>>")
+        DocumentationStructure::new_simple("A post processor that applies a de-noising filter to the image. Which gives the appearance of a higher number of samples rendered.")
     }
 }

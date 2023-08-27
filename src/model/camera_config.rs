@@ -29,13 +29,33 @@ impl Creator<solstrale::camera::CameraConfig> for CameraConfig {
 impl HelpDocumentation for CameraConfig {
     fn get_documentation_structure() -> DocumentationStructure {
         DocumentationStructure {
-            description: "<<CameraConfig>>".to_string(),
+            description: "Describes the location, orientation and other properties of the camera in the scene".to_string(),
             fields: HashMap::from([
-                ("vertical_fov_degrees".to_string(), FieldInfo::new_simple("<<vertical_fov_degrees>>", Normal, "<<f64>>")),
-                ("aperture_size".to_string(), FieldInfo::new_simple("<<aperture_size>>", Normal, "<<f64>>")),
-                ("look_from".to_string(), FieldInfo::new("<<look_from>>", Normal, Pos::get_documentation_structure())),
-                ("look_at".to_string(), FieldInfo::new("<<look_at>>", Normal, Pos::get_documentation_structure())),
-                ("up".to_string(), FieldInfo::new("<<up>>", Normal, Pos::get_documentation_structure()))
+                ("vertical_fov_degrees".to_string(), FieldInfo::new_simple(
+                    "Field of view for the camera in degrees",
+                    Normal,
+                    "Amount of vertical field of view for the camera"
+                )),
+                ("aperture_size".to_string(), FieldInfo::new_simple(
+                    "Aperture is defined by the size of the opening through which light can enter the camera. A higher value gives a more shallow depth of field",
+                    Normal,
+                    "The radius of the aperture"
+                )),
+                ("look_from".to_string(), FieldInfo::new(
+                    "Position where the camera is located",
+                    Normal,
+                    Pos::get_documentation_structure()
+                )),
+                ("look_at".to_string(), FieldInfo::new(
+                    "Position the camera is pointed at",
+                    Normal,
+                    Pos::get_documentation_structure()
+                )),
+                ("up".to_string(), FieldInfo::new(
+                    "A vector pointing in the 'up' direction of the camera",
+                    Normal,
+                    Pos::get_documentation_structure()
+                ))
             ]),
         }
     }

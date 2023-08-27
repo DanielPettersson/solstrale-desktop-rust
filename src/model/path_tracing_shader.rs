@@ -20,9 +20,13 @@ impl Creator<Shaders> for PathTracingShader {
 impl HelpDocumentation for PathTracingShader {
     fn get_documentation_structure() -> DocumentationStructure {
         DocumentationStructure {
-            description: "<<PathTracingShader>>".to_string(),
+            description: "The main shader for this path tracer. Gives the most realistic output".to_string(),
             fields: HashMap::from([
-                ("max_depth".to_string(), FieldInfo::new_simple("<<max_depth>>", Normal, "<<u32>>")),
+                ("max_depth".to_string(), FieldInfo::new_simple(
+                    "Max number of bounces for each ray shot from the camera",
+                    Normal,
+                    "Max number of bounces. No more scattering of the ray is done when this is exceeded"
+                )),
             ]),
         }
     }
