@@ -256,7 +256,7 @@ impl App for SolstraleApp {
             });
 
         SidePanel::right("help-panel").frame(egui::Frame {
-            inner_margin: Margin::same(2.),
+            inner_margin: Margin::same(10.),
             ..Default::default()
         }).min_width(300.0).show(ctx, |ui| help::show(ui, &documentation_structure));
 

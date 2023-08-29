@@ -1,10 +1,15 @@
-use eframe::egui::Ui;
+use eframe::egui::{Separator, Ui};
 
 use crate::model::{DocumentationStructure, FieldInfo, FieldType};
 
 pub fn show(ui: &mut Ui, documentation_structure: &Option<DocumentationStructure>) {
     if let Some(doc) = documentation_structure {
-        ui.heading(&doc.description);
+        ui.label(&doc.description);
+
+        if !doc.fields.is_empty() {
+            ui.add_space(10.);
+            ui.add(Separator::default().spacing(10.));
+        }
 
         let mut fields: Vec<(&String, &FieldInfo)> = doc.fields.iter().to_owned().collect();
         fields.sort_by_key(|f| f.0);
@@ -15,7 +20,12 @@ pub fn show(ui: &mut Ui, documentation_structure: &Option<DocumentationStructure
                 FieldType::List => "(list)",
             };
 
-            ui.label(format!("{} {}: {}", f.0, field_type_descr, f.1.description));
+            ui.add_space(10.);
+            ui.horizontal(|ui| {
+                ui.strong(format!("{}:", f.0));
+                ui.label(field_type_descr);
+            });
+            ui.label(&f.1.description);
         }
     }
 }
