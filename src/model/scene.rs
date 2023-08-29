@@ -39,12 +39,28 @@ impl Creator<solstrale::renderer::Scene> for Scene {
 impl HelpDocumentation for Scene {
     fn get_documentation_structure() -> DocumentationStructure {
         DocumentationStructure {
-            description: "<<Scene>>".to_string(),
+            description: "".to_string(),
             fields: HashMap::from([
-                ("render_configuration".to_string(), FieldInfo::new("<<render_configuration>>", Normal, RenderConfig::get_documentation_structure())),
-                ("background_color".to_string(), FieldInfo::new("<<background_color>>", Normal, Rgb::get_documentation_structure())),
-                ("camera".to_string(), FieldInfo::new("<<camera>>", Normal, CameraConfig::get_documentation_structure())),
-                ("world".to_string(), FieldInfo::new("<<world>>", List, Hittable::get_documentation_structure())),
+                ("render_configuration".to_string(), FieldInfo::new(
+                    "General configuration for the renderer",
+                    Normal,
+                    RenderConfig::get_documentation_structure()
+                )),
+                ("background_color".to_string(), FieldInfo::new(
+                    "The resulting pixel color for when a ray hits nothing",
+                    Normal,
+                    Rgb::get_documentation_structure()
+                )),
+                ("camera".to_string(), FieldInfo::new(
+                    "Describes the camera used in the scene",
+                    Normal,
+                    CameraConfig::get_documentation_structure()
+                )),
+                ("world".to_string(), FieldInfo::new(
+                    "Contains all hittable objects that are visible in the scene",
+                    List,
+                    Hittable::get_documentation_structure()
+                )),
             ]),
         }
     }

@@ -38,10 +38,18 @@ impl Creator<Textures> for Texture {
 impl HelpDocumentation for Texture {
     fn get_documentation_structure() -> DocumentationStructure {
         DocumentationStructure {
-            description: "<<Texture>>".to_string(),
+            description: "A texture defines the color of hittable objects. Can also be used for normals.".to_string(),
             fields: HashMap::from([
-                ("color".to_string(), FieldInfo::new("<<color>>", Optional, Rgb::get_documentation_structure())),
-                ("image".to_string(), FieldInfo::new("<<image>>", Optional, Image::get_documentation_structure())),
+                ("color".to_string(), FieldInfo::new(
+                    "Simple one-color texture",
+                    Optional,
+                    Rgb::get_documentation_structure()
+                )),
+                ("image".to_string(), FieldInfo::new(
+                    "Texture where the color of each coordinate is read from an image file",
+                    Optional,
+                    Image::get_documentation_structure()
+                )),
             ]),
         }
     }

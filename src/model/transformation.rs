@@ -80,13 +80,33 @@ pub fn create_transformation(
 impl HelpDocumentation for Transformation {
     fn get_documentation_structure() -> DocumentationStructure {
         DocumentationStructure {
-            description: "<<Transformation>>".to_string(),
+            description: "Changes a hittables position, rotation and / or size".to_string(),
             fields: HashMap::from([
-                ("translation".to_string(), FieldInfo::new("<<translation>>", Optional, Pos::get_documentation_structure())),
-                ("scale".to_string(), FieldInfo::new_simple("<<scale>>", Optional, "<<f64>>")),
-                ("rotation_x".to_string(), FieldInfo::new_simple("<<rotation_x>>", Optional, "<<f64>>")),
-                ("rotation_y".to_string(), FieldInfo::new_simple("<<rotation_y>>", Optional, "<<f64>>")),
-                ("rotation_z".to_string(), FieldInfo::new_simple("<<rotation_z>>", Optional, "<<f64>>")),
+                ("translation".to_string(), FieldInfo::new(
+                    "Moves the hittable by the given offset",
+                    Optional,
+                    Pos::get_documentation_structure()
+                )),
+                ("scale".to_string(), FieldInfo::new_simple(
+                    "Scales the hittable uniformly by the given factor",
+                    Optional,
+                    "Scaling factor"
+                )),
+                ("rotation_x".to_string(), FieldInfo::new_simple(
+                    "Rotates the hittable around the X axis",
+                    Optional,
+                    "Rotation in degrees"
+                )),
+                ("rotation_y".to_string(), FieldInfo::new_simple(
+                    "Rotates the hittable around the Y axis",
+                    Optional,
+                    "Rotation in degrees"
+                )),
+                ("rotation_z".to_string(), FieldInfo::new_simple(
+                    "Rotates the hittable around the Z axis",
+                    Optional,
+                    "Rotation in degrees"
+                )),
             ]),
         }
     }

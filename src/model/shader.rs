@@ -60,12 +60,28 @@ impl Creator<Shaders> for Shader {
 impl HelpDocumentation for Shader {
     fn get_documentation_structure() -> DocumentationStructure {
         DocumentationStructure {
-            description: "<<Shader>>".to_string(),
+            description: "A shader is responsible for coloring the pixels where a ray has hit an object".to_string(),
             fields: HashMap::from([
-                ("path_tracing".to_string(), FieldInfo::new("<<path_tracing>>", Optional, PathTracingShader::get_documentation_structure())),
-                ("simple".to_string(), FieldInfo::new("<<simple>>", Optional, SimpleShader::get_documentation_structure())),
-                ("albedo".to_string(), FieldInfo::new("<<albedo>>", Optional, AlbedoShader::get_documentation_structure())),
-                ("normal".to_string(), FieldInfo::new("<<normal>>", Optional, NormalShader::get_documentation_structure())),
+                ("path_tracing".to_string(), FieldInfo::new(
+                    "A path tracing shader",
+                    Optional,
+                    PathTracingShader::get_documentation_structure()
+                )),
+                ("simple".to_string(), FieldInfo::new(
+                    "Combines albedo and normal color without any light scattering",
+                    Optional,
+                    SimpleShader::get_documentation_structure()
+                )),
+                ("albedo".to_string(), FieldInfo::new(
+                    "A simple shader that just shows the hittable's albedo color",
+                    Optional,
+                    AlbedoShader::get_documentation_structure()
+                )),
+                ("normal".to_string(), FieldInfo::new(
+                    "Shader for displaying the normals of where rays intersect with hittables",
+                    Optional,
+                    NormalShader::get_documentation_structure()
+                )),
             ]),
         }
     }

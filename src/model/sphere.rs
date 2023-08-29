@@ -28,11 +28,23 @@ impl Creator<Hittables> for Sphere {
 impl HelpDocumentation for Sphere {
     fn get_documentation_structure() -> DocumentationStructure {
         DocumentationStructure {
-            description: "<<Sphere>>".to_string(),
+            description: "A sphere hittable object".to_string(),
             fields: HashMap::from([
-                ("center".to_string(), FieldInfo::new("<<center>>", Normal, Pos::get_documentation_structure())),
-                ("radius".to_string(), FieldInfo::new_simple("<<radius>>", Normal, "<<f64>>")),
-                ("material".to_string(), FieldInfo::new("<<material>>", Normal, Material::get_documentation_structure())),
+                ("center".to_string(), FieldInfo::new(
+                    "Position of the sphere's center",
+                    Normal,
+                    Pos::get_documentation_structure()
+                )),
+                ("radius".to_string(), FieldInfo::new_simple(
+                    "Radius of the sphere",
+                    Normal,
+                    "Radius of the sphere"
+                )),
+                ("material".to_string(), FieldInfo::new(
+                    "Material of the sphere",
+                    Normal,
+                    Material::get_documentation_structure()
+                )),
             ]),
         }
     }
