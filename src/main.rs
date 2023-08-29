@@ -3,7 +3,7 @@ use std::sync::mpsc::{Receiver, Sender};
 use std::time::Duration;
 
 use eframe::{App, egui, Frame, IconData, NativeOptions, run_native};
-use eframe::egui::{Button, Context, Margin, ProgressBar, SidePanel, TopBottomPanel, Vec2};
+use eframe::egui::{Align, Button, Context, Layout, Margin, ProgressBar, SidePanel, TopBottomPanel, Vec2};
 use eframe::egui::Event::CompositionUpdate;
 use eframe::epaint::TextureHandle;
 use egui::{CentralPanel, ScrollArea, Window};
@@ -63,6 +63,7 @@ struct SolstraleApp {
     scene_yaml: String,
     error_info: ErrorInfo,
     dialogs: Dialogs,
+    display_help: bool,
 }
 
 pub struct Dialogs {
@@ -128,6 +129,7 @@ impl SolstraleApp {
 
         SolstraleApp {
             scene_yaml: yaml.parse().unwrap(),
+            display_help: true,
             ..Default::default()
         }
     }
@@ -158,7 +160,6 @@ impl App for SolstraleApp {
                 });
 
                 let render_button_enabled = render_button::is_enabled(&self.render_control);
-
                 let render_button_clicked = ui
                     .add_enabled(
                         render_button_enabled,
@@ -174,6 +175,10 @@ impl App for SolstraleApp {
                         ui,
                     );
                 }
+
+                ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                    ui.checkbox(&mut self.display_help, "Display help")
+                });
             });
         });
 
@@ -258,7 +263,11 @@ impl App for SolstraleApp {
         SidePanel::right("help-panel").frame(egui::Frame {
             inner_margin: Margin::same(10.),
             ..Default::default()
-        }).min_width(300.0).show(ctx, |ui| help::show(ui, &documentation_structure));
+        }).min_width(300.0).show_animated(ctx, self.display_help, |ui|
+            ScrollArea::vertical().show(ui, |ui| {
+                help::show(ui, &documentation_structure);
+            })
+        );
 
         CentralPanel::default()
             .frame(egui::Frame {
