@@ -39,7 +39,8 @@ impl Creator<solstrale::renderer::Scene> for Scene {
 impl HelpDocumentation for Scene {
     fn get_documentation_structure() -> DocumentationStructure {
         DocumentationStructure {
-            description: "The scene YAML is used to configure all aspects of the rendered image".to_string(),
+            description: "The scene YAML is used to configure all aspects of the rendered image.\n\n\
+            Use ctrl+space to autocomplete configuration keys and ctrl+r to restart the rendering".to_string(),
             fields: HashMap::from([
                 ("render_configuration".to_string(), FieldInfo::new(
                     "General configuration for the renderer",

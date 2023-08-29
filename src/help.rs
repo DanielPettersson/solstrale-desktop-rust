@@ -11,8 +11,7 @@ pub fn show(ui: &mut Ui, documentation_structure: &Option<DocumentationStructure
             ui.add(Separator::default().spacing(10.));
         }
 
-        let mut fields: Vec<(&String, &FieldInfo)> = doc.fields.iter().to_owned().collect();
-        fields.sort_by_key(|f| f.0);
+        let fields: Vec<(&String, &FieldInfo)> = doc.fields.iter().to_owned().collect();
         for f in fields {
             let field_type_descr = match f.1.field_type {
                 FieldType::Normal => "",
