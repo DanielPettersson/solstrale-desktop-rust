@@ -1,4 +1,4 @@
-use eframe::egui::{Separator, Ui};
+use eframe::egui::{Separator, Ui, WidgetText};
 
 use crate::model::{DocumentationStructure, FieldInfo, FieldType};
 
@@ -17,12 +17,13 @@ pub fn show(ui: &mut Ui, documentation_structure: &Option<DocumentationStructure
                 FieldType::Normal => "",
                 FieldType::Optional => "(optional)",
                 FieldType::List => "(list)",
+                FieldType::OptionalList => "(list) (optional)"
             };
 
             ui.add_space(10.);
             ui.horizontal(|ui| {
                 ui.strong(format!("{}:", f.0));
-                ui.label(field_type_descr);
+                ui.label(WidgetText::from(field_type_descr).italics());
             });
             ui.label(&f.1.description);
         }

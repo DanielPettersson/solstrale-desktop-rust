@@ -1,9 +1,11 @@
 use std::collections::HashMap;
 use std::error::Error;
+
 use serde::{Deserialize, Serialize};
 use solstrale::hittable::Hittables;
+
 use crate::model::{Creator, DocumentationStructure, FieldInfo, HelpDocumentation};
-use crate::model::FieldType::{List, Normal};
+use crate::model::FieldType::{Normal, OptionalList};
 use crate::model::material::Material;
 use crate::model::pos::Pos;
 use crate::model::transformation::{create_transformation, Transformation};
@@ -58,7 +60,7 @@ impl HelpDocumentation for Quad {
                 )),
                 ("transformations".to_string(), FieldInfo::new(
                     "Transformations to be applied to the position and size of the quad",
-                    List,
+                    OptionalList,
                     Transformation::get_documentation_structure()
                 )),
             ]),

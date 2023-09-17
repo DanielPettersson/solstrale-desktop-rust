@@ -83,6 +83,7 @@ pub enum FieldType {
     Normal,
     Optional,
     List,
+    OptionalList,
 }
 
 #[derive(Clone)]

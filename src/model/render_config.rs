@@ -1,11 +1,13 @@
 use std::collections::HashMap;
 use std::error::Error;
 use std::time::Duration;
+
 use serde::{Deserialize, Serialize};
 use solstrale::post::PostProcessors;
 use solstrale::renderer::RenderImageStrategy;
+
 use crate::model::{Creator, DocumentationStructure, FieldInfo, HelpDocumentation};
-use crate::model::FieldType::{List, Normal};
+use crate::model::FieldType::{Normal, OptionalList};
 use crate::model::post_processor::PostProcessor;
 use crate::model::shader::Shader;
 
@@ -14,7 +16,7 @@ use crate::model::shader::Shader;
 pub struct RenderConfig {
     pub samples_per_pixel: u32,
     pub shader: Shader,
-    #[serde(skip_serializing_if = "Vec::is_empty")]
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
     pub post_processors: Vec<PostProcessor>,
     pub preview_interval_ms: u64,
 }
@@ -57,7 +59,7 @@ impl HelpDocumentation for RenderConfig {
                 )),
                 ("post_processors".to_string(), FieldInfo::new(
                     "A post processor is applied to the image after rendering for various effects",
-                    List,
+                    OptionalList,
                     PostProcessor::get_documentation_structure()
                 )),
                 ("preview_interval_ms".to_string(), FieldInfo::new_simple(
