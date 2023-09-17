@@ -238,7 +238,7 @@ impl App for SolstraleApp {
                 ..Default::default()
             })
             .show(ctx, |ui| {
-                ScrollArea::vertical().show(ui, |ui| {
+                ScrollArea::both().min_scrolled_width(300.).show(ui, |ui| {
                     ui.add(yaml_editor(
                         &mut self.scene_yaml,
                         &mut create_layouter(),
