@@ -1,9 +1,10 @@
 use std::error::Error;
 use std::sync::mpsc::{Receiver, Sender};
 use std::time::Duration;
+use dark_light::Mode;
 
 use eframe::{App, egui, Frame, IconData, NativeOptions, run_native};
-use eframe::egui::{Align, Button, Context, Layout, Margin, ProgressBar, SidePanel, TopBottomPanel, Vec2};
+use eframe::egui::{Align, Button, Context, Layout, Margin, ProgressBar, SidePanel, TopBottomPanel, Vec2, Visuals};
 use eframe::egui::Event::CompositionUpdate;
 use eframe::epaint::TextureHandle;
 use egui::{CentralPanel, ScrollArea, Window};
@@ -137,6 +138,14 @@ impl SolstraleApp {
 
 impl App for SolstraleApp {
     fn update(&mut self, ctx: &Context, _: &mut Frame) {
+
+        let mode = dark_light::detect();
+        match mode {
+            Mode::Dark => ctx.set_visuals(Visuals::dark()),
+            Mode::Light => ctx.set_visuals(Visuals::light()),
+            Mode::Default => ctx.set_visuals(Visuals::default())
+        }
+
         TopBottomPanel::top("top-panel").show(ctx, |ui| {
             ui.horizontal(|ui| {
                 ui.menu_button("File", |ui| {
@@ -206,23 +215,16 @@ impl App for SolstraleApp {
         );
 
         TopBottomPanel::bottom("bottom-panel")
-            .frame(egui::Frame {
-                inner_margin: Margin {
-                    left: 0.0,
-                    right: 0.0,
-                    top: 4.0,
-                    bottom: 0.0,
-                },
-                ..Default::default()
-            })
             .show(ctx, |ui| {
-                ui.add(
-                    ProgressBar::new(self.rendered_image.progress as f32).text(format!(
-                        "{:.0}% {} {:.1}FPS",
-                        self.rendered_image.progress * 100.,
-                        self.rendered_image.estimated_time_left.hhmmss(),
-                        self.rendered_image.fps,
-                    )),
+                egui::Frame::side_top_panel(ui.style()).inner_margin(Margin { top: 4., ..Margin::default() }).show(ui, |ui|
+                    ui.add(
+                        ProgressBar::new(self.rendered_image.progress as f32).text(format!(
+                            "{:.0}% {} {:.1}FPS",
+                            self.rendered_image.progress * 100.,
+                            self.rendered_image.estimated_time_left.hhmmss(),
+                            self.rendered_image.fps,
+                        )),
+                    )
                 );
             });
 
@@ -233,40 +235,37 @@ impl App for SolstraleApp {
         );
 
         SidePanel::left("code-panel")
-            .frame(egui::Frame {
-                inner_margin: Margin::same(2.),
-                ..Default::default()
-            })
             .show(ctx, |ui| {
-                ScrollArea::both().min_scrolled_width(300.).show(ui, |ui| {
-                    ui.add(yaml_editor(
-                        &mut self.scene_yaml,
-                        &mut create_layouter(),
-                        Vec2 {
-                            x: 300.0,
-                            y: ui.available_height(),
-                        },
-                    ));
+                egui::Frame::side_top_panel(ui.style()).inner_margin(Margin::same(0.)).show(ui, |ui|
+                    ScrollArea::both().min_scrolled_width(300.).show(ui, |ui| {
+                        ui.add(yaml_editor(
+                            &mut self.scene_yaml,
+                            &mut create_layouter(),
+                            Vec2 {
+                                x: 300.0,
+                                y: ui.available_height(),
+                            },
+                        ));
 
-                    if is_ctrl_space(ui) {
-                        if let Some(doc) = &documentation_structure {
-                            yaml_editor::autocomplete(&mut self.scene_yaml, doc, ctx);
+                        if is_ctrl_space(ui) {
+                            if let Some(doc) = &documentation_structure {
+                                yaml_editor::autocomplete(&mut self.scene_yaml, doc, ctx);
+                            }
                         }
-                    }
 
-                    if is_enter(ui) {
-                        yaml_editor::indent_new_line(&mut self.scene_yaml, ctx);
-                    }
-                });
+                        if is_enter(ui) {
+                            yaml_editor::indent_new_line(&mut self.scene_yaml, ctx);
+                        }
+                    })
+                );
             });
 
-        SidePanel::right("help-panel").frame(egui::Frame {
-            inner_margin: Margin::same(10.),
-            ..Default::default()
-        }).min_width(300.0).show_animated(ctx, self.display_help, |ui|
+        SidePanel::right("help-panel").min_width(300.0).show_animated(ctx, self.display_help, |ui|
             ScrollArea::vertical().show(ui, |ui| {
-                help::show(ui, &documentation_structure);
-            })
+                egui::Frame::side_top_panel(ui.style()).show(ui, |ui|
+                    help::show(ui, &documentation_structure)
+                );
+            }),
         );
 
         CentralPanel::default()
