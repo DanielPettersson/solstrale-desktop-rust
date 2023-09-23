@@ -1,2 +1,2 @@
 [env]
-OIDN_DIR = { value= "../solstrale-rust/oidn", relative = true, force = true }
+OIDN_DIR = { value= "oidn", relative = true, force = true }
