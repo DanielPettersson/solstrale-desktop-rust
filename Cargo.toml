@@ -18,7 +18,7 @@ enum-map = { version = "2.5.0", features = ["serde"] }
 syntect = { version = "5.0.0", default-features = false, features = [
     "default-fancy",
 ] }
-moka = "0.12.0"
+moka = { version = "0.12.0", features = ["sync"] }
 once_cell = "1.17.1"
 derive_more = "0.99.17"
 hhmmss = "0.1.0"
