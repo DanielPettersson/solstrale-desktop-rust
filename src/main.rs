@@ -34,6 +34,7 @@ mod loading_output;
 mod model;
 mod render_button;
 mod render_output;
+mod reset_confirm;
 mod save_image;
 mod save_scene;
 mod yaml_editor;
@@ -41,7 +42,7 @@ mod yaml_editor;
 static ROOT_DOCUMENTATION_STRUCTURE: Lazy<DocumentationStructure> =
     Lazy::new(Scene::get_documentation_structure);
 
-static DEFAULT_SCENE: Lazy<String> =
+pub static DEFAULT_SCENE: Lazy<String> =
     Lazy::new(|| include_str!("../resources/scene.yaml").to_owned());
 
 fn main() -> eframe::Result<()> {
@@ -80,6 +81,7 @@ pub struct Dialogs {
     load_scene_dialog: FileDialog,
     save_scene_dialog: FileDialog,
     save_output_dialog: FileDialog,
+    show_reset_confirm_dialog: bool,
 }
 
 impl Default for Dialogs {
@@ -88,6 +90,7 @@ impl Default for Dialogs {
             load_scene_dialog: load_scene::create(),
             save_scene_dialog: save_scene::create(None),
             save_output_dialog: save_image::create(),
+            show_reset_confirm_dialog: false,
         }
     }
 }
@@ -188,7 +191,7 @@ impl App for SolstraleApp {
                 });
 
                 if ui.button("Reset").clicked() {
-                    self.scene_yaml = DEFAULT_SCENE.to_owned()
+                    self.dialogs.show_reset_confirm_dialog = true;
                 }
 
                 let render_button_enabled = render_button::is_enabled(&self.render_control);
@@ -231,6 +234,12 @@ impl App for SolstraleApp {
             &mut self.dialogs.save_output_dialog,
             &mut self.error_info,
             &self.rendered_image,
+            ctx,
+        );
+
+        reset_confirm::dialog(
+            &mut self.dialogs.show_reset_confirm_dialog,
+            &mut self.scene_yaml,
             ctx,
         );
 
