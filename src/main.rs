@@ -130,8 +130,15 @@ impl ErrorInfo {
 }
 
 impl SolstraleApp {
-    fn new(_: &eframe::CreationContext<'_>) -> Self {
+    fn new(ctx: &eframe::CreationContext<'_>) -> Self {
         let yaml = include_str!("../resources/scene.yaml");
+
+        let mode = dark_light::detect();
+        match mode {
+            Mode::Dark => ctx.egui_ctx.set_visuals(Visuals::dark()),
+            Mode::Light => ctx.egui_ctx.set_visuals(Visuals::light()),
+            Mode::Default => ctx.egui_ctx.set_visuals(Visuals::default()),
+        }
 
         SolstraleApp {
             scene_yaml: yaml.parse().unwrap(),
@@ -143,13 +150,6 @@ impl SolstraleApp {
 
 impl App for SolstraleApp {
     fn update(&mut self, ctx: &Context, _: &mut Frame) {
-        let mode = dark_light::detect();
-        match mode {
-            Mode::Dark => ctx.set_visuals(Visuals::dark()),
-            Mode::Light => ctx.set_visuals(Visuals::light()),
-            Mode::Default => ctx.set_visuals(Visuals::default()),
-        }
-
         TopBottomPanel::top("top-panel").show(ctx, |ui| {
             ui.horizontal(|ui| {
                 ui.menu_button("File", |ui| {
