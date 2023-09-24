@@ -5,11 +5,10 @@ edition = "2021"
 
 [profile.release]
 lto = true
-codegen-units = 1
 
 [dependencies]
 solstrale = "0.1.7"
-eframe = "0.22.0"
+eframe = { version = "0.22.0", features = ["persistence", "wayland", "wgpu"] }
 egui_file = "0.10.0"
 image = "0.24.5"
 serde = { version = "1.0.163", features = ["derive"] }

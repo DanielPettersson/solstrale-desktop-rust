@@ -1,5 +1,6 @@
 use dark_light::Mode;
 use std::error::Error;
+use std::str::FromStr;
 use std::sync::mpsc::{Receiver, Sender};
 use std::time::Duration;
 
@@ -8,7 +9,7 @@ use eframe::egui::{
     Align, Button, Context, Layout, Margin, ProgressBar, SidePanel, TopBottomPanel, Vec2, Visuals,
 };
 use eframe::epaint::TextureHandle;
-use eframe::{egui, run_native, App, Frame, IconData, NativeOptions};
+use eframe::{egui, run_native, App, Frame, IconData, NativeOptions, Storage};
 use egui::{CentralPanel, ScrollArea, Window};
 use egui_file::FileDialog;
 use hhmmss::Hhmmss;
@@ -131,7 +132,7 @@ impl ErrorInfo {
 
 impl SolstraleApp {
     fn new(ctx: &eframe::CreationContext<'_>) -> Self {
-        let yaml = include_str!("../resources/scene.yaml");
+        let mut yaml = include_str!("../resources/scene.yaml").to_owned();
 
         let mode = dark_light::detect();
         match mode {
@@ -140,9 +141,20 @@ impl SolstraleApp {
             Mode::Default => ctx.egui_ctx.set_visuals(Visuals::default()),
         }
 
+        let mut display_help = true;
+        if let Some(storage) = ctx.storage {
+            if let Some(value) = storage.get_string("display_help") {
+                display_help =
+                    bool::from_str(&value).expect("Invalid app configuration for display help");
+            }
+            if let Some(value) = storage.get_string("scene_yaml") {
+                yaml = value;
+            }
+        }
+
         SolstraleApp {
-            scene_yaml: yaml.parse().unwrap(),
-            display_help: true,
+            scene_yaml: yaml,
+            display_help,
             ..Default::default()
         }
     }
@@ -329,5 +341,14 @@ impl App for SolstraleApp {
                 }
             })
         });
+    }
+
+    fn persist_native_window(&self) -> bool {
+        true
+    }
+
+    fn save(&mut self, storage: &mut dyn Storage) {
+        storage.set_string("display_help", self.display_help.to_string());
+        storage.set_string("scene_yaml", self.scene_yaml.to_owned())
     }
 }
