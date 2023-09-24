@@ -41,6 +41,9 @@ mod yaml_editor;
 static ROOT_DOCUMENTATION_STRUCTURE: Lazy<DocumentationStructure> =
     Lazy::new(Scene::get_documentation_structure);
 
+static DEFAULT_SCENE: Lazy<String> =
+    Lazy::new(|| include_str!("../resources/scene.yaml").to_owned());
+
 fn main() -> eframe::Result<()> {
     let icon_bytes = include_bytes!("../resources/icon.png");
     let icon = IconData::try_from_png_bytes(icon_bytes).expect("Failed to load application icon");
@@ -132,7 +135,7 @@ impl ErrorInfo {
 
 impl SolstraleApp {
     fn new(ctx: &eframe::CreationContext<'_>) -> Self {
-        let mut yaml = include_str!("../resources/scene.yaml").to_owned();
+        let mut yaml = DEFAULT_SCENE.to_owned();
 
         let mode = dark_light::detect();
         match mode {
@@ -184,6 +187,10 @@ impl App for SolstraleApp {
                     }
                 });
 
+                if ui.button("Reset").clicked() {
+                    self.scene_yaml = DEFAULT_SCENE.to_owned()
+                }
+
                 let render_button_enabled = render_button::is_enabled(&self.render_control);
                 let render_button_clicked = ui
                     .add_enabled(render_button_enabled, Button::new("Render"))
@@ -230,7 +237,7 @@ impl App for SolstraleApp {
         TopBottomPanel::bottom("bottom-panel").show(ctx, |ui| {
             egui::Frame::side_top_panel(ui.style())
                 .inner_margin(Margin {
-                    top: 4.,
+                    top: 3.,
                     ..Margin::default()
                 })
                 .show(ui, |ui| {
@@ -343,12 +350,12 @@ impl App for SolstraleApp {
         });
     }
 
-    fn persist_native_window(&self) -> bool {
-        true
-    }
-
     fn save(&mut self, storage: &mut dyn Storage) {
         storage.set_string("display_help", self.display_help.to_string());
         storage.set_string("scene_yaml", self.scene_yaml.to_owned())
+    }
+
+    fn persist_native_window(&self) -> bool {
+        true
     }
 }
