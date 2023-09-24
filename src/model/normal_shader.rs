@@ -1,7 +1,7 @@
-use std::error::Error;
+use crate::model::{Creator, DocumentationStructure, HelpDocumentation};
 use serde::{Deserialize, Serialize};
 use solstrale::renderer::shader::Shaders;
-use crate::model::{Creator, DocumentationStructure, HelpDocumentation};
+use std::error::Error;
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
 #[serde(deny_unknown_fields)]

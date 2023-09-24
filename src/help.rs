@@ -17,7 +17,7 @@ pub fn show(ui: &mut Ui, documentation_structure: &Option<DocumentationStructure
                 FieldType::Normal => "",
                 FieldType::Optional => "(optional)",
                 FieldType::List => "(list)",
-                FieldType::OptionalList => "(list) (optional)"
+                FieldType::OptionalList => "(list) (optional)",
             };
 
             ui.add_space(10.);

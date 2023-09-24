@@ -1,7 +1,7 @@
-use std::error::Error;
+use crate::model::{parse_option, Creator, DocumentationStructure, HelpDocumentation};
 use serde::{Deserialize, Serialize};
 use solstrale::geo::vec3::Vec3;
-use crate::model::{Creator, DocumentationStructure, HelpDocumentation, parse_option};
+use std::error::Error;
 
 #[derive(PartialEq, Debug)]
 pub struct Pos {
@@ -16,8 +16,8 @@ static Z: &str = "z";
 
 impl Serialize for Pos {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        where
-            S: serde::ser::Serializer,
+    where
+        S: serde::ser::Serializer,
     {
         serializer.serialize_str(&format!("{}, {}, {}", self.x, self.y, self.z))
     }
@@ -25,8 +25,8 @@ impl Serialize for Pos {
 
 impl<'de> Deserialize<'de> for Pos {
     fn deserialize<D>(deserializer: D) -> Result<Pos, D::Error>
-        where
-            D: serde::de::Deserializer<'de>,
+    where
+        D: serde::de::Deserializer<'de>,
     {
         let s = String::deserialize(deserializer)?;
         let mut split = s.split(',');
@@ -51,6 +51,8 @@ impl Creator<Vec3> for Pos {
 
 impl HelpDocumentation for Pos {
     fn get_documentation_structure() -> DocumentationStructure {
-        DocumentationStructure::new_simple("Value describing an X, Y, Z position in space. For example: 1.0, 2.0, -3.0")
+        DocumentationStructure::new_simple(
+            "Value describing an X, Y, Z position in space. For example: 1.0, 2.0, -3.0",
+        )
     }
 }

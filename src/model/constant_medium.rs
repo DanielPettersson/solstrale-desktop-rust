@@ -4,10 +4,10 @@ use std::error::Error;
 use serde::{Deserialize, Serialize};
 use solstrale::hittable::{Bvh, Hittables};
 
-use crate::model::{Creator, DocumentationStructure, FieldInfo, HelpDocumentation};
-use crate::model::FieldType::Normal;
 use crate::model::r#box::Box as BoxHittable;
 use crate::model::rgb::Rgb;
+use crate::model::FieldType::Normal;
+use crate::model::{Creator, DocumentationStructure, FieldInfo, HelpDocumentation};
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
 #[serde(deny_unknown_fields)]

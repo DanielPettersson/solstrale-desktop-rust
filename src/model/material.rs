@@ -1,13 +1,13 @@
-use std::collections::HashMap;
-use std::error::Error;
-use serde::{Deserialize, Serialize};
-use solstrale::material::Materials;
-use crate::model::{Creator, DocumentationStructure, FieldInfo, HelpDocumentation, ModelError};
-use crate::model::FieldType::Optional;
 use crate::model::glass::Glass;
 use crate::model::lambertian::Lambertian;
 use crate::model::light::Light;
 use crate::model::metal::Metal;
+use crate::model::FieldType::Optional;
+use crate::model::{Creator, DocumentationStructure, FieldInfo, HelpDocumentation, ModelError};
+use serde::{Deserialize, Serialize};
+use solstrale::material::Materials;
+use std::collections::HashMap;
+use std::error::Error;
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
 #[serde(deny_unknown_fields)]
@@ -49,10 +49,10 @@ impl Creator<Materials> for Material {
                 metal: None,
                 light: Some(l),
             } => l.create(),
-            _ => Err(Box::try_from(ModelError::new(
-                "Material should have single field defined",
-            ))
-                .unwrap()),
+            _ => Err(
+                Box::try_from(ModelError::new("Material should have single field defined"))
+                    .unwrap(),
+            ),
         }
     }
 }
@@ -60,28 +60,42 @@ impl Creator<Materials> for Material {
 impl HelpDocumentation for Material {
     fn get_documentation_structure() -> DocumentationStructure {
         DocumentationStructure {
-            description: "A material gives hittable objects it's looks as they scatter the light differently".to_string(),
+            description:
+                "A material gives hittable objects it's looks as they scatter the light differently"
+                    .to_string(),
             fields: HashMap::from([
-                ("lambertian".to_string(), FieldInfo::new(
-                    "A material with the appearance of a matte surface",
-                    Optional,
-                    Lambertian::get_documentation_structure()
-                )),
-                ("glass".to_string(), FieldInfo::new(
-                    "A dielectric material which has a glass-like appearance",
-                    Optional,
-                    Glass::get_documentation_structure()
-                )),
-                ("metal".to_string(), FieldInfo::new(
-                    "A reflective material that gives a metallic appearance",
-                    Optional,
-                    Metal::get_documentation_structure()
-                )),
-                ("light".to_string(), FieldInfo::new(
-                    "A material that emits light",
-                    Optional,
-                    Light::get_documentation_structure()
-                )),
+                (
+                    "lambertian".to_string(),
+                    FieldInfo::new(
+                        "A material with the appearance of a matte surface",
+                        Optional,
+                        Lambertian::get_documentation_structure(),
+                    ),
+                ),
+                (
+                    "glass".to_string(),
+                    FieldInfo::new(
+                        "A dielectric material which has a glass-like appearance",
+                        Optional,
+                        Glass::get_documentation_structure(),
+                    ),
+                ),
+                (
+                    "metal".to_string(),
+                    FieldInfo::new(
+                        "A reflective material that gives a metallic appearance",
+                        Optional,
+                        Metal::get_documentation_structure(),
+                    ),
+                ),
+                (
+                    "light".to_string(),
+                    FieldInfo::new(
+                        "A material that emits light",
+                        Optional,
+                        Light::get_documentation_structure(),
+                    ),
+                ),
             ]),
         }
     }

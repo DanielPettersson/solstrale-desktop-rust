@@ -1,11 +1,11 @@
-use std::collections::HashMap;
-use std::error::Error;
-use serde::{Deserialize, Serialize};
-use solstrale::hittable::Hittables;
-use crate::model::{Creator, DocumentationStructure, FieldInfo, HelpDocumentation};
-use crate::model::FieldType::Normal;
 use crate::model::material::Material;
 use crate::model::pos::Pos;
+use crate::model::FieldType::Normal;
+use crate::model::{Creator, DocumentationStructure, FieldInfo, HelpDocumentation};
+use serde::{Deserialize, Serialize};
+use solstrale::hittable::Hittables;
+use std::collections::HashMap;
+use std::error::Error;
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
 #[serde(deny_unknown_fields)]
@@ -30,21 +30,26 @@ impl HelpDocumentation for Sphere {
         DocumentationStructure {
             description: "A sphere hittable object".to_string(),
             fields: HashMap::from([
-                ("center".to_string(), FieldInfo::new(
-                    "Position of the sphere's center",
-                    Normal,
-                    Pos::get_documentation_structure()
-                )),
-                ("radius".to_string(), FieldInfo::new_simple(
-                    "Radius of the sphere",
-                    Normal,
-                    "Radius of the sphere"
-                )),
-                ("material".to_string(), FieldInfo::new(
-                    "Material of the sphere",
-                    Normal,
-                    Material::get_documentation_structure()
-                )),
+                (
+                    "center".to_string(),
+                    FieldInfo::new(
+                        "Position of the sphere's center",
+                        Normal,
+                        Pos::get_documentation_structure(),
+                    ),
+                ),
+                (
+                    "radius".to_string(),
+                    FieldInfo::new_simple("Radius of the sphere", Normal, "Radius of the sphere"),
+                ),
+                (
+                    "material".to_string(),
+                    FieldInfo::new(
+                        "Material of the sphere",
+                        Normal,
+                        Material::get_documentation_structure(),
+                    ),
+                ),
             ]),
         }
     }

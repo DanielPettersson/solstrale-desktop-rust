@@ -79,7 +79,10 @@ pub fn render_output(
         let texture_handle = rendered_image.texture_handle.get_or_insert_with(|| {
             ctx.load_texture(
                 "",
-                ColorImage::new([render_size.x as usize, render_size.y as usize], Color32::BLACK),
+                ColorImage::new(
+                    [render_size.x as usize, render_size.y as usize],
+                    Color32::BLACK,
+                ),
                 TextureOptions::default(),
             )
         });
@@ -103,7 +106,6 @@ fn render(
     let ctx2 = ctx.clone();
 
     thread::spawn(move || {
-
         // Not too fancy, solution. But adding a sleep here avoids flickering
         // when restarting rendering with a scene that loads really fast
         thread::sleep(Duration::from_millis(100));

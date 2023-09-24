@@ -1,20 +1,19 @@
-use std::collections::HashMap;
-use std::error::Error;
+use crate::model::material::Material;
+use crate::model::transformation::{create_transformation, Transformation};
+use crate::model::FieldType::{List, Normal, Optional};
+use crate::model::{Creator, DocumentationStructure, FieldInfo, HelpDocumentation, ModelError};
 use moka::sync::Cache;
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use solstrale::hittable::Hittables;
-use solstrale::loader::Loader;
 use solstrale::loader::obj::Obj;
+use solstrale::loader::Loader;
 use solstrale::material::texture::SolidColor;
-use crate::model::{Creator, DocumentationStructure, FieldInfo, HelpDocumentation, ModelError};
-use crate::model::FieldType::{List, Normal, Optional};
-use crate::model::material::Material;
-use crate::model::transformation::{create_transformation, Transformation};
+use std::collections::HashMap;
+use std::error::Error;
 
 static MODEL_CACHE: Lazy<Cache<String, Result<Hittables, ModelError>>> =
     Lazy::new(|| Cache::new(4));
-
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
 #[serde(deny_unknown_fields)]

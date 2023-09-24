@@ -1,9 +1,9 @@
-use std::collections::HashMap;
-use std::error::Error;
+use crate::model::FieldType::{Normal, Optional};
+use crate::model::{Creator, DocumentationStructure, FieldInfo, HelpDocumentation};
 use serde::{Deserialize, Serialize};
 use solstrale::post::PostProcessors;
-use crate::model::{Creator, DocumentationStructure, FieldInfo, HelpDocumentation};
-use crate::model::FieldType::{Normal, Optional};
+use std::collections::HashMap;
+use std::error::Error;
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
 #[serde(deny_unknown_fields)]

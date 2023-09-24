@@ -4,11 +4,11 @@ use std::error::Error;
 use serde::{Deserialize, Serialize};
 use solstrale::hittable::Hittables;
 
-use crate::model::{Creator, DocumentationStructure, FieldInfo, HelpDocumentation};
-use crate::model::FieldType::{Normal, OptionalList};
 use crate::model::material::Material;
 use crate::model::pos::Pos;
 use crate::model::transformation::{create_transformation, Transformation};
+use crate::model::FieldType::{Normal, OptionalList};
+use crate::model::{Creator, DocumentationStructure, FieldInfo, HelpDocumentation};
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
 #[serde(deny_unknown_fields)]
@@ -36,26 +36,38 @@ impl HelpDocumentation for Box {
         DocumentationStructure {
             description: "A hittable in the shape of a box".to_string(),
             fields: HashMap::from([
-                ("a".to_string(), FieldInfo::new(
-                    "Position of a corner of the box",
-                    Normal,
-                    Pos::get_documentation_structure()
-                )),
-                ("b".to_string(), FieldInfo::new(
-                    "Position of the corner opposite to 'a' of the box",
-                    Normal,
-                    Pos::get_documentation_structure()
-                )),
-                ("material".to_string(), FieldInfo::new(
-                    "Material of the box",
-                    Normal,
-                    Material::get_documentation_structure()
-                )),
-                ("transformations".to_string(), FieldInfo::new(
-                    "Transformations to be applied to the position and size of the box",
-                    OptionalList,
-                    Transformation::get_documentation_structure()
-                ))
+                (
+                    "a".to_string(),
+                    FieldInfo::new(
+                        "Position of a corner of the box",
+                        Normal,
+                        Pos::get_documentation_structure(),
+                    ),
+                ),
+                (
+                    "b".to_string(),
+                    FieldInfo::new(
+                        "Position of the corner opposite to 'a' of the box",
+                        Normal,
+                        Pos::get_documentation_structure(),
+                    ),
+                ),
+                (
+                    "material".to_string(),
+                    FieldInfo::new(
+                        "Material of the box",
+                        Normal,
+                        Material::get_documentation_structure(),
+                    ),
+                ),
+                (
+                    "transformations".to_string(),
+                    FieldInfo::new(
+                        "Transformations to be applied to the position and size of the box",
+                        OptionalList,
+                        Transformation::get_documentation_structure(),
+                    ),
+                ),
             ]),
         }
     }

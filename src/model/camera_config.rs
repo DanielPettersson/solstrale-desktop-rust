@@ -1,8 +1,8 @@
+use crate::model::FieldType::Normal;
+use crate::model::{Creator, DocumentationStructure, FieldInfo, HelpDocumentation, Pos};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::error::Error;
-use serde::{Deserialize, Serialize};
-use crate::model::{Creator, DocumentationStructure, FieldInfo, HelpDocumentation, Pos};
-use crate::model::FieldType::Normal;
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
 #[serde(deny_unknown_fields)]

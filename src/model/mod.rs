@@ -6,32 +6,32 @@ use derive_more::Display;
 use crate::model::pos::Pos;
 use crate::model::scene::Scene;
 
+mod albedo_shader;
+mod bloom_post_processor;
+mod r#box;
 mod camera_config;
+mod constant_medium;
+mod denoise_post_processor;
+mod glass;
+mod hittable;
+mod image;
+mod lambertian;
+mod light;
+mod material;
+mod metal;
+mod normal_shader;
+mod obj_model;
+mod path_tracing_shader;
+mod pos;
+mod post_processor;
+mod quad;
+mod render_config;
+mod rgb;
 pub mod scene;
 mod shader;
-mod path_tracing_shader;
 mod simple_shader;
-mod albedo_shader;
-mod normal_shader;
-mod post_processor;
-mod bloom_post_processor;
-mod denoise_post_processor;
-mod render_config;
-mod pos;
-mod hittable;
 mod sphere;
-mod obj_model;
-mod quad;
-mod r#box;
-mod constant_medium;
-mod material;
-mod lambertian;
-mod glass;
-mod metal;
-mod light;
 mod texture;
-mod image;
-mod rgb;
 mod transformation;
 
 #[derive(Clone, Debug, Display)]
@@ -90,18 +90,26 @@ pub enum FieldType {
 pub struct FieldInfo {
     pub description: String,
     pub field_type: FieldType,
-    pub documentation_structure: DocumentationStructure
+    pub documentation_structure: DocumentationStructure,
 }
 
 impl FieldInfo {
-    pub fn new(field_description: &str, field_type: FieldType, documentation_structure: DocumentationStructure) -> FieldInfo {
+    pub fn new(
+        field_description: &str,
+        field_type: FieldType,
+        documentation_structure: DocumentationStructure,
+    ) -> FieldInfo {
         FieldInfo {
             description: field_description.to_string(),
             field_type,
             documentation_structure,
         }
     }
-    pub fn new_simple(field_description: &str, field_type: FieldType, description: &str) -> FieldInfo {
+    pub fn new_simple(
+        field_description: &str,
+        field_type: FieldType,
+        description: &str,
+    ) -> FieldInfo {
         FieldInfo {
             description: field_description.to_string(),
             field_type,
@@ -110,18 +118,22 @@ impl FieldInfo {
     }
 }
 
-pub fn get_documentation_structure_by_yaml_path(info: &DocumentationStructure, path: &[String]) -> Option<DocumentationStructure> {
+pub fn get_documentation_structure_by_yaml_path(
+    info: &DocumentationStructure,
+    path: &[String],
+) -> Option<DocumentationStructure> {
     if path.is_empty() {
         Some(info.clone())
     } else {
         match path.split_first() {
             None => None,
-            Some((first, rest)) => {
-                match info.fields.get(first) {
-                    None => None,
-                    Some(child_info) => get_documentation_structure_by_yaml_path(&child_info.documentation_structure, rest)
-                }
-            }
+            Some((first, rest)) => match info.fields.get(first) {
+                None => None,
+                Some(child_info) => get_documentation_structure_by_yaml_path(
+                    &child_info.documentation_structure,
+                    rest,
+                ),
+            },
         }
     }
 }
@@ -132,8 +144,8 @@ pub fn parse_scene_yaml(yaml: &str) -> Result<Scene, Box<dyn Error>> {
 }
 
 pub fn parse_option<'de, D>(a: Option<&str>, expected_field: &'static str) -> Result<f64, D::Error>
-    where
-        D: serde::de::Deserializer<'de>,
+where
+    D: serde::de::Deserializer<'de>,
 {
     a.ok_or(serde::de::Error::missing_field(expected_field))?
         .trim()
@@ -143,7 +155,6 @@ pub fn parse_option<'de, D>(a: Option<&str>, expected_field: &'static str) -> Re
 
 #[cfg(test)]
 mod test {
-    use crate::model::*;
     use crate::model::bloom_post_processor::BloomPostProcessor;
     use crate::model::camera_config::CameraConfig;
     use crate::model::denoise_post_processor::DenoisePostProcessor;
@@ -157,6 +168,7 @@ mod test {
     use crate::model::shader::Shader;
     use crate::model::texture::Texture;
     use crate::model::transformation::Transformation;
+    use crate::model::*;
 
     #[test]
     fn serde() {

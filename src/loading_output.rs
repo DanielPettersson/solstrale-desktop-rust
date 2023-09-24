@@ -15,7 +15,6 @@ pub fn show(ui: &mut Ui) {
             (Color32::from_rgb(200, 200, 200), Color32::BLACK)
         };
 
-
         let to_screen = RectTransform::from_to(Rect::from_x_y_ranges(0.0..=1.0, -1.0..=1.0), rect);
 
         let mut shapes = vec![];
@@ -36,7 +35,7 @@ pub fn show(ui: &mut Ui) {
             let thickness = 20.0 / mode as f32;
             shapes.push(Shape::line(points, Stroke::new(thickness, line_color)));
         }
-        ui.fonts(|fonts|
+        ui.fonts(|fonts| {
             shapes.push(Shape::text(
                 fonts,
                 to_screen * Pos2::new(0.5, 0.0),
@@ -45,7 +44,7 @@ pub fn show(ui: &mut Ui) {
                 FontId::monospace(to_screen.scale().x * 0.04),
                 text_color,
             ))
-        );
+        });
 
         ui.painter().extend(shapes);
     });

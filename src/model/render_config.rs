@@ -6,10 +6,10 @@ use serde::{Deserialize, Serialize};
 use solstrale::post::PostProcessors;
 use solstrale::renderer::RenderImageStrategy;
 
-use crate::model::{Creator, DocumentationStructure, FieldInfo, HelpDocumentation};
-use crate::model::FieldType::{Normal, OptionalList};
 use crate::model::post_processor::PostProcessor;
 use crate::model::shader::Shader;
+use crate::model::FieldType::{Normal, OptionalList};
+use crate::model::{Creator, DocumentationStructure, FieldInfo, HelpDocumentation};
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
 #[serde(deny_unknown_fields)]

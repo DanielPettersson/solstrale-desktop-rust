@@ -1,9 +1,9 @@
-use std::collections::HashMap;
-use std::error::Error;
+use crate::model::FieldType::Normal;
+use crate::model::{Creator, DocumentationStructure, FieldInfo, HelpDocumentation};
 use serde::{Deserialize, Serialize};
 use solstrale::renderer::shader::Shaders;
-use crate::model::{Creator, DocumentationStructure, FieldInfo, HelpDocumentation};
-use crate::model::FieldType::Normal;
+use std::collections::HashMap;
+use std::error::Error;
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
 #[serde(deny_unknown_fields)]
@@ -13,7 +13,9 @@ pub struct PathTracingShader {
 
 impl Creator<Shaders> for PathTracingShader {
     fn create(&self) -> Result<Shaders, Box<dyn Error>> {
-        Ok(solstrale::renderer::shader::PathTracingShader::new(self.max_depth))
+        Ok(solstrale::renderer::shader::PathTracingShader::new(
+            self.max_depth,
+        ))
     }
 }
 

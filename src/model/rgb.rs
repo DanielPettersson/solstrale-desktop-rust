@@ -1,7 +1,7 @@
-use std::error::Error;
+use crate::model::{parse_option, Creator, DocumentationStructure, HelpDocumentation};
 use serde::{Deserialize, Serialize};
 use solstrale::geo::vec3::Vec3;
-use crate::model::{Creator, DocumentationStructure, HelpDocumentation, parse_option};
+use std::error::Error;
 
 #[derive(PartialEq, Debug, Copy, Clone)]
 pub struct Rgb {
@@ -16,8 +16,8 @@ static B: &str = "b";
 
 impl Serialize for Rgb {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        where
-            S: serde::ser::Serializer,
+    where
+        S: serde::ser::Serializer,
     {
         serializer.serialize_str(&format!("{}, {}, {}", self.r, self.g, self.b))
     }
@@ -25,8 +25,8 @@ impl Serialize for Rgb {
 
 impl<'de> Deserialize<'de> for Rgb {
     fn deserialize<D>(deserializer: D) -> Result<Rgb, D::Error>
-        where
-            D: serde::de::Deserializer<'de>,
+    where
+        D: serde::de::Deserializer<'de>,
     {
         let s = String::deserialize(deserializer)?;
         let mut split = s.split(',');

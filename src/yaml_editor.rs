@@ -1,20 +1,26 @@
 use std::sync::Arc;
 
+use crate::model::DocumentationStructure;
 use eframe::egui;
-use eframe::egui::{Context, Galley, Id, TextBuffer, TextEdit, TextFormat, Ui, Vec2};
 use eframe::egui::text::{LayoutJob, LayoutSection};
+use eframe::egui::{Context, Galley, Id, TextBuffer, TextEdit, TextFormat, Ui, Vec2};
 use egui::util::cache::{ComputerMut, FrameCache};
 use once_cell::sync::Lazy;
 use regex::Regex;
-use crate::model::DocumentationStructure;
 
 pub static YAML_EDITOR_ID: Lazy<Id> = Lazy::new(|| Id::from("yaml_editor"));
 static INDENTATION_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new("^[\\s-]*").unwrap());
 static YAML_KEY_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new("^([\\s-]*)([\\w_]+):").unwrap());
 static AUTOCOMPLETE_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new("^[\\s-]*([\\w_]+)$").unwrap());
 
-pub fn yaml_editor<'a, L>(text: &'a mut dyn TextBuffer, layouter: &'a mut L, min_size: Vec2) -> TextEdit<'a>
-    where L: Fn(&Ui, &str, f32) -> Arc<Galley> {
+pub fn yaml_editor<'a, L>(
+    text: &'a mut dyn TextBuffer,
+    layouter: &'a mut L,
+    min_size: Vec2,
+) -> TextEdit<'a>
+where
+    L: Fn(&Ui, &str, f32) -> Arc<Galley>,
+{
     TextEdit::multiline(text)
         .id(*YAML_EDITOR_ID)
         .code_editor()
@@ -29,7 +35,7 @@ fn cursor_char_offset(ctx: &Context) -> Option<usize> {
 
 pub fn get_yaml_path(yaml: &dyn TextBuffer, ctx: &Context) -> Vec<String> {
     match cursor_char_offset(ctx) {
-        None => vec!(),
+        None => vec![],
         Some(idx) => {
             let mut max_indentation: usize = usize::MAX;
             let mut ret = Vec::new();
@@ -68,11 +74,12 @@ pub fn autocomplete(text: &mut dyn TextBuffer, doc: &DocumentationStructure, ctx
                 if let Some(cap) = AUTOCOMPLETE_REGEX.captures(last_line) {
                     let autocomplete_key = cap.get(1).unwrap().as_str().to_owned();
 
-                    if let Some(autocomplete_val) =
-                        doc.fields.iter()
-                            .find(|f| f.0.starts_with(&autocomplete_key))
-                            .map(|f| f.0[autocomplete_key.len()..].to_owned()) {
-
+                    if let Some(autocomplete_val) = doc
+                        .fields
+                        .iter()
+                        .find(|f| f.0.starts_with(&autocomplete_key))
+                        .map(|f| f.0[autocomplete_key.len()..].to_owned())
+                    {
                         let ins = format!("{}: ", autocomplete_val);
                         text.insert_text(&ins, idx);
 
@@ -92,7 +99,10 @@ pub fn indent_new_line(text: &mut dyn TextBuffer, ctx: &Context) {
             let idx = range.primary.index;
 
             if let Some(last_line) = text.char_range(0..idx).lines().last() {
-                let num_spaces_at_start = INDENTATION_REGEX.find(last_line).map(|m| m.len()).unwrap_or(0);
+                let num_spaces_at_start = INDENTATION_REGEX
+                    .find(last_line)
+                    .map(|m| m.len())
+                    .unwrap_or(0);
                 let ends_with_colon = last_line.trim().chars().last().unwrap_or(' ') == ':';
                 let space_indent = num_spaces_at_start + if ends_with_colon { 2 } else { 0 };
 

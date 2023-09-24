@@ -1,13 +1,13 @@
-use std::collections::HashMap;
-use std::error::Error;
-use serde::{Deserialize, Serialize};
-use solstrale::renderer::shader::Shaders;
-use crate::model::{Creator, DocumentationStructure, FieldInfo, HelpDocumentation, ModelError};
 use crate::model::albedo_shader::AlbedoShader;
-use crate::model::FieldType::Optional;
 use crate::model::normal_shader::NormalShader;
 use crate::model::path_tracing_shader::PathTracingShader;
 use crate::model::simple_shader::SimpleShader;
+use crate::model::FieldType::Optional;
+use crate::model::{Creator, DocumentationStructure, FieldInfo, HelpDocumentation, ModelError};
+use serde::{Deserialize, Serialize};
+use solstrale::renderer::shader::Shaders;
+use std::collections::HashMap;
+use std::error::Error;
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
 #[serde(deny_unknown_fields)]
@@ -50,8 +50,7 @@ impl Creator<Shaders> for Shader {
                 normal: Some(n),
             } => n.create(),
             _ => Err(
-                Box::try_from(ModelError::new("Shader should have single field defined"))
-                    .unwrap(),
+                Box::try_from(ModelError::new("Shader should have single field defined")).unwrap(),
             ),
         }
     }
@@ -60,28 +59,42 @@ impl Creator<Shaders> for Shader {
 impl HelpDocumentation for Shader {
     fn get_documentation_structure() -> DocumentationStructure {
         DocumentationStructure {
-            description: "A shader is responsible for coloring the pixels where a ray has hit an object".to_string(),
+            description:
+                "A shader is responsible for coloring the pixels where a ray has hit an object"
+                    .to_string(),
             fields: HashMap::from([
-                ("path_tracing".to_string(), FieldInfo::new(
-                    "A path tracing shader",
-                    Optional,
-                    PathTracingShader::get_documentation_structure()
-                )),
-                ("simple".to_string(), FieldInfo::new(
-                    "Combines albedo and normal color without any light scattering",
-                    Optional,
-                    SimpleShader::get_documentation_structure()
-                )),
-                ("albedo".to_string(), FieldInfo::new(
-                    "A simple shader that just shows the hittable's albedo color",
-                    Optional,
-                    AlbedoShader::get_documentation_structure()
-                )),
-                ("normal".to_string(), FieldInfo::new(
-                    "Shader for displaying the normals of where rays intersect with hittables",
-                    Optional,
-                    NormalShader::get_documentation_structure()
-                )),
+                (
+                    "path_tracing".to_string(),
+                    FieldInfo::new(
+                        "A path tracing shader",
+                        Optional,
+                        PathTracingShader::get_documentation_structure(),
+                    ),
+                ),
+                (
+                    "simple".to_string(),
+                    FieldInfo::new(
+                        "Combines albedo and normal color without any light scattering",
+                        Optional,
+                        SimpleShader::get_documentation_structure(),
+                    ),
+                ),
+                (
+                    "albedo".to_string(),
+                    FieldInfo::new(
+                        "A simple shader that just shows the hittable's albedo color",
+                        Optional,
+                        AlbedoShader::get_documentation_structure(),
+                    ),
+                ),
+                (
+                    "normal".to_string(),
+                    FieldInfo::new(
+                        "Shader for displaying the normals of where rays intersect with hittables",
+                        Optional,
+                        NormalShader::get_documentation_structure(),
+                    ),
+                ),
             ]),
         }
     }

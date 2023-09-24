@@ -4,11 +4,11 @@ use std::error::Error;
 use serde::{Deserialize, Serialize};
 use solstrale::hittable::Hittables;
 
-use crate::model::{Creator, DocumentationStructure, FieldInfo, HelpDocumentation};
-use crate::model::FieldType::{Normal, OptionalList};
 use crate::model::material::Material;
 use crate::model::pos::Pos;
 use crate::model::transformation::{create_transformation, Transformation};
+use crate::model::FieldType::{Normal, OptionalList};
+use crate::model::{Creator, DocumentationStructure, FieldInfo, HelpDocumentation};
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
 #[serde(deny_unknown_fields)]
@@ -38,31 +38,46 @@ impl HelpDocumentation for Quad {
         DocumentationStructure {
             description: "A flat rectangular hittable object".to_string(),
             fields: HashMap::from([
-                ("q".to_string(), FieldInfo::new(
-                    "Position of a corner of the quad",
-                    Normal,
-                    Pos::get_documentation_structure()
-                )),
-                ("u".to_string(), FieldInfo::new(
-                    "Direction of the first edge from 'q'",
-                    Normal,
-                    Pos::get_documentation_structure()
-                )),
-                ("v".to_string(), FieldInfo::new(
-                    "Direction of the other edge from 'q'",
-                    Normal,
-                    Pos::get_documentation_structure()
-                )),
-                ("material".to_string(), FieldInfo::new(
-                    "Material of the quad",
-                    Normal,
-                    Material::get_documentation_structure()
-                )),
-                ("transformations".to_string(), FieldInfo::new(
-                    "Transformations to be applied to the position and size of the quad",
-                    OptionalList,
-                    Transformation::get_documentation_structure()
-                )),
+                (
+                    "q".to_string(),
+                    FieldInfo::new(
+                        "Position of a corner of the quad",
+                        Normal,
+                        Pos::get_documentation_structure(),
+                    ),
+                ),
+                (
+                    "u".to_string(),
+                    FieldInfo::new(
+                        "Direction of the first edge from 'q'",
+                        Normal,
+                        Pos::get_documentation_structure(),
+                    ),
+                ),
+                (
+                    "v".to_string(),
+                    FieldInfo::new(
+                        "Direction of the other edge from 'q'",
+                        Normal,
+                        Pos::get_documentation_structure(),
+                    ),
+                ),
+                (
+                    "material".to_string(),
+                    FieldInfo::new(
+                        "Material of the quad",
+                        Normal,
+                        Material::get_documentation_structure(),
+                    ),
+                ),
+                (
+                    "transformations".to_string(),
+                    FieldInfo::new(
+                        "Transformations to be applied to the position and size of the quad",
+                        OptionalList,
+                        Transformation::get_documentation_structure(),
+                    ),
+                ),
             ]),
         }
     }

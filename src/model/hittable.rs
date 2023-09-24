@@ -1,14 +1,14 @@
-use std::collections::HashMap;
-use serde::{Deserialize, Serialize};
-use std::error::Error;
-use solstrale::hittable::{Hittables};
-use crate::model::{Creator, DocumentationStructure, FieldInfo, HelpDocumentation, ModelError};
 use crate::model::constant_medium::ConstantMedium;
-use crate::model::FieldType::Optional;
-use crate::model::r#box::Box;
 use crate::model::obj_model::ObjModel;
 use crate::model::quad::Quad;
+use crate::model::r#box::Box;
 use crate::model::sphere::Sphere;
+use crate::model::FieldType::Optional;
+use crate::model::{Creator, DocumentationStructure, FieldInfo, HelpDocumentation, ModelError};
+use serde::{Deserialize, Serialize};
+use solstrale::hittable::Hittables;
+use std::collections::HashMap;
+use std::error::Error;
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
 #[serde(deny_unknown_fields)]
@@ -66,7 +66,7 @@ impl Creator<Vec<Hittables>> for Hittable {
             _ => Err(std::boxed::Box::try_from(ModelError::new(
                 "Hittable should have single field defined",
             ))
-                .unwrap()),
+            .unwrap()),
         }
     }
 }

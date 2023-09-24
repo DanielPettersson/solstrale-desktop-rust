@@ -1,11 +1,11 @@
-use std::collections::HashMap;
-use std::error::Error;
-use serde::{Deserialize, Serialize};
-use solstrale::post::PostProcessors;
-use crate::model::{Creator, DocumentationStructure, FieldInfo, HelpDocumentation, ModelError};
 use crate::model::bloom_post_processor::BloomPostProcessor;
 use crate::model::denoise_post_processor::DenoisePostProcessor;
 use crate::model::FieldType::Optional;
+use crate::model::{Creator, DocumentationStructure, FieldInfo, HelpDocumentation, ModelError};
+use serde::{Deserialize, Serialize};
+use solstrale::post::PostProcessors;
+use std::collections::HashMap;
+use std::error::Error;
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
 #[serde(deny_unknown_fields)]
@@ -30,7 +30,7 @@ impl Creator<PostProcessors> for PostProcessor {
             _ => Err(Box::try_from(ModelError::new(
                 "PostProcessor should have single field defined",
             ))
-                .unwrap()),
+            .unwrap()),
         }
     }
 }

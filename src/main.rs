@@ -1,12 +1,14 @@
+use dark_light::Mode;
 use std::error::Error;
 use std::sync::mpsc::{Receiver, Sender};
 use std::time::Duration;
-use dark_light::Mode;
 
-use eframe::{App, egui, Frame, IconData, NativeOptions, run_native};
-use eframe::egui::{Align, Button, Context, Layout, Margin, ProgressBar, SidePanel, TopBottomPanel, Vec2, Visuals};
 use eframe::egui::Event::CompositionUpdate;
+use eframe::egui::{
+    Align, Button, Context, Layout, Margin, ProgressBar, SidePanel, TopBottomPanel, Vec2, Visuals,
+};
 use eframe::epaint::TextureHandle;
+use eframe::{egui, run_native, App, Frame, IconData, NativeOptions};
 use egui::{CentralPanel, ScrollArea, Window};
 use egui_file::FileDialog;
 use hhmmss::Hhmmss;
@@ -17,23 +19,26 @@ use solstrale::renderer::RenderProgress;
 use yaml_editor::yaml_editor;
 
 use crate::keyboard::{is_ctrl_space, is_enter};
-use crate::model::{DocumentationStructure, get_documentation_structure_by_yaml_path, HelpDocumentation};
 use crate::model::scene::Scene;
+use crate::model::{
+    get_documentation_structure_by_yaml_path, DocumentationStructure, HelpDocumentation,
+};
 use crate::render_output::render_output;
 use crate::yaml_editor::create_layouter;
 
+mod help;
+mod keyboard;
 mod load_scene;
 mod loading_output;
+mod model;
 mod render_button;
 mod render_output;
 mod save_image;
 mod save_scene;
 mod yaml_editor;
-mod keyboard;
-mod help;
-mod model;
 
-static ROOT_DOCUMENTATION_STRUCTURE: Lazy<DocumentationStructure> = Lazy::new(Scene::get_documentation_structure);
+static ROOT_DOCUMENTATION_STRUCTURE: Lazy<DocumentationStructure> =
+    Lazy::new(Scene::get_documentation_structure);
 
 fn main() -> eframe::Result<()> {
     let icon_bytes = include_bytes!("../resources/icon.png");
@@ -138,12 +143,11 @@ impl SolstraleApp {
 
 impl App for SolstraleApp {
     fn update(&mut self, ctx: &Context, _: &mut Frame) {
-
         let mode = dark_light::detect();
         match mode {
             Mode::Dark => ctx.set_visuals(Visuals::dark()),
             Mode::Light => ctx.set_visuals(Visuals::light()),
-            Mode::Default => ctx.set_visuals(Visuals::default())
+            Mode::Default => ctx.set_visuals(Visuals::default()),
         }
 
         TopBottomPanel::top("top-panel").show(ctx, |ui| {
@@ -170,10 +174,7 @@ impl App for SolstraleApp {
 
                 let render_button_enabled = render_button::is_enabled(&self.render_control);
                 let render_button_clicked = ui
-                    .add_enabled(
-                        render_button_enabled,
-                        Button::new("Render"),
-                    )
+                    .add_enabled(render_button_enabled, Button::new("Render"))
                     .clicked();
 
                 if render_button_enabled {
@@ -214,9 +215,13 @@ impl App for SolstraleApp {
             ctx,
         );
 
-        TopBottomPanel::bottom("bottom-panel")
-            .show(ctx, |ui| {
-                egui::Frame::side_top_panel(ui.style()).inner_margin(Margin { top: 4., ..Margin::default() }).show(ui, |ui|
+        TopBottomPanel::bottom("bottom-panel").show(ctx, |ui| {
+            egui::Frame::side_top_panel(ui.style())
+                .inner_margin(Margin {
+                    top: 4.,
+                    ..Margin::default()
+                })
+                .show(ui, |ui| {
                     ui.add(
                         ProgressBar::new(self.rendered_image.progress as f32).text(format!(
                             "{:.0}% {} {:.1}FPS",
@@ -225,18 +230,18 @@ impl App for SolstraleApp {
                             self.rendered_image.fps,
                         )),
                     )
-                );
-            });
-
+                });
+        });
 
         let documentation_structure = get_documentation_structure_by_yaml_path(
             &ROOT_DOCUMENTATION_STRUCTURE,
             &yaml_editor::get_yaml_path(&self.scene_yaml, ctx),
         );
 
-        SidePanel::left("code-panel")
-            .show(ctx, |ui| {
-                egui::Frame::side_top_panel(ui.style()).inner_margin(Margin::same(0.)).show(ui, |ui|
+        SidePanel::left("code-panel").show(ctx, |ui| {
+            egui::Frame::side_top_panel(ui.style())
+                .inner_margin(Margin::same(0.))
+                .show(ui, |ui| {
                     ScrollArea::both().min_scrolled_width(300.).show(ui, |ui| {
                         ui.add(yaml_editor(
                             &mut self.scene_yaml,
@@ -257,16 +262,17 @@ impl App for SolstraleApp {
                             yaml_editor::indent_new_line(&mut self.scene_yaml, ctx);
                         }
                     })
-                );
-            });
+                });
+        });
 
-        SidePanel::right("help-panel").min_width(300.0).show_animated(ctx, self.display_help, |ui|
-            ScrollArea::vertical().show(ui, |ui| {
-                egui::Frame::side_top_panel(ui.style()).show(ui, |ui|
-                    help::show(ui, &documentation_structure)
-                );
-            }),
-        );
+        SidePanel::right("help-panel")
+            .min_width(300.0)
+            .show_animated(ctx, self.display_help, |ui| {
+                ScrollArea::vertical().show(ui, |ui| {
+                    egui::Frame::side_top_panel(ui.style())
+                        .show(ui, |ui| help::show(ui, &documentation_structure));
+                })
+            });
 
         CentralPanel::default()
             .frame(egui::Frame {
@@ -274,7 +280,6 @@ impl App for SolstraleApp {
                 ..Default::default()
             })
             .show(ctx, |ui| {
-
                 // When window is first displayed, the available size can change in the
                 // first few frames. So here we wait until the layout stabilizes until kicking off
                 // the initial rendering, as to get 1:1 match to display pixel size
@@ -316,10 +321,12 @@ impl App for SolstraleApp {
         // and empty IME composition update event. So just delete it here seems to work
         // without any noticeable side effects.
         ctx.input_mut(|i| {
-            i.events.retain(|e| if let CompositionUpdate(s) = e {
-                !s.eq("")
-            } else {
-                true
+            i.events.retain(|e| {
+                if let CompositionUpdate(s) = e {
+                    !s.eq("")
+                } else {
+                    true
+                }
             })
         });
     }

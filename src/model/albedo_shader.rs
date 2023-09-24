@@ -1,7 +1,7 @@
-use std::error::Error;
+use crate::model::{Creator, DocumentationStructure, HelpDocumentation};
 use serde::{Deserialize, Serialize};
 use solstrale::renderer::shader::Shaders;
-use crate::model::{Creator, DocumentationStructure, HelpDocumentation};
+use std::error::Error;
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
 #[serde(deny_unknown_fields)]
@@ -15,6 +15,8 @@ impl Creator<Shaders> for AlbedoShader {
 
 impl HelpDocumentation for AlbedoShader {
     fn get_documentation_structure() -> DocumentationStructure {
-        DocumentationStructure::new_simple("A simple shader that just outputs the flat albedo color")
+        DocumentationStructure::new_simple(
+            "A simple shader that just outputs the flat albedo color",
+        )
     }
 }
