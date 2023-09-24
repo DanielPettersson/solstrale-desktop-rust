@@ -55,6 +55,7 @@ fn main() -> eframe::Result<()> {
             x: 1400.0,
             y: 800.0,
         }),
+        min_window_size: Some(Vec2 { x: 700., y: 300. }),
         icon_data: Some(icon),
         app_id: Some("solstrale".to_string()),
         ..Default::default()
@@ -117,6 +118,7 @@ pub struct RenderedImage {
     pub progress: f64,
     pub fps: f64,
     pub estimated_time_left: Duration,
+    pub num_pixels: u32,
 }
 
 #[derive(Default)]
@@ -252,10 +254,12 @@ impl App for SolstraleApp {
                 .show(ui, |ui| {
                     ui.add(
                         ProgressBar::new(self.rendered_image.progress as f32).text(format!(
-                            "{:.0}% {} {:.1}FPS",
+                            "{:.0}% {} {:.1}FPS {:.1}MPPS",
                             self.rendered_image.progress * 100.,
                             self.rendered_image.estimated_time_left.hhmmss(),
                             self.rendered_image.fps,
+                            self.rendered_image.fps * self.rendered_image.num_pixels as f64
+                                / 1_000_000.,
                         )),
                     )
                 });

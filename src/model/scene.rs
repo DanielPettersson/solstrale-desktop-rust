@@ -41,7 +41,8 @@ impl HelpDocumentation for Scene {
         DocumentationStructure {
             description:
                 "The scene YAML is used to configure all aspects of the rendered image.\n\n\
-            Use ctrl+space to autocomplete configuration keys and ctrl+r to restart the rendering"
+            Use ctrl+space to autocomplete configuration keys and ctrl+r to restart the rendering\n\n\
+            Progress bar shows percentage completed, remaining time, FPS (frames rendered per second) and MPPS (Million pixel samples rendered per second)"
                     .to_string(),
             fields: HashMap::from([
                 (

@@ -23,6 +23,8 @@ pub fn render_output(
     }
 
     if render_control.abort_sender.is_none() && render_control.render_requested {
+        rendered_image.num_pixels = render_size.x as u32 * render_size.y as u32;
+
         let res = render(scene_yaml, render_size, ctx);
         render_control.render_receiver = Some(res.0);
         render_control.abort_sender = Some(res.1);
