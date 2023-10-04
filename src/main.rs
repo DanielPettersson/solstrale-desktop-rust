@@ -332,7 +332,7 @@ impl App for SolstraleApp {
                     ui.ctx(),
                 ) {
                     None => {
-                        loading_output::show(ui);
+                        loading_output::show(ui, self.rendered_image.texture_handle.clone());
                     }
                     Some(im) => {
                         ui.add(im);
