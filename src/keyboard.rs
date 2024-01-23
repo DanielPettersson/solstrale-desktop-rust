@@ -23,7 +23,8 @@ fn is_key_combo(ui: &Ui, pressed_key: egui::Key, modifier: Modifiers) -> bool {
                     pressed: false,
                     repeat: false,
                     modifiers,
-                } => key == pressed_key && modifiers.matches(modifier),
+                    physical_key: _,
+                } => key == pressed_key && modifiers.matches_logically(modifier),
                 _ => false,
             } {
                 return true;

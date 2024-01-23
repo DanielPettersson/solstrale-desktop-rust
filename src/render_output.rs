@@ -1,20 +1,21 @@
 use std::sync::mpsc::{channel, Receiver, Sender, TryRecvError};
 use std::thread;
 
+use eframe::egui::load::SizedTexture;
 use eframe::egui::{Color32, ColorImage, Context, Image, TextureOptions, Vec2};
 use solstrale::ray_trace;
 
 use crate::model::{parse_scene_yaml, Creator};
 use crate::{ErrorInfo, RenderControl, RenderMessage, RenderedImage};
 
-pub fn render_output(
+pub fn render_output<'a>(
     render_control: &mut RenderControl,
     rendered_image: &mut RenderedImage,
     error_info: &mut ErrorInfo,
     scene_yaml: &str,
     render_size: Vec2,
     ctx: &Context,
-) -> Option<Image> {
+) -> Option<Image<'a>> {
     if render_control.render_requested {
         if let Some(sender) = &render_control.abort_sender {
             sender.send(true).ok();
@@ -88,7 +89,10 @@ pub fn render_output(
             )
         });
 
-        Some(Image::new(texture_handle, render_size))
+        Some(Image::from_texture(SizedTexture::new(
+            texture_handle,
+            render_size,
+        )))
     }
 }
 

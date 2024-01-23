@@ -1,15 +1,16 @@
-use dark_light::Mode;
 use std::error::Error;
 use std::str::FromStr;
 use std::sync::mpsc::{Receiver, Sender};
 use std::time::Duration;
 
+use dark_light::Mode;
 use eframe::egui::Event::CompositionUpdate;
 use eframe::egui::{
-    Align, Button, Context, Layout, Margin, ProgressBar, SidePanel, TopBottomPanel, Vec2, Visuals,
+    Align, Button, Context, Layout, Margin, ProgressBar, SidePanel, TopBottomPanel, Vec2,
+    ViewportBuilder, Visuals,
 };
 use eframe::epaint::TextureHandle;
-use eframe::{egui, run_native, App, Frame, IconData, NativeOptions, Storage};
+use eframe::{egui, icon_data, run_native, App, Frame, NativeOptions, Storage};
 use egui::{CentralPanel, ScrollArea, Window};
 use egui_file::FileDialog;
 use hhmmss::Hhmmss;
@@ -47,17 +48,18 @@ pub static DEFAULT_SCENE: Lazy<String> =
 
 fn main() -> eframe::Result<()> {
     let icon_bytes = include_bytes!("../resources/icon.png");
-    let icon = IconData::try_from_png_bytes(icon_bytes).expect("Failed to load application icon");
+    let icon = icon_data::from_png_bytes(icon_bytes).expect("Failed to load application icon");
 
     let native_options = NativeOptions {
-        resizable: true,
-        initial_window_size: Some(Vec2 {
-            x: 1400.0,
-            y: 800.0,
-        }),
-        min_window_size: Some(Vec2 { x: 700., y: 300. }),
-        icon_data: Some(icon),
-        app_id: Some("solstrale".to_string()),
+        viewport: ViewportBuilder::default()
+            .with_resizable(true)
+            .with_inner_size(Vec2 {
+                x: 1400.0,
+                y: 800.0,
+            })
+            .with_min_inner_size(Vec2 { x: 700., y: 300. })
+            .with_icon(icon)
+            .with_app_id("solstrale".to_string()),
         ..Default::default()
     };
 
@@ -368,7 +370,7 @@ impl App for SolstraleApp {
         storage.set_string("scene_yaml", self.scene_yaml.to_owned())
     }
 
-    fn persist_native_window(&self) -> bool {
+    fn persist_egui_memory(&self) -> bool {
         true
     }
 }

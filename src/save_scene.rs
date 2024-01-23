@@ -13,7 +13,7 @@ pub fn create(initial_path: Option<PathBuf>) -> FileDialog {
         dialog = dialog.default_filename("scene.yaml");
     }
 
-    dialog = dialog.filter(Box::new(|f| match f.extension() {
+    dialog = dialog.show_files_filter(Box::new(|f| match f.extension() {
         None => false,
         Some(ext) => ext.eq_ignore_ascii_case("yaml"),
     }));

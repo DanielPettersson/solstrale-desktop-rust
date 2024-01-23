@@ -9,7 +9,7 @@ use std::path::PathBuf;
 
 pub fn create() -> FileDialog {
     let mut dialog = FileDialog::open_file(None);
-    dialog = dialog.filter(Box::new(|f| match f.extension() {
+    dialog = dialog.show_files_filter(Box::new(|f| match f.extension() {
         None => false,
         Some(ext) => ext.eq_ignore_ascii_case("yaml"),
     }));
@@ -31,7 +31,7 @@ pub fn handle_dialog(
                     let mut file_content = String::new();
                     match f.read_to_string(&mut file_content) {
                         Ok(_) => {
-                            scene_yaml.replace(&file_content);
+                            scene_yaml.replace_with(&file_content);
                             *save_scene_dialog = save_scene::create(Some(PathBuf::from(file_path)));
                             error_info.show_error = false;
                             render_control.render_requested = true;
