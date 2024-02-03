@@ -33,6 +33,7 @@ mod simple_shader;
 mod sphere;
 mod texture;
 mod transformation;
+mod blend;
 
 #[derive(Clone, Debug, Display)]
 struct ModelError {
@@ -203,6 +204,7 @@ mod test {
                         glass: None,
                         metal: None,
                         light: None,
+                        blend: 
                     },
                     transformations: vec![Transformation {
                         translation: None,

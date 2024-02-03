@@ -27,9 +27,9 @@ impl Creator<Textures> for Texture {
                 color: None,
                 image: Some(im),
             } => im.create(),
-            _ => Err(
-                Box::try_from(ModelError::new("Texture should have single field defined")).unwrap(),
-            ),
+            _ => Err(From::from(ModelError::new(
+                "Texture should have single field defined",
+            ))),
         }
     }
 }

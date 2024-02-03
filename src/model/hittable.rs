@@ -63,10 +63,9 @@ impl Creator<Vec<Hittables>> for Hittable {
                 r#box: None,
                 constant_medium: Some(cm),
             } => cm.create().map(|h| vec![h]),
-            _ => Err(std::boxed::Box::try_from(ModelError::new(
+            _ => Err(From::from(ModelError::new(
                 "Hittable should have single field defined",
-            ))
-            .unwrap()),
+            ))),
         }
     }
 }

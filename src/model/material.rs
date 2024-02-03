@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 use solstrale::material::Materials;
 use std::collections::HashMap;
 use std::error::Error;
+use crate::model::blend::Blend;
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
 #[serde(deny_unknown_fields)]
@@ -20,6 +21,9 @@ pub struct Material {
     pub metal: Option<Metal>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub light: Option<Light>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub blend: Option<Box<Blend>>,
+
 }
 
 impl Creator<Materials> for Material {
@@ -30,28 +34,38 @@ impl Creator<Materials> for Material {
                 glass: None,
                 metal: None,
                 light: None,
+                blend: None,
             } => l.create(),
             Material {
                 lambertian: None,
                 glass: Some(g),
                 metal: None,
                 light: None,
+                blend: None,
             } => g.create(),
             Material {
                 lambertian: None,
                 glass: None,
                 metal: Some(m),
                 light: None,
+                blend: None,
             } => m.create(),
             Material {
                 lambertian: None,
                 glass: None,
                 metal: None,
                 light: Some(l),
+                blend: None,
             } => l.create(),
+            Material {
+                lambertian: None,
+                glass: None,
+                metal: None,
+                light: None,
+                blend: Some(b),
+            } => b.create(),
             _ => Err(
-                Box::try_from(ModelError::new("Material should have single field defined"))
-                    .unwrap(),
+                From::from(ModelError::new("Material should have single field defined")),
             ),
         }
     }

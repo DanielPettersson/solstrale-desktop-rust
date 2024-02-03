@@ -61,10 +61,9 @@ impl Creator<Box<dyn Transformer>> for Transformation {
                 rotation_y: None,
                 rotation_z: Some(r),
             } => Ok(Box::new(RotationZ::new(*r))),
-            _ => Err(Box::try_from(ModelError::new(
+            _ => Err(From::from(ModelError::new(
                 "Transformation should have single field defined",
-            ))
-            .unwrap()),
+            ))),
         }
     }
 }
