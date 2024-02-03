@@ -7,6 +7,7 @@ use crate::model::pos::Pos;
 use crate::model::scene::Scene;
 
 mod albedo_shader;
+mod blend;
 mod bloom_post_processor;
 mod r#box;
 mod camera_config;
@@ -33,7 +34,6 @@ mod simple_shader;
 mod sphere;
 mod texture;
 mod transformation;
-mod blend;
 
 #[derive(Clone, Debug, Display)]
 struct ModelError {
@@ -156,12 +156,14 @@ where
 
 #[cfg(test)]
 mod test {
+    use crate::model::blend::Blend;
     use crate::model::bloom_post_processor::BloomPostProcessor;
     use crate::model::camera_config::CameraConfig;
     use crate::model::denoise_post_processor::DenoisePostProcessor;
     use crate::model::hittable::Hittable;
     use crate::model::lambertian::Lambertian;
     use crate::model::material::Material;
+    use crate::model::metal::Metal;
     use crate::model::path_tracing_shader::PathTracingShader;
     use crate::model::post_processor::PostProcessor;
     use crate::model::render_config::RenderConfig;
@@ -190,21 +192,48 @@ mod test {
                         z: 6.,
                     },
                     material: Material {
-                        lambertian: Some(Lambertian {
-                            albedo: Texture {
-                                color: Some(Rgb {
-                                    r: 0.0,
-                                    g: 0.0,
-                                    b: 0.0,
-                                }),
-                                image: None,
-                            },
-                            normal: None,
-                        }),
+                        lambertian: None,
                         glass: None,
                         metal: None,
                         light: None,
-                        blend: 
+                        blend: Some(Box::new(Blend {
+                            a: Material {
+                                lambertian: Some(Lambertian {
+                                    albedo: Texture {
+                                        color: Some(Rgb {
+                                            r: 1.0,
+                                            g: 0.0,
+                                            b: 0.0,
+                                        }),
+                                        image: None,
+                                    },
+                                    normal: None,
+                                }),
+                                glass: None,
+                                metal: None,
+                                light: None,
+                                blend: None,
+                            },
+                            b: Material {
+                                lambertian: None,
+                                glass: None,
+                                metal: Some(Metal {
+                                    albedo: Texture {
+                                        color: Some(Rgb {
+                                            r: 0.0,
+                                            g: 1.0,
+                                            b: 0.0,
+                                        }),
+                                        image: None,
+                                    },
+                                    normal: None,
+                                    fuzz: 0.1,
+                                }),
+                                light: None,
+                                blend: None,
+                            },
+                            blend_factor: 0.5,
+                        })),
                     },
                     transformations: vec![Transformation {
                         translation: None,
@@ -291,9 +320,17 @@ world:
     a: 1, 2, 3
     b: 4, 5, 6
     material:
-      lambertian:
-        albedo:
-          color: 0, 0, 0
+      blend:
+        a:
+          lambertian:
+            albedo:
+              color: 1, 0, 0
+        b:
+          metal:
+            albedo:
+              color: 0, 1, 0
+            fuzz: 0.1
+        blend_factor: 0.5
     transformations:
     - rotation_x: 30.0
 ",
