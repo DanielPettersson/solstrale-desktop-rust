@@ -57,7 +57,7 @@ impl Creator<Shaders> for Shader {
 }
 
 impl HelpDocumentation for Shader {
-    fn get_documentation_structure() -> DocumentationStructure {
+    fn get_documentation_structure(depth: u8) -> DocumentationStructure {
         DocumentationStructure {
             description:
                 "A shader is responsible for coloring the pixels where a ray has hit an object"
@@ -68,7 +68,7 @@ impl HelpDocumentation for Shader {
                     FieldInfo::new(
                         "A path tracing shader",
                         Optional,
-                        PathTracingShader::get_documentation_structure(),
+                        PathTracingShader::get_documentation_structure(depth + 1),
                     ),
                 ),
                 (
@@ -76,7 +76,7 @@ impl HelpDocumentation for Shader {
                     FieldInfo::new(
                         "Combines albedo and normal color without any light scattering",
                         Optional,
-                        SimpleShader::get_documentation_structure(),
+                        SimpleShader::get_documentation_structure(depth + 1),
                     ),
                 ),
                 (
@@ -84,7 +84,7 @@ impl HelpDocumentation for Shader {
                     FieldInfo::new(
                         "A simple shader that just shows the hittable's albedo color",
                         Optional,
-                        AlbedoShader::get_documentation_structure(),
+                        AlbedoShader::get_documentation_structure(depth + 1),
                     ),
                 ),
                 (
@@ -92,7 +92,7 @@ impl HelpDocumentation for Shader {
                     FieldInfo::new(
                         "Shader for displaying the normals of where rays intersect with hittables",
                         Optional,
-                        NormalShader::get_documentation_structure(),
+                        NormalShader::get_documentation_structure(depth + 1),
                     ),
                 ),
             ]),

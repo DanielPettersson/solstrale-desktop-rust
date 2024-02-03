@@ -71,34 +71,34 @@ impl Creator<Vec<Hittables>> for Hittable {
 }
 
 impl HelpDocumentation for Hittable {
-    fn get_documentation_structure() -> DocumentationStructure {
+    fn get_documentation_structure(depth: u8) -> DocumentationStructure {
         DocumentationStructure {
             description: "Objects that are hittable by rays shot by the ray tracer".to_string(),
             fields: HashMap::from([
                 ("sphere".to_string(), FieldInfo::new(
                     "A sphere object",
                     Optional,
-                    Sphere::get_documentation_structure()
+                    Sphere::get_documentation_structure(depth + 1)
                 )),
                 ("model".to_string(), FieldInfo::new(
                     "A model is loaded from an .obj file. And contains a 3d model composed by triangles with materials",
                     Optional,
-                    ObjModel::get_documentation_structure()
+                    ObjModel::get_documentation_structure(depth + 1)
                 )),
                 ("quad".to_string(), FieldInfo::new(
                     "A quad is a flat rectangular object",
                     Optional,
-                    Quad::get_documentation_structure()
+                    Quad::get_documentation_structure(depth + 1)
                 )),
                 ("box".to_string(), FieldInfo::new(
                     "A cuboid object consisting of 6 quads",
                     Optional,
-                    Box::get_documentation_structure()
+                    Box::get_documentation_structure(depth + 1)
                 )),
                 ("constant_medium".to_string(), FieldInfo::new(
                     "A box shaped hittable object with a fog-type material",
                     Optional,
-                    ConstantMedium::get_documentation_structure()
+                    ConstantMedium::get_documentation_structure(depth + 1)
                 )),
             ]),
         }

@@ -26,7 +26,7 @@ impl Creator<PostProcessors> for BloomPostProcessor {
 }
 
 impl HelpDocumentation for BloomPostProcessor {
-    fn get_documentation_structure() -> DocumentationStructure {
+    fn get_documentation_structure(_: u8) -> DocumentationStructure {
         DocumentationStructure {
             description: "A post processor that applies a bloom effect to bright areas of the image".to_string(),
             fields: HashMap::from([

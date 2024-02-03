@@ -20,7 +20,7 @@ impl Creator<Shaders> for PathTracingShader {
 }
 
 impl HelpDocumentation for PathTracingShader {
-    fn get_documentation_structure() -> DocumentationStructure {
+    fn get_documentation_structure(_: u8) -> DocumentationStructure {
         DocumentationStructure {
             description: "The main shader for this renderer. Gives the most realistic output".to_string(),
             fields: HashMap::from([

@@ -1,3 +1,4 @@
+use crate::model::blend::Blend;
 use crate::model::glass::Glass;
 use crate::model::lambertian::Lambertian;
 use crate::model::light::Light;
@@ -8,7 +9,6 @@ use serde::{Deserialize, Serialize};
 use solstrale::material::Materials;
 use std::collections::HashMap;
 use std::error::Error;
-use crate::model::blend::Blend;
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
 #[serde(deny_unknown_fields)]
@@ -23,7 +23,6 @@ pub struct Material {
     pub light: Option<Light>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub blend: Option<Box<Blend>>,
-
 }
 
 impl Creator<Materials> for Material {
@@ -64,15 +63,15 @@ impl Creator<Materials> for Material {
                 light: None,
                 blend: Some(b),
             } => b.create(),
-            _ => Err(
-                From::from(ModelError::new("Material should have single field defined")),
-            ),
+            _ => Err(From::from(ModelError::new(
+                "Material should have single field defined",
+            ))),
         }
     }
 }
 
 impl HelpDocumentation for Material {
-    fn get_documentation_structure() -> DocumentationStructure {
+    fn get_documentation_structure(depth: u8) -> DocumentationStructure {
         DocumentationStructure {
             description:
                 "A material gives hittable objects it's looks as they scatter the light differently"
@@ -83,7 +82,7 @@ impl HelpDocumentation for Material {
                     FieldInfo::new(
                         "A material with the appearance of a matte surface",
                         Optional,
-                        Lambertian::get_documentation_structure(),
+                        Lambertian::get_documentation_structure(depth + 1),
                     ),
                 ),
                 (
@@ -91,7 +90,7 @@ impl HelpDocumentation for Material {
                     FieldInfo::new(
                         "A dielectric material which has a glass-like appearance",
                         Optional,
-                        Glass::get_documentation_structure(),
+                        Glass::get_documentation_structure(depth + 1),
                     ),
                 ),
                 (
@@ -99,7 +98,7 @@ impl HelpDocumentation for Material {
                     FieldInfo::new(
                         "A reflective material that gives a metallic appearance",
                         Optional,
-                        Metal::get_documentation_structure(),
+                        Metal::get_documentation_structure(depth + 1),
                     ),
                 ),
                 (
@@ -107,7 +106,15 @@ impl HelpDocumentation for Material {
                     FieldInfo::new(
                         "A material that emits light",
                         Optional,
-                        Light::get_documentation_structure(),
+                        Light::get_documentation_structure(depth + 1),
+                    ),
+                ),
+                (
+                    "blend".to_string(),
+                    FieldInfo::new(
+                        "A material that is a blend of two underlying materials",
+                        Optional,
+                        Blend::get_documentation_structure(depth + 1),
                     ),
                 ),
             ]),

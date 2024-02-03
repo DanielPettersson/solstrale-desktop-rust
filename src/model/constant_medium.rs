@@ -36,14 +36,14 @@ impl Creator<Hittables> for ConstantMedium {
 }
 
 impl HelpDocumentation for ConstantMedium {
-    fn get_documentation_structure() -> DocumentationStructure {
+    fn get_documentation_structure(depth: u8) -> DocumentationStructure {
         DocumentationStructure {
             description: "A fog type hittable object where rays not only scatter at the edge of the object, but at random points inside the object. Which gives a fog-like material.".to_string(),
             fields: HashMap::from([
                 ("box".to_string(), FieldInfo::new(
                     "A box describing the fog volume",
                     Normal,
-                    BoxHittable::get_documentation_structure()
+                    BoxHittable::get_documentation_structure(depth + 1)
                 )),
                 ("density".to_string(), FieldInfo::new_simple(
                     "Density of the fog",
@@ -53,7 +53,7 @@ impl HelpDocumentation for ConstantMedium {
                 ("color".to_string(), FieldInfo::new(
                     "Color of the fog material",
                     Normal,
-                    Rgb::get_documentation_structure()
+                    Rgb::get_documentation_structure(depth + 1)
                 )),
             ]),
         }

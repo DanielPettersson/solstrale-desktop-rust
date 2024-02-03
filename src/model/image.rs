@@ -18,7 +18,7 @@ impl Creator<Textures> for Image {
 }
 
 impl HelpDocumentation for Image {
-    fn get_documentation_structure() -> DocumentationStructure {
+    fn get_documentation_structure(_: u8) -> DocumentationStructure {
         DocumentationStructure {
             description:
                 "A texture where the colors for a coordinate is looked up from an image file"

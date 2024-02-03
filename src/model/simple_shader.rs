@@ -16,7 +16,7 @@ impl Creator<Shaders> for SimpleShader {
 }
 
 impl HelpDocumentation for SimpleShader {
-    fn get_documentation_structure() -> DocumentationStructure {
+    fn get_documentation_structure(_: u8) -> DocumentationStructure {
         DocumentationStructure::new_simple(
             "Combines albedo and normal color without any light scattering",
         )

@@ -14,7 +14,7 @@ impl Creator<Shaders> for NormalShader {
 }
 
 impl HelpDocumentation for NormalShader {
-    fn get_documentation_structure() -> DocumentationStructure {
+    fn get_documentation_structure(_: u8) -> DocumentationStructure {
         DocumentationStructure::new_simple("A simple shader that outputs a color representing the normal of the hittable of the ray's intersection point")
     }
 }

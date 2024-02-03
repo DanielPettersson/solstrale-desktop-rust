@@ -61,7 +61,7 @@ pub trait Creator<T> {
 }
 
 pub trait HelpDocumentation {
-    fn get_documentation_structure() -> DocumentationStructure;
+    fn get_documentation_structure(depth: u8) -> DocumentationStructure;
 }
 
 #[derive(Clone)]
@@ -197,7 +197,7 @@ mod test {
                         metal: None,
                         light: None,
                         blend: Some(Box::new(Blend {
-                            a: Material {
+                            first: Material {
                                 lambertian: Some(Lambertian {
                                     albedo: Texture {
                                         color: Some(Rgb {
@@ -214,7 +214,7 @@ mod test {
                                 light: None,
                                 blend: None,
                             },
-                            b: Material {
+                            second: Material {
                                 lambertian: None,
                                 glass: None,
                                 metal: Some(Metal {
@@ -321,11 +321,11 @@ world:
     b: 4, 5, 6
     material:
       blend:
-        a:
+        first:
           lambertian:
             albedo:
               color: 1, 0, 0
-        b:
+        second:
           metal:
             albedo:
               color: 0, 1, 0

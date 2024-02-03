@@ -32,7 +32,7 @@ impl Creator<Vec<Hittables>> for Box {
 }
 
 impl HelpDocumentation for Box {
-    fn get_documentation_structure() -> DocumentationStructure {
+    fn get_documentation_structure(depth: u8) -> DocumentationStructure {
         DocumentationStructure {
             description: "A hittable in the shape of a box".to_string(),
             fields: HashMap::from([
@@ -41,7 +41,7 @@ impl HelpDocumentation for Box {
                     FieldInfo::new(
                         "Position of a corner of the box",
                         Normal,
-                        Pos::get_documentation_structure(),
+                        Pos::get_documentation_structure(depth + 1),
                     ),
                 ),
                 (
@@ -49,7 +49,7 @@ impl HelpDocumentation for Box {
                     FieldInfo::new(
                         "Position of the corner opposite to 'a' of the box",
                         Normal,
-                        Pos::get_documentation_structure(),
+                        Pos::get_documentation_structure(depth + 1),
                     ),
                 ),
                 (
@@ -57,7 +57,7 @@ impl HelpDocumentation for Box {
                     FieldInfo::new(
                         "Material of the box",
                         Normal,
-                        Material::get_documentation_structure(),
+                        Material::get_documentation_structure(depth + 1),
                     ),
                 ),
                 (
@@ -65,7 +65,7 @@ impl HelpDocumentation for Box {
                     FieldInfo::new(
                         "Transformations to be applied to the position and size of the box",
                         OptionalList,
-                        Transformation::get_documentation_structure(),
+                        Transformation::get_documentation_structure(depth + 1),
                     ),
                 ),
             ]),

@@ -41,7 +41,7 @@ mod save_scene;
 mod yaml_editor;
 
 static ROOT_DOCUMENTATION_STRUCTURE: Lazy<DocumentationStructure> =
-    Lazy::new(Scene::get_documentation_structure);
+    Lazy::new(|| Scene::get_documentation_structure(0));
 
 pub static DEFAULT_SCENE: Lazy<String> =
     Lazy::new(|| include_str!("../resources/scene.yaml").to_owned());

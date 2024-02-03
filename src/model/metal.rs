@@ -29,19 +29,19 @@ impl Creator<Materials> for Metal {
 }
 
 impl HelpDocumentation for Metal {
-    fn get_documentation_structure() -> DocumentationStructure {
+    fn get_documentation_structure(depth: u8) -> DocumentationStructure {
         DocumentationStructure {
             description: "A reflective material that gives a metallic appearance".to_string(),
             fields: HashMap::from([
                 ("albedo".to_string(), FieldInfo::new(
                     "Texture for the material's albedo color",
                     Normal,
-                    Texture::get_documentation_structure()
+                    Texture::get_documentation_structure(depth + 1)
                 )),
                 ("normal".to_string(), FieldInfo::new(
                     "Texture for the material's normals. Used to give the illusion of fine structure of the hittable",
                     Optional,
-                    Texture::get_documentation_structure()
+                    Texture::get_documentation_structure(depth + 1)
                 )),
                 ("fuzz".to_string(), FieldInfo::new_simple(
                     "The smoothness of the material",

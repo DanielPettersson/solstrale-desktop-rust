@@ -37,7 +37,7 @@ impl Creator<solstrale::renderer::Scene> for Scene {
 }
 
 impl HelpDocumentation for Scene {
-    fn get_documentation_structure() -> DocumentationStructure {
+    fn get_documentation_structure(depth: u8) -> DocumentationStructure {
         DocumentationStructure {
             description:
                 "The scene YAML is used to configure all aspects of the rendered image.\n\n\
@@ -50,7 +50,7 @@ impl HelpDocumentation for Scene {
                     FieldInfo::new(
                         "General configuration for the renderer",
                         Normal,
-                        RenderConfig::get_documentation_structure(),
+                        RenderConfig::get_documentation_structure(depth + 1),
                     ),
                 ),
                 (
@@ -58,7 +58,7 @@ impl HelpDocumentation for Scene {
                     FieldInfo::new(
                         "The resulting pixel color for when a ray hits nothing",
                         Normal,
-                        Rgb::get_documentation_structure(),
+                        Rgb::get_documentation_structure(depth + 1),
                     ),
                 ),
                 (
@@ -66,7 +66,7 @@ impl HelpDocumentation for Scene {
                     FieldInfo::new(
                         "Describes the camera used in the scene",
                         Normal,
-                        CameraConfig::get_documentation_structure(),
+                        CameraConfig::get_documentation_structure(depth + 1),
                     ),
                 ),
                 (
@@ -74,7 +74,7 @@ impl HelpDocumentation for Scene {
                     FieldInfo::new(
                         "Contains all hittable objects that are visible in the scene",
                         List,
-                        Hittable::get_documentation_structure(),
+                        Hittable::get_documentation_structure(depth + 1),
                     ),
                 ),
             ]),

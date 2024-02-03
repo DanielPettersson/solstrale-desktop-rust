@@ -79,7 +79,7 @@ pub fn create_transformation(
 }
 
 impl HelpDocumentation for Transformation {
-    fn get_documentation_structure() -> DocumentationStructure {
+    fn get_documentation_structure(depth: u8) -> DocumentationStructure {
         DocumentationStructure {
             description: "Changes a hittables position, rotation and / or size".to_string(),
             fields: HashMap::from([
@@ -88,7 +88,7 @@ impl HelpDocumentation for Transformation {
                     FieldInfo::new(
                         "Moves the hittable by the given offset",
                         Optional,
-                        Pos::get_documentation_structure(),
+                        Pos::get_documentation_structure(depth + 1),
                     ),
                 ),
                 (

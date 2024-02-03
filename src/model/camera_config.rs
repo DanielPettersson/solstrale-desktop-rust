@@ -27,7 +27,7 @@ impl Creator<solstrale::camera::CameraConfig> for CameraConfig {
 }
 
 impl HelpDocumentation for CameraConfig {
-    fn get_documentation_structure() -> DocumentationStructure {
+    fn get_documentation_structure(depth: u8) -> DocumentationStructure {
         DocumentationStructure {
             description: "Describes the location, orientation and other properties of the camera in the scene".to_string(),
             fields: HashMap::from([
@@ -44,17 +44,17 @@ impl HelpDocumentation for CameraConfig {
                 ("look_from".to_string(), FieldInfo::new(
                     "Position where the camera is located",
                     Normal,
-                    Pos::get_documentation_structure()
+                    Pos::get_documentation_structure(depth + 1)
                 )),
                 ("look_at".to_string(), FieldInfo::new(
                     "Position the camera is pointed at",
                     Normal,
-                    Pos::get_documentation_structure()
+                    Pos::get_documentation_structure(depth + 1)
                 )),
                 ("up".to_string(), FieldInfo::new(
                     "A vector pointing in the 'up' direction of the camera",
                     Normal,
-                    Pos::get_documentation_structure()
+                    Pos::get_documentation_structure(depth + 1)
                 ))
             ]),
         }

@@ -26,7 +26,7 @@ impl Creator<Hittables> for Sphere {
 }
 
 impl HelpDocumentation for Sphere {
-    fn get_documentation_structure() -> DocumentationStructure {
+    fn get_documentation_structure(depth: u8) -> DocumentationStructure {
         DocumentationStructure {
             description: "A sphere hittable object".to_string(),
             fields: HashMap::from([
@@ -35,7 +35,7 @@ impl HelpDocumentation for Sphere {
                     FieldInfo::new(
                         "Position of the sphere's center",
                         Normal,
-                        Pos::get_documentation_structure(),
+                        Pos::get_documentation_structure(depth + 1),
                     ),
                 ),
                 (
@@ -47,7 +47,7 @@ impl HelpDocumentation for Sphere {
                     FieldInfo::new(
                         "Material of the sphere",
                         Normal,
-                        Material::get_documentation_structure(),
+                        Material::get_documentation_structure(depth + 1),
                     ),
                 ),
             ]),

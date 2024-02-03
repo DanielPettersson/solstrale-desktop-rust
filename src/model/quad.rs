@@ -34,7 +34,7 @@ impl Creator<Hittables> for Quad {
 }
 
 impl HelpDocumentation for Quad {
-    fn get_documentation_structure() -> DocumentationStructure {
+    fn get_documentation_structure(depth: u8) -> DocumentationStructure {
         DocumentationStructure {
             description: "A flat rectangular hittable object".to_string(),
             fields: HashMap::from([
@@ -43,7 +43,7 @@ impl HelpDocumentation for Quad {
                     FieldInfo::new(
                         "Position of a corner of the quad",
                         Normal,
-                        Pos::get_documentation_structure(),
+                        Pos::get_documentation_structure(depth + 1),
                     ),
                 ),
                 (
@@ -51,7 +51,7 @@ impl HelpDocumentation for Quad {
                     FieldInfo::new(
                         "Direction of the first edge from 'q'",
                         Normal,
-                        Pos::get_documentation_structure(),
+                        Pos::get_documentation_structure(depth + 1),
                     ),
                 ),
                 (
@@ -59,7 +59,7 @@ impl HelpDocumentation for Quad {
                     FieldInfo::new(
                         "Direction of the other edge from 'q'",
                         Normal,
-                        Pos::get_documentation_structure(),
+                        Pos::get_documentation_structure(depth + 1),
                     ),
                 ),
                 (
@@ -67,7 +67,7 @@ impl HelpDocumentation for Quad {
                     FieldInfo::new(
                         "Material of the quad",
                         Normal,
-                        Material::get_documentation_structure(),
+                        Material::get_documentation_structure(depth + 1),
                     ),
                 ),
                 (
@@ -75,7 +75,7 @@ impl HelpDocumentation for Quad {
                     FieldInfo::new(
                         "Transformations to be applied to the position and size of the quad",
                         OptionalList,
-                        Transformation::get_documentation_structure(),
+                        Transformation::get_documentation_structure(depth + 1),
                     ),
                 ),
             ]),

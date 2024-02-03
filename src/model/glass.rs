@@ -29,19 +29,19 @@ impl Creator<Materials> for Glass {
 }
 
 impl HelpDocumentation for Glass {
-    fn get_documentation_structure() -> DocumentationStructure {
+    fn get_documentation_structure(depth: u8) -> DocumentationStructure {
         DocumentationStructure {
             description: "A dielectric material which has a glass-like appearance".to_string(),
             fields: HashMap::from([
                 ("albedo".to_string(), FieldInfo::new(
                     "Texture for the material's albedo color",
                     Normal,
-                    Texture::get_documentation_structure()
+                    Texture::get_documentation_structure(depth + 1)
                 )),
                 ("normal".to_string(), FieldInfo::new(
                     "Texture for the material's normals. Used to give the illusion of fine structure of the hittable",
                     Optional,
-                    Texture::get_documentation_structure()
+                    Texture::get_documentation_structure(depth + 1)
                 )),
                 ("index_of_refraction".to_string(), FieldInfo::new_simple(
                     "The refractive index determines how much the path of light is bent, or refracted, when entering a material",

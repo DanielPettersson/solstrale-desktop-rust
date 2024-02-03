@@ -36,19 +36,19 @@ impl Creator<PostProcessors> for PostProcessor {
 }
 
 impl HelpDocumentation for PostProcessor {
-    fn get_documentation_structure() -> DocumentationStructure {
+    fn get_documentation_structure(depth: u8) -> DocumentationStructure {
         DocumentationStructure {
             description: "A post processor is applied to the image after rendering for various effects".to_string(),
             fields: HashMap::from([
                 ("bloom".to_string(), FieldInfo::new(
                     "A post processor that applies a bloom effect to bright areas of the image",
                     Optional,
-                    BloomPostProcessor::get_documentation_structure()
+                    BloomPostProcessor::get_documentation_structure(depth + 1)
                 )),
                 ("denoise".to_string(), FieldInfo::new(
                     "A post processor that applies a de-noising filter to the image. Which gives the appearance of a higher number of samples rendered.",
                     Optional,
-                    DenoisePostProcessor::get_documentation_structure()
+                    DenoisePostProcessor::get_documentation_structure(depth + 1)
                 )),
             ]),
         }

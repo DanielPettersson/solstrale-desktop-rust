@@ -26,14 +26,14 @@ impl Creator<Materials> for Light {
 }
 
 impl HelpDocumentation for Light {
-    fn get_documentation_structure() -> DocumentationStructure {
+    fn get_documentation_structure(depth: u8) -> DocumentationStructure {
         DocumentationStructure {
             description: "A material that emits light".to_string(),
             fields: HashMap::from([
                 ("color".to_string(), FieldInfo::new(
                     "The color of the light being emitted. The intensity of color is normally way over 1",
                     Normal,
-                    Rgb::get_documentation_structure()
+                    Rgb::get_documentation_structure(depth + 1)
                 )),
                 ("attenuation_half_length".to_string(), FieldInfo::new_simple(
                     "Attenuation is the amount of intensity lost the further away from the light source",

@@ -50,7 +50,7 @@ impl Creator<Vec3> for Rgb {
 }
 
 impl HelpDocumentation for Rgb {
-    fn get_documentation_structure() -> DocumentationStructure {
+    fn get_documentation_structure(_: u8) -> DocumentationStructure {
         DocumentationStructure::new_simple("Value describing an R, G, B color. For example: 1, 1, 0 for yellow or 0.5, 0.5, 0.5 for gray")
     }
 }

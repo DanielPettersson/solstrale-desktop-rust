@@ -14,7 +14,7 @@ impl Creator<Shaders> for AlbedoShader {
 }
 
 impl HelpDocumentation for AlbedoShader {
-    fn get_documentation_structure() -> DocumentationStructure {
+    fn get_documentation_structure(_: u8) -> DocumentationStructure {
         DocumentationStructure::new_simple(
             "A simple shader that just outputs the flat albedo color",
         )
