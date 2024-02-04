@@ -37,9 +37,7 @@ impl Creator<Textures> for Texture {
 impl HelpDocumentation for Texture {
     fn get_documentation_structure(depth: u8) -> DocumentationStructure {
         DocumentationStructure {
-            description:
-                "A texture defines the color of hittable objects. Can also be used for normals."
-                    .to_string(),
+            description: "A texture defines the color of hittable objects".to_string(),
             fields: HashMap::from([
                 (
                     "color".to_string(),

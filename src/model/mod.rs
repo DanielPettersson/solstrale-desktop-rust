@@ -21,6 +21,7 @@ mod light;
 mod material;
 mod metal;
 mod normal_shader;
+mod normal_texture;
 mod obj_model;
 mod path_tracing_shader;
 mod pos;

@@ -5,13 +5,14 @@ use serde::{Deserialize, Serialize};
 use solstrale::material::Materials;
 use std::collections::HashMap;
 use std::error::Error;
+use crate::model::normal_texture::NormalTexture;
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct Lambertian {
     pub albedo: Texture,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub normal: Option<Texture>,
+    pub normal: Option<NormalTexture>,
 }
 
 impl Creator<Materials> for Lambertian {

@@ -1,3 +1,4 @@
+use crate::model::normal_texture::NormalTexture;
 use crate::model::texture::Texture;
 use crate::model::FieldType::{Normal, Optional};
 use crate::model::{Creator, DocumentationStructure, FieldInfo, HelpDocumentation};
@@ -11,7 +12,7 @@ use std::error::Error;
 pub struct Glass {
     pub albedo: Texture,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub normal: Option<Texture>,
+    pub normal: Option<NormalTexture>,
     pub index_of_refraction: f64,
 }
 
