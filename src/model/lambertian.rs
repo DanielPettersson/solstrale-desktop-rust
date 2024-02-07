@@ -1,3 +1,4 @@
+use crate::model::normal_texture::NormalTexture;
 use crate::model::texture::Texture;
 use crate::model::FieldType::{Normal, Optional};
 use crate::model::{Creator, DocumentationStructure, FieldInfo, HelpDocumentation};
@@ -5,7 +6,6 @@ use serde::{Deserialize, Serialize};
 use solstrale::material::Materials;
 use std::collections::HashMap;
 use std::error::Error;
-use crate::model::normal_texture::NormalTexture;
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
 #[serde(deny_unknown_fields)]
@@ -40,7 +40,7 @@ impl HelpDocumentation for Lambertian {
                 ("normal".to_string(), FieldInfo::new(
                     "Texture for the material's normals. Used to give the illusion of fine structure of the hittable",
                     Optional,
-                    Texture::get_documentation_structure(depth + 1)
+                    NormalTexture::get_documentation_structure(depth + 1)
                 )),
             ]),
         }

@@ -42,7 +42,7 @@ impl HelpDocumentation for Metal {
                 ("normal".to_string(), FieldInfo::new(
                     "Texture for the material's normals. Used to give the illusion of fine structure of the hittable",
                     Optional,
-                    Texture::get_documentation_structure(depth + 1)
+                    NormalTexture::get_documentation_structure(depth + 1)
                 )),
                 ("fuzz".to_string(), FieldInfo::new_simple(
                     "The smoothness of the material",
