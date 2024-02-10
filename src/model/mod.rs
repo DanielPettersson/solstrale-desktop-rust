@@ -12,6 +12,7 @@ mod bloom_post_processor;
 mod r#box;
 mod camera_config;
 mod constant_medium;
+mod custom_width_height;
 mod denoise_post_processor;
 mod glass;
 mod half_screen_width_height;
@@ -39,7 +40,6 @@ mod sphere;
 mod texture;
 mod transformation;
 mod width_height;
-mod custom_width_height;
 
 #[derive(Clone, Debug, Display)]
 struct ModelError {
@@ -170,6 +170,7 @@ mod test {
     use crate::model::blend::Blend;
     use crate::model::bloom_post_processor::BloomPostProcessor;
     use crate::model::camera_config::CameraConfig;
+    use crate::model::custom_width_height::CustomWidthHeight;
     use crate::model::denoise_post_processor::DenoisePostProcessor;
     use crate::model::hittable::Hittable;
     use crate::model::lambertian::Lambertian;
@@ -182,6 +183,7 @@ mod test {
     use crate::model::shader::Shader;
     use crate::model::texture::Texture;
     use crate::model::transformation::Transformation;
+    use crate::model::width_height::WidthHeight;
     use crate::model::*;
 
     #[test]
@@ -281,6 +283,15 @@ mod test {
                 b: 0.0,
             },
             render_configuration: RenderConfig {
+                width_height: Some(WidthHeight {
+                    screen: None,
+                    half_screen: None,
+                    quarter_screen: None,
+                    custom: Some(CustomWidthHeight {
+                        width: 200,
+                        height: 100,
+                    }),
+                }),
                 samples_per_pixel: 50,
                 shader: Shader {
                     path_tracing: Some(PathTracingShader { max_depth: 50 }),
@@ -309,6 +320,10 @@ mod test {
         let yaml = serde_yaml::to_string(&scene).unwrap();
         assert_eq!(
             "render_configuration:
+  width_height:
+    custom:
+      width: 200
+      height: 100
   samples_per_pixel: 50
   shader:
     path_tracing:
