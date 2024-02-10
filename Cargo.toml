@@ -8,11 +8,12 @@ license = "Apache-2.0"
 lto = true
 
 [dependencies]
-solstrale = { version = "0.1.10", features = ["oidn-postprocessor"] }
+solstrale = { path = "../solstrale-rust", features = ["oidn-postprocessor"] }
 eframe = { version = "0.26.0", features = ["persistence", "wayland", "wgpu"] }
 egui_file = "0.15.0"
 image = "0.24.8"
-serde = { version = "1.0.19", features = ["derive"] }
+serde = { version = "1.0.196", features = ["derive"] }
+serde_json = "1.0.113"
 serde_yaml = "0.9.31"
 enum-map = { version = "2.7.3", features = ["serde"] }
 syntect = { version = "5.2.0", default-features = false, features = [
@@ -24,3 +25,4 @@ derive_more = "0.99.17"
 hhmmss = "0.1.0"
 regex = "1.10.3"
 dark-light = "1.0.0"
+tera = "1.19.1"
