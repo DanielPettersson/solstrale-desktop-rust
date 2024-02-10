@@ -1,6 +1,6 @@
 use crate::model::rgb::Rgb;
 use crate::model::FieldType::{Normal, Optional};
-use crate::model::{Creator, DocumentationStructure, FieldInfo, HelpDocumentation};
+use crate::model::{Creator, CreatorContext, DocumentationStructure, FieldInfo, HelpDocumentation};
 use serde::{Deserialize, Serialize};
 use solstrale::material::{DiffuseLight, Materials};
 use std::collections::HashMap;
@@ -15,7 +15,7 @@ pub struct Light {
 }
 
 impl Creator<Materials> for Light {
-    fn create(&self) -> Result<Materials, Box<dyn Error>> {
+    fn create(&self, _: &CreatorContext) -> Result<Materials, Box<dyn Error>> {
         Ok(DiffuseLight::new(
             self.color.r,
             self.color.g,

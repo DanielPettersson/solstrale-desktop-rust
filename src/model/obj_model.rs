@@ -1,7 +1,9 @@
 use crate::model::material::Material;
 use crate::model::transformation::{create_transformation, Transformation};
 use crate::model::FieldType::{List, Normal, Optional};
-use crate::model::{Creator, DocumentationStructure, FieldInfo, HelpDocumentation, ModelError};
+use crate::model::{
+    Creator, CreatorContext, DocumentationStructure, FieldInfo, HelpDocumentation, ModelError,
+};
 use moka::sync::Cache;
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
@@ -27,21 +29,21 @@ pub struct ObjModel {
 }
 
 impl Creator<Hittables> for ObjModel {
-    fn create(&self) -> Result<Hittables, Box<dyn Error>> {
+    fn create(&self, ctx: &CreatorContext) -> Result<Hittables, Box<dyn Error>> {
         let material = self.material.as_ref().map_or(
             Ok(solstrale::material::Lambertian::new(
                 SolidColor::new(1., 1., 1.),
                 None,
             )),
-            |m| m.create(),
+            |m| m.create(ctx),
         )?;
-        let transformation = create_transformation(&self.transformations)?;
+        let transformation = create_transformation(&self.transformations, ctx)?;
 
         let key = format!("{:?}", self);
         let model_result = MODEL_CACHE.get_with(key.to_owned(), || {
             Obj::new(&self.path, &self.name)
                 .load(&transformation, Some(material))
-                .map_err(|err| ModelError::new_from_err(err))
+                .map_err(ModelError::new_from_err)
         });
 
         match model_result {

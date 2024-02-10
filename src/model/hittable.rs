@@ -4,7 +4,9 @@ use crate::model::quad::Quad;
 use crate::model::r#box::Box;
 use crate::model::sphere::Sphere;
 use crate::model::FieldType::Optional;
-use crate::model::{Creator, DocumentationStructure, FieldInfo, HelpDocumentation, ModelError};
+use crate::model::{
+    Creator, CreatorContext, DocumentationStructure, FieldInfo, HelpDocumentation, ModelError,
+};
 use serde::{Deserialize, Serialize};
 use solstrale::hittable::Hittables;
 use std::collections::HashMap;
@@ -26,7 +28,7 @@ pub struct Hittable {
 }
 
 impl Creator<Vec<Hittables>> for Hittable {
-    fn create(&self) -> Result<Vec<Hittables>, std::boxed::Box<dyn Error>> {
+    fn create(&self, ctx: &CreatorContext) -> Result<Vec<Hittables>, std::boxed::Box<dyn Error>> {
         match self {
             Hittable {
                 sphere: Some(s),
@@ -34,35 +36,35 @@ impl Creator<Vec<Hittables>> for Hittable {
                 quad: None,
                 r#box: None,
                 constant_medium: None,
-            } => s.create().map(|h| vec![h]),
+            } => s.create(ctx).map(|h| vec![h]),
             Hittable {
                 sphere: None,
                 model: Some(m),
                 quad: None,
                 r#box: None,
                 constant_medium: None,
-            } => m.create().map(|h| vec![h]),
+            } => m.create(ctx).map(|h| vec![h]),
             Hittable {
                 sphere: None,
                 model: None,
                 quad: Some(q),
                 r#box: None,
                 constant_medium: None,
-            } => q.create().map(|h| vec![h]),
+            } => q.create(ctx).map(|h| vec![h]),
             Hittable {
                 sphere: None,
                 model: None,
                 quad: None,
                 r#box: Some(b),
                 constant_medium: None,
-            } => b.create(),
+            } => b.create(ctx),
             Hittable {
                 sphere: None,
                 model: None,
                 quad: None,
                 r#box: None,
                 constant_medium: Some(cm),
-            } => cm.create().map(|h| vec![h]),
+            } => cm.create(ctx).map(|h| vec![h]),
             _ => Err(From::from(ModelError::new(
                 "Hittable should have single field defined",
             ))),

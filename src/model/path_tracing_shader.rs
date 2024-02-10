@@ -1,5 +1,5 @@
 use crate::model::FieldType::Normal;
-use crate::model::{Creator, DocumentationStructure, FieldInfo, HelpDocumentation};
+use crate::model::{Creator, CreatorContext, DocumentationStructure, FieldInfo, HelpDocumentation};
 use serde::{Deserialize, Serialize};
 use solstrale::renderer::shader::Shaders;
 use std::collections::HashMap;
@@ -12,7 +12,7 @@ pub struct PathTracingShader {
 }
 
 impl Creator<Shaders> for PathTracingShader {
-    fn create(&self) -> Result<Shaders, Box<dyn Error>> {
+    fn create(&self, _: &CreatorContext) -> Result<Shaders, Box<dyn Error>> {
         Ok(solstrale::renderer::shader::PathTracingShader::new(
             self.max_depth,
         ))

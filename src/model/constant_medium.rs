@@ -7,7 +7,7 @@ use solstrale::hittable::{Bvh, Hittables};
 use crate::model::r#box::Box as BoxHittable;
 use crate::model::rgb::Rgb;
 use crate::model::FieldType::Normal;
-use crate::model::{Creator, DocumentationStructure, FieldInfo, HelpDocumentation};
+use crate::model::{Creator, CreatorContext, DocumentationStructure, FieldInfo, HelpDocumentation};
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
 #[serde(deny_unknown_fields)]
@@ -18,8 +18,8 @@ pub struct ConstantMedium {
 }
 
 impl Creator<Hittables> for ConstantMedium {
-    fn create(&self) -> Result<Hittables, Box<dyn Error>> {
-        let children = self.r#box.create()?;
+    fn create(&self, ctx: &CreatorContext) -> Result<Hittables, Box<dyn Error>> {
+        let children = self.r#box.create(ctx)?;
 
         let child = if children.len() == 1 {
             children.get(0).unwrap().clone()

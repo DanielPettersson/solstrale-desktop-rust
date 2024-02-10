@@ -9,7 +9,7 @@ use crate::model::hittable::Hittable;
 use crate::model::render_config::RenderConfig;
 use crate::model::rgb::Rgb;
 use crate::model::FieldType::{List, Normal};
-use crate::model::{Creator, DocumentationStructure, FieldInfo, HelpDocumentation};
+use crate::model::{Creator, CreatorContext, DocumentationStructure, FieldInfo, HelpDocumentation};
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
 #[serde(deny_unknown_fields)]
@@ -21,17 +21,17 @@ pub struct Scene {
 }
 
 impl Creator<solstrale::renderer::Scene> for Scene {
-    fn create(&self) -> Result<solstrale::renderer::Scene, Box<dyn Error>> {
+    fn create(&self, ctx: &CreatorContext) -> Result<solstrale::renderer::Scene, Box<dyn Error>> {
         let mut list = Vec::new();
         for child in self.world.iter() {
-            list.append(&mut child.create()?)
+            list.append(&mut child.create(ctx)?)
         }
 
         Ok(solstrale::renderer::Scene {
             world: Bvh::new(list),
-            camera: self.camera.create()?,
-            background_color: self.background_color.create()?,
-            render_config: self.render_configuration.create()?,
+            camera: self.camera.create(ctx)?,
+            background_color: self.background_color.create(ctx)?,
+            render_config: self.render_configuration.create(ctx)?,
         })
     }
 }

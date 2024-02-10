@@ -8,7 +8,7 @@ use crate::model::material::Material;
 use crate::model::pos::Pos;
 use crate::model::transformation::{create_transformation, Transformation};
 use crate::model::FieldType::{Normal, OptionalList};
-use crate::model::{Creator, DocumentationStructure, FieldInfo, HelpDocumentation};
+use crate::model::{Creator, CreatorContext, DocumentationStructure, FieldInfo, HelpDocumentation};
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
 #[serde(deny_unknown_fields)]
@@ -22,13 +22,13 @@ pub struct Quad {
 }
 
 impl Creator<Hittables> for Quad {
-    fn create(&self) -> Result<Hittables, Box<dyn Error>> {
+    fn create(&self, ctx: &CreatorContext) -> Result<Hittables, Box<dyn Error>> {
         Ok(solstrale::hittable::Quad::new(
-            self.q.create()?,
-            self.u.create()?,
-            self.v.create()?,
-            self.material.create()?,
-            &create_transformation(&self.transformations)?,
+            self.q.create(ctx)?,
+            self.u.create(ctx)?,
+            self.v.create(ctx)?,
+            self.material.create(ctx)?,
+            &create_transformation(&self.transformations, ctx)?,
         ))
     }
 }

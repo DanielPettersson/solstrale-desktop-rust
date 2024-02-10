@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use solstrale::material::texture::{load_normal_texture, Textures};
 
 use crate::model::FieldType::Normal;
-use crate::model::{Creator, DocumentationStructure, FieldInfo, HelpDocumentation};
+use crate::model::{Creator, CreatorContext, DocumentationStructure, FieldInfo, HelpDocumentation};
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
 #[serde(deny_unknown_fields)]
@@ -14,7 +14,7 @@ pub struct NormalTexture {
 }
 
 impl Creator<Textures> for NormalTexture {
-    fn create(&self) -> Result<Textures, Box<dyn Error>> {
+    fn create(&self, _: &CreatorContext) -> Result<Textures, Box<dyn Error>> {
         load_normal_texture(self.file.as_ref())
     }
 }

@@ -1,5 +1,7 @@
 use crate::model::FieldType::Normal;
-use crate::model::{Creator, DocumentationStructure, FieldInfo, HelpDocumentation, Pos};
+use crate::model::{
+    Creator, CreatorContext, DocumentationStructure, FieldInfo, HelpDocumentation, Pos,
+};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::error::Error;
@@ -15,13 +17,16 @@ pub struct CameraConfig {
 }
 
 impl Creator<solstrale::camera::CameraConfig> for CameraConfig {
-    fn create(&self) -> Result<solstrale::camera::CameraConfig, Box<dyn Error>> {
+    fn create(
+        &self,
+        ctx: &CreatorContext,
+    ) -> Result<solstrale::camera::CameraConfig, Box<dyn Error>> {
         Ok(solstrale::camera::CameraConfig {
             vertical_fov_degrees: self.vertical_fov_degrees,
             aperture_size: self.aperture_size,
-            look_from: self.look_from.create()?,
-            look_at: self.look_at.create()?,
-            up: self.up.create()?,
+            look_from: self.look_from.create(ctx)?,
+            look_at: self.look_at.create(ctx)?,
+            up: self.up.create(ctx)?,
         })
     }
 }

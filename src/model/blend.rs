@@ -6,7 +6,7 @@ use solstrale::material::Materials;
 
 use crate::model::material::Material;
 use crate::model::FieldType::Normal;
-use crate::model::{Creator, DocumentationStructure, FieldInfo, HelpDocumentation};
+use crate::model::{Creator, CreatorContext, DocumentationStructure, FieldInfo, HelpDocumentation};
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
 #[serde(deny_unknown_fields)]
@@ -17,10 +17,10 @@ pub struct Blend {
 }
 
 impl Creator<Materials> for Blend {
-    fn create(&self) -> Result<Materials, Box<dyn Error>> {
+    fn create(&self, ctx: &CreatorContext) -> Result<Materials, Box<dyn Error>> {
         Ok(solstrale::material::Blend::new(
-            self.first.create()?,
-            self.second.create()?,
+            self.first.create(ctx)?,
+            self.second.create(ctx)?,
             self.blend_factor,
         ))
     }

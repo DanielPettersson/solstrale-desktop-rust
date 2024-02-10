@@ -1,4 +1,6 @@
-use crate::model::{parse_option, Creator, DocumentationStructure, HelpDocumentation};
+use crate::model::{
+    parse_option, Creator, CreatorContext, DocumentationStructure, HelpDocumentation,
+};
 use serde::{Deserialize, Serialize};
 use solstrale::geo::vec3::Vec3;
 use std::error::Error;
@@ -44,7 +46,7 @@ impl From<&Pos> for Vec3 {
 }
 
 impl Creator<Vec3> for Pos {
-    fn create(&self) -> Result<Vec3, Box<dyn Error>> {
+    fn create(&self, _: &CreatorContext) -> Result<Vec3, Box<dyn Error>> {
         Ok(Vec3::new(self.x, self.y, self.z))
     }
 }

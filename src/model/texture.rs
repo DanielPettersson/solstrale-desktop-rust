@@ -1,7 +1,9 @@
 use crate::model::image::Image;
 use crate::model::rgb::Rgb;
 use crate::model::FieldType::Optional;
-use crate::model::{Creator, DocumentationStructure, FieldInfo, HelpDocumentation, ModelError};
+use crate::model::{
+    Creator, CreatorContext, DocumentationStructure, FieldInfo, HelpDocumentation, ModelError,
+};
 use serde::{Deserialize, Serialize};
 use solstrale::material::texture::{SolidColor, Textures};
 use std::collections::HashMap;
@@ -17,7 +19,7 @@ pub struct Texture {
 }
 
 impl Creator<Textures> for Texture {
-    fn create(&self) -> Result<Textures, Box<dyn Error>> {
+    fn create(&self, ctx: &CreatorContext) -> Result<Textures, Box<dyn Error>> {
         match self {
             Texture {
                 color: Some(c),
@@ -26,7 +28,7 @@ impl Creator<Textures> for Texture {
             Texture {
                 color: None,
                 image: Some(im),
-            } => im.create(),
+            } => im.create(ctx),
             _ => Err(From::from(ModelError::new(
                 "Texture should have single field defined",
             ))),

@@ -1,24 +1,23 @@
 use std::error::Error;
 
 use serde::{Deserialize, Serialize};
-use solstrale::renderer::shader::Shaders;
 
 use crate::model::{Creator, CreatorContext, DocumentationStructure, HelpDocumentation};
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
 #[serde(deny_unknown_fields)]
-pub struct SimpleShader {}
+pub struct ScreenWidthHeight {}
 
-impl Creator<Shaders> for SimpleShader {
-    fn create(&self, _: &CreatorContext) -> Result<Shaders, Box<dyn Error>> {
-        Ok(solstrale::renderer::shader::SimpleShader::new())
+impl Creator<(usize, usize)> for ScreenWidthHeight {
+    fn create(&self, ctx: &CreatorContext) -> Result<(usize, usize), Box<dyn Error>> {
+        Ok((ctx.screen_width, ctx.screen_height))
     }
 }
 
-impl HelpDocumentation for SimpleShader {
+impl HelpDocumentation for ScreenWidthHeight {
     fn get_documentation_structure(_: u8) -> DocumentationStructure {
         DocumentationStructure::new_simple(
-            "Combines albedo and normal color without any light scattering",
+            "The width and height is the same as the visible render window",
         )
     }
 }

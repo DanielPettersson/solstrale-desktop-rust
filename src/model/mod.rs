@@ -14,6 +14,7 @@ mod camera_config;
 mod constant_medium;
 mod denoise_post_processor;
 mod glass;
+mod half_screen_width_height;
 mod hittable;
 mod image;
 mod lambertian;
@@ -27,14 +28,18 @@ mod path_tracing_shader;
 mod pos;
 mod post_processor;
 mod quad;
+mod quarter_screen_width_height;
 mod render_config;
 mod rgb;
 pub mod scene;
+mod screen_width_height;
 mod shader;
 mod simple_shader;
 mod sphere;
 mod texture;
 mod transformation;
+mod width_height;
+mod custom_width_height;
 
 #[derive(Clone, Debug, Display)]
 struct ModelError {
@@ -57,8 +62,13 @@ impl ModelError {
 
 impl Error for ModelError {}
 
+pub struct CreatorContext {
+    pub screen_width: usize,
+    pub screen_height: usize,
+}
+
 pub trait Creator<T> {
-    fn create(&self) -> Result<T, Box<dyn Error>>;
+    fn create(&self, ctx: &CreatorContext) -> Result<T, Box<dyn Error>>;
 }
 
 pub trait HelpDocumentation {

@@ -1,6 +1,8 @@
 use crate::model::pos::Pos;
 use crate::model::FieldType::Optional;
-use crate::model::{Creator, DocumentationStructure, FieldInfo, HelpDocumentation, ModelError};
+use crate::model::{
+    Creator, CreatorContext, DocumentationStructure, FieldInfo, HelpDocumentation, ModelError,
+};
 use serde::{Deserialize, Serialize};
 use solstrale::geo::transformation::{
     RotationX, RotationY, RotationZ, Scale, Transformations, Transformer, Translation,
@@ -24,7 +26,7 @@ pub struct Transformation {
 }
 
 impl Creator<Box<dyn Transformer>> for Transformation {
-    fn create(&self) -> Result<Box<dyn Transformer>, Box<dyn Error>> {
+    fn create(&self, _: &CreatorContext) -> Result<Box<dyn Transformer>, Box<dyn Error>> {
         match self {
             Transformation {
                 translation: Some(p),
@@ -70,10 +72,11 @@ impl Creator<Box<dyn Transformer>> for Transformation {
 
 pub fn create_transformation(
     transformations: &Vec<Transformation>,
+    ctx: &CreatorContext,
 ) -> Result<Transformations, Box<dyn Error>> {
     let mut trans: Vec<Box<dyn Transformer>> = Vec::with_capacity(transformations.len());
     for t in transformations {
-        trans.push(t.create()?);
+        trans.push(t.create(ctx)?);
     }
     Ok(Transformations::new(trans))
 }

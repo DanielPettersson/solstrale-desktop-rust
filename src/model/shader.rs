@@ -3,7 +3,9 @@ use crate::model::normal_shader::NormalShader;
 use crate::model::path_tracing_shader::PathTracingShader;
 use crate::model::simple_shader::SimpleShader;
 use crate::model::FieldType::Optional;
-use crate::model::{Creator, DocumentationStructure, FieldInfo, HelpDocumentation, ModelError};
+use crate::model::{
+    Creator, CreatorContext, DocumentationStructure, FieldInfo, HelpDocumentation, ModelError,
+};
 use serde::{Deserialize, Serialize};
 use solstrale::renderer::shader::Shaders;
 use std::collections::HashMap;
@@ -23,35 +25,35 @@ pub struct Shader {
 }
 
 impl Creator<Shaders> for Shader {
-    fn create(&self) -> Result<Shaders, Box<dyn Error>> {
+    fn create(&self, ctx: &CreatorContext) -> Result<Shaders, Box<dyn Error>> {
         match self {
             Shader {
                 path_tracing: Some(p),
                 simple: None,
                 albedo: None,
                 normal: None,
-            } => p.create(),
+            } => p.create(ctx),
             Shader {
                 path_tracing: None,
                 simple: Some(s),
                 albedo: None,
                 normal: None,
-            } => s.create(),
+            } => s.create(ctx),
             Shader {
                 path_tracing: None,
                 simple: None,
                 albedo: Some(a),
                 normal: None,
-            } => a.create(),
+            } => a.create(ctx),
             Shader {
                 path_tracing: None,
                 simple: None,
                 albedo: None,
                 normal: Some(n),
-            } => n.create(),
-            _ => Err(
-                Box::try_from(ModelError::new("Shader should have single field defined")).unwrap(),
-            ),
+            } => n.create(ctx),
+            _ => Err(From::from(ModelError::new(
+                "Shader should have single field defined",
+            ))),
         }
     }
 }

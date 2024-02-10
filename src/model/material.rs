@@ -4,7 +4,9 @@ use crate::model::lambertian::Lambertian;
 use crate::model::light::Light;
 use crate::model::metal::Metal;
 use crate::model::FieldType::Optional;
-use crate::model::{Creator, DocumentationStructure, FieldInfo, HelpDocumentation, ModelError};
+use crate::model::{
+    Creator, CreatorContext, DocumentationStructure, FieldInfo, HelpDocumentation, ModelError,
+};
 use serde::{Deserialize, Serialize};
 use solstrale::material::Materials;
 use std::collections::HashMap;
@@ -26,7 +28,7 @@ pub struct Material {
 }
 
 impl Creator<Materials> for Material {
-    fn create(&self) -> Result<Materials, Box<dyn Error>> {
+    fn create(&self, ctx: &CreatorContext) -> Result<Materials, Box<dyn Error>> {
         match self {
             Material {
                 lambertian: Some(l),
@@ -34,35 +36,35 @@ impl Creator<Materials> for Material {
                 metal: None,
                 light: None,
                 blend: None,
-            } => l.create(),
+            } => l.create(ctx),
             Material {
                 lambertian: None,
                 glass: Some(g),
                 metal: None,
                 light: None,
                 blend: None,
-            } => g.create(),
+            } => g.create(ctx),
             Material {
                 lambertian: None,
                 glass: None,
                 metal: Some(m),
                 light: None,
                 blend: None,
-            } => m.create(),
+            } => m.create(ctx),
             Material {
                 lambertian: None,
                 glass: None,
                 metal: None,
                 light: Some(l),
                 blend: None,
-            } => l.create(),
+            } => l.create(ctx),
             Material {
                 lambertian: None,
                 glass: None,
                 metal: None,
                 light: None,
                 blend: Some(b),
-            } => b.create(),
+            } => b.create(ctx),
             _ => Err(From::from(ModelError::new(
                 "Material should have single field defined",
             ))),

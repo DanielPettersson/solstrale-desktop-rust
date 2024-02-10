@@ -1,4 +1,4 @@
-use crate::model::{Creator, DocumentationStructure, HelpDocumentation};
+use crate::model::{Creator, CreatorContext, DocumentationStructure, HelpDocumentation};
 use serde::{Deserialize, Serialize};
 use solstrale::renderer::shader::Shaders;
 use std::error::Error;
@@ -8,7 +8,7 @@ use std::error::Error;
 pub struct AlbedoShader {}
 
 impl Creator<Shaders> for AlbedoShader {
-    fn create(&self) -> Result<Shaders, Box<dyn Error>> {
+    fn create(&self, _: &CreatorContext) -> Result<Shaders, Box<dyn Error>> {
         Ok(solstrale::renderer::shader::AlbedoShader::new())
     }
 }

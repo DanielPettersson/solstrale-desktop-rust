@@ -5,7 +5,7 @@ use eframe::egui::load::SizedTexture;
 use eframe::egui::{Color32, ColorImage, Context, Image, TextureOptions, Vec2};
 use solstrale::ray_trace;
 
-use crate::model::{parse_scene_yaml, Creator};
+use crate::model::{parse_scene_yaml, Creator, CreatorContext};
 use crate::{ErrorInfo, RenderControl, RenderMessage, RenderedImage};
 
 pub fn render_output<'a>(
@@ -42,6 +42,7 @@ pub fn render_output<'a>(
                             [image.width() as usize, image.height() as usize],
                             fs.as_slice(),
                         );
+                        rendered_image.num_pixels = image.width() * image.height();
                         rendered_image.rgb_image = Some(image);
                         match rendered_image.texture_handle.as_mut() {
                             None => {
@@ -111,14 +112,11 @@ fn render(
     let ctx2 = ctx.clone();
 
     thread::spawn(move || {
-        let res = (|| match parse_scene_yaml(&scene_yaml_str)?.create() {
-            Ok(scene) => ray_trace(
-                render_size.x as u32,
-                render_size.y as u32,
-                scene,
-                &output_sender,
-                &abort_receiver,
-            ),
+        let res = (|| match parse_scene_yaml(&scene_yaml_str)?.create(&CreatorContext {
+            screen_width: render_size.x as usize,
+            screen_height: render_size.y as usize,
+        }) {
+            Ok(scene) => ray_trace(scene, &output_sender, &abort_receiver),
             Err(err) => Err(err),
         })();
 

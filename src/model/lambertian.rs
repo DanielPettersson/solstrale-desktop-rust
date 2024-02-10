@@ -1,7 +1,7 @@
 use crate::model::normal_texture::NormalTexture;
 use crate::model::texture::Texture;
 use crate::model::FieldType::{Normal, Optional};
-use crate::model::{Creator, DocumentationStructure, FieldInfo, HelpDocumentation};
+use crate::model::{Creator, CreatorContext, DocumentationStructure, FieldInfo, HelpDocumentation};
 use serde::{Deserialize, Serialize};
 use solstrale::material::Materials;
 use std::collections::HashMap;
@@ -16,12 +16,12 @@ pub struct Lambertian {
 }
 
 impl Creator<Materials> for Lambertian {
-    fn create(&self) -> Result<Materials, Box<dyn Error>> {
+    fn create(&self, ctx: &CreatorContext) -> Result<Materials, Box<dyn Error>> {
         Ok(solstrale::material::Lambertian::new(
-            self.albedo.create()?,
+            self.albedo.create(ctx)?,
             match self.normal.as_ref() {
                 None => None,
-                Some(n) => Some(n.create()?),
+                Some(n) => Some(n.create(ctx)?),
             },
         ))
     }

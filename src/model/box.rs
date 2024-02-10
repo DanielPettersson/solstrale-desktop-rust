@@ -8,7 +8,7 @@ use crate::model::material::Material;
 use crate::model::pos::Pos;
 use crate::model::transformation::{create_transformation, Transformation};
 use crate::model::FieldType::{Normal, OptionalList};
-use crate::model::{Creator, DocumentationStructure, FieldInfo, HelpDocumentation};
+use crate::model::{Creator, CreatorContext, DocumentationStructure, FieldInfo, HelpDocumentation};
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
 #[serde(deny_unknown_fields)]
@@ -21,12 +21,12 @@ pub struct Box {
 }
 
 impl Creator<Vec<Hittables>> for Box {
-    fn create(&self) -> Result<Vec<Hittables>, std::boxed::Box<dyn Error>> {
+    fn create(&self, ctx: &CreatorContext) -> Result<Vec<Hittables>, std::boxed::Box<dyn Error>> {
         Ok(solstrale::hittable::Quad::new_box(
-            self.a.create()?,
-            self.b.create()?,
-            self.material.create()?,
-            &create_transformation(&self.transformations)?,
+            self.a.create(ctx)?,
+            self.b.create(ctx)?,
+            self.material.create(ctx)?,
+            &create_transformation(&self.transformations, ctx)?,
         ))
     }
 }

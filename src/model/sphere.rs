@@ -1,7 +1,7 @@
 use crate::model::material::Material;
 use crate::model::pos::Pos;
 use crate::model::FieldType::Normal;
-use crate::model::{Creator, DocumentationStructure, FieldInfo, HelpDocumentation};
+use crate::model::{Creator, CreatorContext, DocumentationStructure, FieldInfo, HelpDocumentation};
 use serde::{Deserialize, Serialize};
 use solstrale::hittable::Hittables;
 use std::collections::HashMap;
@@ -16,11 +16,11 @@ pub struct Sphere {
 }
 
 impl Creator<Hittables> for Sphere {
-    fn create(&self) -> Result<Hittables, Box<dyn Error>> {
+    fn create(&self, ctx: &CreatorContext) -> Result<Hittables, Box<dyn Error>> {
         Ok(solstrale::hittable::Sphere::new(
-            self.center.create()?,
+            self.center.create(ctx)?,
             self.radius,
-            self.material.create()?,
+            self.material.create(ctx)?,
         ))
     }
 }

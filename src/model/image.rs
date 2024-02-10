@@ -1,5 +1,5 @@
 use crate::model::FieldType::Normal;
-use crate::model::{Creator, DocumentationStructure, FieldInfo, HelpDocumentation};
+use crate::model::{Creator, CreatorContext, DocumentationStructure, FieldInfo, HelpDocumentation};
 use serde::{Deserialize, Serialize};
 use solstrale::material::texture::{ImageMap, Textures};
 use std::collections::HashMap;
@@ -12,7 +12,7 @@ pub struct Image {
 }
 
 impl Creator<Textures> for Image {
-    fn create(&self) -> Result<Textures, Box<dyn Error>> {
+    fn create(&self, _: &CreatorContext) -> Result<Textures, Box<dyn Error>> {
         ImageMap::load(self.file.as_ref())
     }
 }

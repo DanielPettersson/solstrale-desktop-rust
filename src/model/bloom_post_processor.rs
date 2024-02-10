@@ -1,5 +1,5 @@
 use crate::model::FieldType::{Normal, Optional};
-use crate::model::{Creator, DocumentationStructure, FieldInfo, HelpDocumentation};
+use crate::model::{Creator, CreatorContext, DocumentationStructure, FieldInfo, HelpDocumentation};
 use serde::{Deserialize, Serialize};
 use solstrale::post::PostProcessors;
 use std::collections::HashMap;
@@ -16,7 +16,7 @@ pub struct BloomPostProcessor {
 }
 
 impl Creator<PostProcessors> for BloomPostProcessor {
-    fn create(&self) -> Result<PostProcessors, Box<dyn Error>> {
+    fn create(&self, _: &CreatorContext) -> Result<PostProcessors, Box<dyn Error>> {
         Ok(solstrale::post::BloomPostProcessor::new(
             self.kernel_size_fraction,
             self.threshold,
