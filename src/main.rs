@@ -132,7 +132,12 @@ pub struct ErrorInfo {
 impl ErrorInfo {
     pub fn handle(&mut self, err: Box<dyn Error>) {
         self.show_error = true;
-        self.error_message = format!("{}", err);
+
+        let mut err_msg = format!("{}", err);
+        if let Some(s) = err.source() {
+            err_msg = err_msg + &format!("\n{}", s);
+        }
+        self.error_message = err_msg;
     }
     pub fn handle_str(&mut self, err: &str) {
         self.show_error = true;

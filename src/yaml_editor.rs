@@ -10,6 +10,7 @@ use regex::Regex;
 
 pub static YAML_EDITOR_ID: Lazy<Id> = Lazy::new(|| Id::from("yaml_editor"));
 static INDENTATION_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new("^[\\s-]*").unwrap());
+static TEMPLATE_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new("\\{%.*%}").unwrap());
 static YAML_KEY_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new("^([\\s-]*)([\\w_]+):").unwrap());
 static AUTOCOMPLETE_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new("^[\\s-]*([\\w_]+)$").unwrap());
 
@@ -41,6 +42,10 @@ pub fn get_yaml_path(yaml: &dyn TextBuffer, ctx: &Context) -> Vec<String> {
             let mut ret = Vec::new();
 
             for line in yaml.char_range(0..idx).lines().rev() {
+                if TEMPLATE_REGEX.captures(line).is_some() {
+                    continue;
+                }
+
                 if let Some(cap) = YAML_KEY_REGEX.captures(line) {
                     let indentation = cap.get(1).unwrap().len();
                     if indentation < max_indentation {

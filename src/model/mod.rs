@@ -2,11 +2,10 @@ use std::collections::HashMap;
 use std::error::Error;
 
 use derive_more::Display;
-use serde_json::{from_value, json};
-use tera::Tera;
 
 use crate::model::pos::Pos;
 use crate::model::scene::Scene;
+use crate::model::template::apply_template;
 
 mod albedo_shader;
 mod blend;
@@ -39,6 +38,7 @@ mod screen_width_height;
 mod shader;
 mod simple_shader;
 mod sphere;
+mod template;
 mod texture;
 mod transformation;
 mod width_height;
@@ -152,33 +152,8 @@ pub fn get_documentation_structure_by_yaml_path(
     }
 }
 
-pub fn sin(args: &HashMap<String, tera::Value>) -> tera::Result<tera::Value> {
-    let value = match args.get("value") {
-        Some(val) => match from_value::<f64>(val.clone()) {
-            Ok(v) => v,
-            Err(_) => {
-                return Err(tera::Error::msg(format!(
-                    "Function `sin` received value={} but `start` can only be a number",
-                    val
-                )));
-            }
-        },
-        None => {
-            return Err(tera::Error::msg(
-                "Function `sin` missing value parameter".to_string(),
-            ))
-        }
-    };
-    Ok(json!(value.sin()))
-}
-
 pub fn parse_scene_yaml(templated_yaml: &str) -> Result<Scene, Box<dyn Error>> {
-    let mut tera = Tera::default();
-    tera.register_function("sin", sin);
-    tera.add_raw_template("t", templated_yaml)?;
-    let context = tera::Context::new();
-    let yaml = tera.render("t", &context)?;
-
+    let yaml = apply_template(templated_yaml)?;
     let scene: Scene = serde_yaml::from_str(&yaml)?;
     Ok(scene)
 }
