@@ -12,7 +12,7 @@ use solstrale::material::Materials;
 use std::collections::HashMap;
 use std::error::Error;
 
-#[derive(Serialize, Deserialize, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, PartialEq, Debug, Default)]
 #[serde(deny_unknown_fields)]
 pub struct Material {
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -65,8 +65,15 @@ impl Creator<Materials> for Material {
                 light: None,
                 blend: Some(b),
             } => b.create(ctx),
+            Material {
+                lambertian: None,
+                glass: None,
+                metal: None,
+                light: None,
+                blend: None,
+            } => Lambertian::default().create(ctx),
             _ => Err(From::from(ModelError::new(
-                "Material should have single field defined",
+                "Material should have max a single field defined",
             ))),
         }
     }

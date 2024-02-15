@@ -1,6 +1,6 @@
 use crate::model::material::Material;
 use crate::model::pos::Pos;
-use crate::model::FieldType::Normal;
+use crate::model::FieldType::{Normal, Optional};
 use crate::model::{Creator, CreatorContext, DocumentationStructure, FieldInfo, HelpDocumentation};
 use serde::{Deserialize, Serialize};
 use solstrale::hittable::Hittables;
@@ -12,7 +12,8 @@ use std::error::Error;
 pub struct Sphere {
     pub center: Pos,
     pub radius: f64,
-    pub material: Material,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub material: Option<Material>,
 }
 
 impl Creator<Hittables> for Sphere {
@@ -20,7 +21,10 @@ impl Creator<Hittables> for Sphere {
         Ok(solstrale::hittable::Sphere::new(
             self.center.create(ctx)?,
             self.radius,
-            self.material.create(ctx)?,
+            self.material
+                .as_ref()
+                .unwrap_or(&Material::default())
+                .create(ctx)?,
         ))
     }
 }
@@ -46,7 +50,7 @@ impl HelpDocumentation for Sphere {
                     "material".to_string(),
                     FieldInfo::new(
                         "Material of the sphere",
-                        Normal,
+                        Optional,
                         Material::get_documentation_structure(depth + 1),
                     ),
                 ),

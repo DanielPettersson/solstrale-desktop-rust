@@ -9,7 +9,7 @@ lto = true
 
 [dependencies]
 solstrale = { version = "0.1.11"}
-eframe = { version = "0.26.0", features = ["persistence", "wayland", "wgpu"] }
+eframe = { version = "0.26.2", features = ["persistence", "wayland", "wgpu"] }
 egui_file = "0.15.0"
 image = "0.24.8"
 serde = { version = "1.0.196", features = ["derive"] }

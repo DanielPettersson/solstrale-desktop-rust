@@ -1,21 +1,12 @@
 render_configuration:
-  preview_interval_ms: 3000
-  samples_per_pixel: 100
-  shader:
-    path_tracing:
-      max_depth: 50
   post_processors:
     - bloom:
-        kernel_size_fraction: 0.1
         max_intensity: 2
     - denoise: {}
-background_color: 0, 0, 0
 camera:
   vertical_fov_degrees: 35.0
-  aperture_size: 0
   look_from: 278, 278, -800
   look_at: 278, 278, 0
-  up: 0, 1, 0
 world:
   - quad:
       q: 555, 0, 0
@@ -38,49 +29,28 @@ world:
       u: -260, 0, 0
       v: 0, 0, -210
       material:
-        light:
-          color: 15, 15, 15
+        light: {}
   - quad:
       q: 0, 0, 0
       u: 555, 0, 0
       v: 0, 0, 555
-      material:
-        lambertian:
-          albedo:
-            color: 0.73, 0.73, 0.73
   - quad:
       q: 555, 555, 555
       u: -555, 0, 0
       v: 0, 0, -555
-      material:
-        lambertian:
-          albedo:
-            color: 0.73, 0.73, 0.73
   - quad:
       q: 0, 0, 555
       u: 555, 0, 0
       v: 0, 555, 0
-      material:
-        lambertian:
-          albedo:
-            color: 0.73, 0.73, 0.73
   - box:
       a: 0, 0, 0
       b: 165, 330, 165
-      material:
-        lambertian:
-          albedo:
-            color: 0.73, 0.73, 0.73
       transformations:
         - rotation_y: 15
         - translation: 265, 0, 295
   - box:
       a: 0, 0, 0
       b: 165, 165, 165
-      material:
-        lambertian:
-          albedo:
-            color: 0.73, 0.73, 0.73
       transformations:
         - rotation_y: -18
         - translation: 130, 0, 65

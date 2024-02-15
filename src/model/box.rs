@@ -7,7 +7,7 @@ use solstrale::hittable::Hittables;
 use crate::model::material::Material;
 use crate::model::pos::Pos;
 use crate::model::transformation::{create_transformation, Transformation};
-use crate::model::FieldType::{Normal, OptionalList};
+use crate::model::FieldType::{Normal, Optional, OptionalList};
 use crate::model::{Creator, CreatorContext, DocumentationStructure, FieldInfo, HelpDocumentation};
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
@@ -15,7 +15,8 @@ use crate::model::{Creator, CreatorContext, DocumentationStructure, FieldInfo, H
 pub struct Box {
     pub a: Pos,
     pub b: Pos,
-    pub material: Material,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub material: Option<Material>,
     #[serde(skip_serializing_if = "Vec::is_empty", default)]
     pub transformations: Vec<Transformation>,
 }
@@ -25,7 +26,10 @@ impl Creator<Vec<Hittables>> for Box {
         Ok(solstrale::hittable::Quad::new_box(
             self.a.create(ctx)?,
             self.b.create(ctx)?,
-            self.material.create(ctx)?,
+            self.material
+                .as_ref()
+                .unwrap_or(&Material::default())
+                .create(ctx)?,
             &create_transformation(&self.transformations, ctx)?,
         ))
     }
@@ -56,7 +60,7 @@ impl HelpDocumentation for Box {
                     "material".to_string(),
                     FieldInfo::new(
                         "Material of the box",
-                        Normal,
+                        Optional,
                         Material::get_documentation_structure(depth + 1),
                     ),
                 ),

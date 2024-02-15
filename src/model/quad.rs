@@ -7,7 +7,7 @@ use solstrale::hittable::Hittables;
 use crate::model::material::Material;
 use crate::model::pos::Pos;
 use crate::model::transformation::{create_transformation, Transformation};
-use crate::model::FieldType::{Normal, OptionalList};
+use crate::model::FieldType::{Normal, Optional, OptionalList};
 use crate::model::{Creator, CreatorContext, DocumentationStructure, FieldInfo, HelpDocumentation};
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
@@ -16,7 +16,8 @@ pub struct Quad {
     pub q: Pos,
     pub u: Pos,
     pub v: Pos,
-    pub material: Material,
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub material: Option<Material>,
     #[serde(skip_serializing_if = "Vec::is_empty", default)]
     pub transformations: Vec<Transformation>,
 }
@@ -27,7 +28,10 @@ impl Creator<Hittables> for Quad {
             self.q.create(ctx)?,
             self.u.create(ctx)?,
             self.v.create(ctx)?,
-            self.material.create(ctx)?,
+            self.material
+                .as_ref()
+                .unwrap_or(&Material::default())
+                .create(ctx)?,
             &create_transformation(&self.transformations, ctx)?,
         ))
     }
@@ -66,7 +70,7 @@ impl HelpDocumentation for Quad {
                     "material".to_string(),
                     FieldInfo::new(
                         "Material of the quad",
-                        Normal,
+                        Optional,
                         Material::get_documentation_structure(depth + 1),
                     ),
                 ),

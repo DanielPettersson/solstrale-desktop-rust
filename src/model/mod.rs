@@ -207,7 +207,7 @@ mod test {
                         y: 5.,
                         z: 6.,
                     },
-                    material: Material {
+                    material: Some(Material {
                         lambertian: None,
                         glass: None,
                         metal: None,
@@ -215,14 +215,14 @@ mod test {
                         blend: Some(Box::new(Blend {
                             first: Material {
                                 lambertian: Some(Lambertian {
-                                    albedo: Texture {
+                                    albedo: Some(Texture {
                                         color: Some(Rgb {
                                             r: 1.0,
                                             g: 0.0,
                                             b: 0.0,
                                         }),
                                         image: None,
-                                    },
+                                    }),
                                     normal: None,
                                 }),
                                 glass: None,
@@ -234,23 +234,23 @@ mod test {
                                 lambertian: None,
                                 glass: None,
                                 metal: Some(Metal {
-                                    albedo: Texture {
+                                    albedo: Some(Texture {
                                         color: Some(Rgb {
                                             r: 0.0,
                                             g: 1.0,
                                             b: 0.0,
                                         }),
                                         image: None,
-                                    },
+                                    }),
                                     normal: None,
-                                    fuzz: 0.1,
+                                    fuzz: Some(0.1),
                                 }),
                                 light: None,
                                 blend: None,
                             },
-                            blend_factor: 0.5,
+                            blend_factor: Some(0.5),
                         })),
-                    },
+                    }),
                     transformations: vec![Transformation {
                         translation: None,
                         scale: None,
@@ -262,30 +262,30 @@ mod test {
                 constant_medium: None,
             }],
             camera: CameraConfig {
-                vertical_fov_degrees: 0.0,
-                aperture_size: 0.0,
+                vertical_fov_degrees: Some(0.0),
+                aperture_size: Some(0.0),
                 look_from: Pos {
                     x: 0.0,
                     y: 0.0,
                     z: 0.0,
                 },
-                look_at: Pos {
+                look_at: Some(Pos {
                     x: 0.0,
                     y: 0.0,
                     z: 0.0,
-                },
-                up: Pos {
+                }),
+                up: Some(Pos {
                     x: 0.0,
                     y: 1.0,
                     z: 0.0,
-                },
+                }),
             },
-            background_color: Rgb {
+            background_color: Some(Rgb {
                 r: 0.0,
                 g: 0.0,
                 b: 0.0,
-            },
-            render_configuration: RenderConfig {
+            }),
+            render_configuration: Some(RenderConfig {
                 width_height: Some(WidthHeight {
                     screen: None,
                     half_screen: None,
@@ -295,17 +295,19 @@ mod test {
                         height: 100,
                     }),
                 }),
-                samples_per_pixel: 50,
-                shader: Shader {
-                    path_tracing: Some(PathTracingShader { max_depth: 50 }),
+                samples_per_pixel: Some(50),
+                shader: Some(Shader {
+                    path_tracing: Some(PathTracingShader {
+                        max_depth: Some(50),
+                    }),
                     simple: None,
                     albedo: None,
                     normal: None,
-                },
+                }),
                 post_processors: vec![
                     PostProcessor {
                         bloom: Some(BloomPostProcessor {
-                            kernel_size_fraction: 0.1,
+                            kernel_size_fraction: Some(0.1),
                             threshold: Some(1.5),
                             max_intensity: None,
                         }),
@@ -316,8 +318,8 @@ mod test {
                         denoise: Some(DenoisePostProcessor {}),
                     },
                 ],
-                preview_interval_ms: 1000,
-            },
+                preview_interval_ms: Some(1000),
+            }),
         };
 
         let yaml = serde_yaml::to_string(&scene).unwrap();

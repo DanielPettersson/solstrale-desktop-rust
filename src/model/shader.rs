@@ -11,7 +11,7 @@ use solstrale::renderer::shader::Shaders;
 use std::collections::HashMap;
 use std::error::Error;
 
-#[derive(Serialize, Deserialize, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, PartialEq, Debug, Default)]
 #[serde(deny_unknown_fields)]
 pub struct Shader {
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -51,6 +51,12 @@ impl Creator<Shaders> for Shader {
                 albedo: None,
                 normal: Some(n),
             } => n.create(ctx),
+            Shader {
+                path_tracing: None,
+                simple: None,
+                albedo: None,
+                normal: None,
+            } => PathTracingShader::default().create(ctx),
             _ => Err(From::from(ModelError::new(
                 "Shader should have single field defined",
             ))),

@@ -1,30 +1,37 @@
-use crate::model::normal_texture::NormalTexture;
-use crate::model::texture::Texture;
-use crate::model::FieldType::{Normal, Optional};
-use crate::model::{Creator, CreatorContext, DocumentationStructure, FieldInfo, HelpDocumentation};
-use serde::{Deserialize, Serialize};
-use solstrale::material::{Dielectric, Materials};
 use std::collections::HashMap;
 use std::error::Error;
+
+use serde::{Deserialize, Serialize};
+use solstrale::material::{Dielectric, Materials};
+
+use crate::model::normal_texture::NormalTexture;
+use crate::model::texture::Texture;
+use crate::model::FieldType::Optional;
+use crate::model::{Creator, CreatorContext, DocumentationStructure, FieldInfo, HelpDocumentation};
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct Glass {
-    pub albedo: Texture,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub albedo: Option<Texture>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub normal: Option<NormalTexture>,
-    pub index_of_refraction: f64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub index_of_refraction: Option<f64>,
 }
 
 impl Creator<Materials> for Glass {
     fn create(&self, ctx: &CreatorContext) -> Result<Materials, Box<dyn Error>> {
         Ok(Dielectric::new(
-            self.albedo.create(ctx)?,
+            self.albedo
+                .as_ref()
+                .unwrap_or(&Texture::default())
+                .create(ctx)?,
             match self.normal.as_ref() {
                 None => None,
                 Some(n) => Some(n.create(ctx)?),
             },
-            self.index_of_refraction,
+            self.index_of_refraction.unwrap_or(1.5),
         ))
     }
 }
@@ -36,7 +43,7 @@ impl HelpDocumentation for Glass {
             fields: HashMap::from([
                 ("albedo".to_string(), FieldInfo::new(
                     "Texture for the material's albedo color",
-                    Normal,
+                    Optional,
                     Texture::get_documentation_structure(depth + 1)
                 )),
                 ("normal".to_string(), FieldInfo::new(
@@ -46,8 +53,8 @@ impl HelpDocumentation for Glass {
                 )),
                 ("index_of_refraction".to_string(), FieldInfo::new_simple(
                     "The refractive index determines how much the path of light is bent, or refracted, when entering a material",
-                    Normal,
-                    "For example, glass normally has 1.5 and water 1.33"
+                    Optional,
+                    "For example, glass normally has 1.5 and water 1.33. Defaults to 1.5"
                 )),
             ]),
         }

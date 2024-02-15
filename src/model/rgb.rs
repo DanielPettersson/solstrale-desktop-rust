@@ -1,9 +1,11 @@
+use std::error::Error;
+
+use serde::{Deserialize, Serialize};
+use solstrale::geo::vec3::Vec3;
+
 use crate::model::{
     parse_option, Creator, CreatorContext, DocumentationStructure, HelpDocumentation,
 };
-use serde::{Deserialize, Serialize};
-use solstrale::geo::vec3::Vec3;
-use std::error::Error;
 
 #[derive(PartialEq, Debug, Copy, Clone)]
 pub struct Rgb {
@@ -15,6 +17,13 @@ pub struct Rgb {
 static R: &str = "r";
 static G: &str = "g";
 static B: &str = "b";
+
+impl Rgb {
+    /// Creates a new instance
+    pub fn new(r: f64, g: f64, b: f64) -> Rgb {
+        Rgb { r, g, b }
+    }
+}
 
 impl Serialize for Rgb {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>

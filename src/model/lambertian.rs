@@ -1,16 +1,19 @@
-use crate::model::normal_texture::NormalTexture;
-use crate::model::texture::Texture;
-use crate::model::FieldType::{Normal, Optional};
-use crate::model::{Creator, CreatorContext, DocumentationStructure, FieldInfo, HelpDocumentation};
-use serde::{Deserialize, Serialize};
-use solstrale::material::Materials;
 use std::collections::HashMap;
 use std::error::Error;
 
-#[derive(Serialize, Deserialize, PartialEq, Debug)]
+use serde::{Deserialize, Serialize};
+use solstrale::material::Materials;
+
+use crate::model::normal_texture::NormalTexture;
+use crate::model::texture::Texture;
+use crate::model::FieldType::Optional;
+use crate::model::{Creator, CreatorContext, DocumentationStructure, FieldInfo, HelpDocumentation};
+
+#[derive(Serialize, Deserialize, PartialEq, Debug, Default)]
 #[serde(deny_unknown_fields)]
 pub struct Lambertian {
-    pub albedo: Texture,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub albedo: Option<Texture>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub normal: Option<NormalTexture>,
 }
@@ -18,7 +21,10 @@ pub struct Lambertian {
 impl Creator<Materials> for Lambertian {
     fn create(&self, ctx: &CreatorContext) -> Result<Materials, Box<dyn Error>> {
         Ok(solstrale::material::Lambertian::new(
-            self.albedo.create(ctx)?,
+            self.albedo
+                .as_ref()
+                .unwrap_or(&Texture::default())
+                .create(ctx)?,
             match self.normal.as_ref() {
                 None => None,
                 Some(n) => Some(n.create(ctx)?),
@@ -34,7 +40,7 @@ impl HelpDocumentation for Lambertian {
             fields: HashMap::from([
                 ("albedo".to_string(), FieldInfo::new(
                     "Texture for the material's albedo color",
-                    Normal,
+                    Optional,
                     Texture::get_documentation_structure(depth + 1)
                 )),
                 ("normal".to_string(), FieldInfo::new(

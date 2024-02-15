@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use solstrale::material::Materials;
 
 use crate::model::material::Material;
-use crate::model::FieldType::Normal;
+use crate::model::FieldType::{Normal, Optional};
 use crate::model::{Creator, CreatorContext, DocumentationStructure, FieldInfo, HelpDocumentation};
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
@@ -13,7 +13,7 @@ use crate::model::{Creator, CreatorContext, DocumentationStructure, FieldInfo, H
 pub struct Blend {
     pub first: Material,
     pub second: Material,
-    pub blend_factor: f64,
+    pub blend_factor: Option<f64>,
 }
 
 impl Creator<Materials> for Blend {
@@ -21,7 +21,7 @@ impl Creator<Materials> for Blend {
         Ok(solstrale::material::Blend::new(
             self.first.create(ctx)?,
             self.second.create(ctx)?,
-            self.blend_factor,
+            self.blend_factor.unwrap_or(0.5),
         ))
     }
 }
@@ -44,8 +44,8 @@ impl HelpDocumentation for Blend {
                     )),
                     ("blend_factor".to_string(), FieldInfo::new_simple(
                         "A factor of how much each of 'first' and 'second' will be blended",
-                        Normal,
-                        "For example: 0 uses only 'first', 1 uses only 'second' and 0.5 uses equal amount of both materials"
+                        Optional,
+                        "For example: 0 uses only 'first', 1 uses only 'second' and 0.5 uses equal amount of both materials. Defaults to 0.5"
                     )),
                 ]),
             }

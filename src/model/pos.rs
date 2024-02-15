@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use solstrale::geo::vec3::Vec3;
 use std::error::Error;
 
-#[derive(PartialEq, Debug)]
+#[derive(Copy, Clone, PartialEq, Debug, Default)]
 pub struct Pos {
     pub x: f64,
     pub y: f64,
@@ -15,6 +15,13 @@ pub struct Pos {
 static X: &str = "x";
 static Y: &str = "y";
 static Z: &str = "z";
+
+impl Pos {
+    /// Creates a new instance
+    pub fn new(x: f64, y: f64, z: f64) -> Pos {
+        Pos { x, y, z }
+    }
+}
 
 impl Serialize for Pos {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -42,6 +49,16 @@ impl<'de> Deserialize<'de> for Pos {
 impl From<&Pos> for Vec3 {
     fn from(value: &Pos) -> Self {
         Vec3::new(value.x, value.y, value.z)
+    }
+}
+
+impl From<Vec3> for Pos {
+    fn from(value: Vec3) -> Self {
+        Pos {
+            x: value.x,
+            y: value.y,
+            z: value.z,
+        }
     }
 }
 

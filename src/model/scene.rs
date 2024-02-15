@@ -8,14 +8,16 @@ use crate::model::camera_config::CameraConfig;
 use crate::model::hittable::Hittable;
 use crate::model::render_config::RenderConfig;
 use crate::model::rgb::Rgb;
-use crate::model::FieldType::{List, Normal};
+use crate::model::FieldType::{List, Normal, Optional};
 use crate::model::{Creator, CreatorContext, DocumentationStructure, FieldInfo, HelpDocumentation};
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct Scene {
-    pub render_configuration: RenderConfig,
-    pub background_color: Rgb,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub render_configuration: Option<RenderConfig>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub background_color: Option<Rgb>,
     pub camera: CameraConfig,
     pub world: Vec<Hittable>,
 }
@@ -30,8 +32,15 @@ impl Creator<solstrale::renderer::Scene> for Scene {
         Ok(solstrale::renderer::Scene {
             world: Bvh::new(list),
             camera: self.camera.create(ctx)?,
-            background_color: self.background_color.create(ctx)?,
-            render_config: self.render_configuration.create(ctx)?,
+            background_color: self
+                .background_color
+                .unwrap_or(Rgb::new(0., 0., 0.))
+                .create(ctx)?,
+            render_config: self
+                .render_configuration
+                .as_ref()
+                .unwrap_or(&RenderConfig::default())
+                .create(ctx)?,
         })
     }
 }
@@ -49,15 +58,15 @@ impl HelpDocumentation for Scene {
                     "render_configuration".to_string(),
                     FieldInfo::new(
                         "General configuration for the renderer",
-                        Normal,
+                        Optional,
                         RenderConfig::get_documentation_structure(depth + 1),
                     ),
                 ),
                 (
                     "background_color".to_string(),
                     FieldInfo::new(
-                        "The resulting pixel color for when a ray hits nothing",
-                        Normal,
+                        "The resulting pixel color for when a ray hits nothing. Defaults to black",
+                        Optional,
                         Rgb::get_documentation_structure(depth + 1),
                     ),
                 ),

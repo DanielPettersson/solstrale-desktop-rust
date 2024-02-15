@@ -9,7 +9,7 @@ use solstrale::material::texture::{SolidColor, Textures};
 use std::collections::HashMap;
 use std::error::Error;
 
-#[derive(Serialize, Deserialize, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, PartialEq, Debug, Default)]
 #[serde(deny_unknown_fields)]
 pub struct Texture {
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -29,8 +29,12 @@ impl Creator<Textures> for Texture {
                 color: None,
                 image: Some(im),
             } => im.create(ctx),
+            Texture {
+                color: None,
+                image: None,
+            } => Ok(SolidColor::new(0.8, 0.8, 0.8)),
             _ => Err(From::from(ModelError::new(
-                "Texture should have single field defined",
+                "Texture should have max a single field defined",
             ))),
         }
     }
