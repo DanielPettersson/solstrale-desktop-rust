@@ -3,6 +3,7 @@ use crate::model::glass::Glass;
 use crate::model::lambertian::Lambertian;
 use crate::model::light::Light;
 use crate::model::metal::Metal;
+use crate::model::plastic::Plastic;
 use crate::model::FieldType::Optional;
 use crate::model::{
     Creator, CreatorContext, DocumentationStructure, FieldInfo, HelpDocumentation, ModelError,
@@ -22,6 +23,8 @@ pub struct Material {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub metal: Option<Metal>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub plastic: Option<Plastic>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub light: Option<Light>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub blend: Option<Box<Blend>>,
@@ -34,6 +37,7 @@ impl Creator<Materials> for Material {
                 lambertian: Some(l),
                 glass: None,
                 metal: None,
+                plastic: None,
                 light: None,
                 blend: None,
             } => l.create(ctx),
@@ -41,6 +45,7 @@ impl Creator<Materials> for Material {
                 lambertian: None,
                 glass: Some(g),
                 metal: None,
+                plastic: None,
                 light: None,
                 blend: None,
             } => g.create(ctx),
@@ -48,6 +53,7 @@ impl Creator<Materials> for Material {
                 lambertian: None,
                 glass: None,
                 metal: Some(m),
+                plastic: None,
                 light: None,
                 blend: None,
             } => m.create(ctx),
@@ -55,6 +61,15 @@ impl Creator<Materials> for Material {
                 lambertian: None,
                 glass: None,
                 metal: None,
+                plastic: Some(p),
+                light: None,
+                blend: None,
+            } => p.create(ctx),
+            Material {
+                lambertian: None,
+                glass: None,
+                metal: None,
+                plastic: None,
                 light: Some(l),
                 blend: None,
             } => l.create(ctx),
@@ -62,6 +77,7 @@ impl Creator<Materials> for Material {
                 lambertian: None,
                 glass: None,
                 metal: None,
+                plastic: None,
                 light: None,
                 blend: Some(b),
             } => b.create(ctx),
@@ -69,6 +85,7 @@ impl Creator<Materials> for Material {
                 lambertian: None,
                 glass: None,
                 metal: None,
+                plastic: None,
                 light: None,
                 blend: None,
             } => Lambertian::default().create(ctx),
@@ -108,6 +125,14 @@ impl HelpDocumentation for Material {
                         "A reflective material that gives a metallic appearance",
                         Optional,
                         Metal::get_documentation_structure(depth + 1),
+                    ),
+                ),
+                (
+                    "plastic".to_string(),
+                    FieldInfo::new(
+                        "A material with plastic-like appearance",
+                        Optional,
+                        Plastic::get_documentation_structure(depth + 1),
                     ),
                 ),
                 (

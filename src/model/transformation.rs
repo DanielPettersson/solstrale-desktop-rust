@@ -10,7 +10,7 @@ use solstrale::geo::transformation::{
 use std::collections::HashMap;
 use std::error::Error;
 
-#[derive(Serialize, Deserialize, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, PartialEq, Debug, Default)]
 #[serde(deny_unknown_fields)]
 pub struct Transformation {
     #[serde(skip_serializing_if = "Option::is_none")]

@@ -1,4 +1,5 @@
 use serde_json::{from_value, to_value, Value};
+use solstrale::geo::vec3::Vec3;
 use std::collections::HashMap;
 use std::error::Error;
 use tera::Tera;
@@ -8,6 +9,8 @@ pub fn apply_template(templated_yaml: &str) -> Result<String, Box<dyn Error>> {
     tera.register_function("sin", sin);
     tera.register_function("cos", cos);
     tera.register_function("sqrt", sqrt);
+    tera.register_function("abs", abs);
+    tera.register_function("len", len);
     tera.register_function("range", range);
     tera.add_raw_template("template", templated_yaml)?;
     let context = tera::Context::new();
@@ -16,100 +19,44 @@ pub fn apply_template(templated_yaml: &str) -> Result<String, Box<dyn Error>> {
 }
 
 pub fn sin(args: &HashMap<String, Value>) -> tera::Result<Value> {
-    let v = match args.get("v") {
-        Some(val) => match from_value::<f64>(val.clone()) {
-            Ok(v) => v,
-            Err(_) => {
-                return Err(tera::Error::msg(format!(
-                    "Function `sin` received v={val} but `v` can only be a number"
-                )));
-            }
-        },
-        None => {
-            return Err(tera::Error::msg(
-                "Function `sin` was called without a `v` argument",
-            ));
-        }
-    };
+    let v = get_required_numeric_arg(args, "sin", "v")?;
     Ok(to_value(v.sin()).unwrap())
 }
 
 pub fn cos(args: &HashMap<String, Value>) -> tera::Result<Value> {
-    let v = match args.get("v") {
-        Some(val) => match from_value::<f64>(val.clone()) {
-            Ok(v) => v,
-            Err(_) => {
-                return Err(tera::Error::msg(format!(
-                    "Function `cos` received v={val} but `v` can only be a number"
-                )));
-            }
-        },
-        None => {
-            return Err(tera::Error::msg(
-                "Function `cos` was called without a `v` argument",
-            ));
-        }
-    };
+    let v = get_required_numeric_arg(args, "cos", "v")?;
     Ok(to_value(v.cos()).unwrap())
 }
 
+pub fn abs(args: &HashMap<String, Value>) -> tera::Result<Value> {
+    let v = get_required_numeric_arg(args, "abs", "v")?;
+    Ok(to_value(v.abs()).unwrap())
+}
+
+pub fn len(args: &HashMap<String, Value>) -> tera::Result<Value> {
+    let x = get_optional_numeric_arg(args, "len", "x", 0.)?;
+    let y = get_optional_numeric_arg(args, "len", "y", 0.)?;
+    let z = get_optional_numeric_arg(args, "len", "z", 0.)?;
+
+    Ok(to_value(Vec3::new(x, y, z).length()).unwrap())
+}
+
 pub fn sqrt(args: &HashMap<String, Value>) -> tera::Result<Value> {
-    let v = match args.get("v") {
-        Some(val) => match from_value::<f64>(val.clone()) {
-            Ok(v) => v,
-            Err(_) => {
-                return Err(tera::Error::msg(format!(
-                    "Function `sqrt` received v={val} but `v` can only be a number"
-                )));
-            }
-        },
-        None => {
-            return Err(tera::Error::msg(
-                "Function `sqrt` was called without a `v` argument",
-            ));
-        }
-    };
+    let v = get_required_numeric_arg(args, "sqrt", "v")?;
+
+    if v < 0. {
+        return Err(tera::Error::msg(format!(
+            "Function `sqrt` was called with negative `v` argument: {v}"
+        )));
+    }
+
     Ok(to_value(v.sqrt()).unwrap())
 }
 
 pub fn range(args: &HashMap<String, Value>) -> tera::Result<Value> {
-    let start = match args.get("start") {
-        Some(val) => match from_value::<f64>(val.clone()) {
-            Ok(v) => v,
-            Err(_) => {
-                return Err(tera::Error::msg(format!(
-                    "Function `range` received start={val} but `start` can only be a number"
-                )));
-            }
-        },
-        None => 0.,
-    };
-    let step_by = match args.get("step_by") {
-        Some(val) => match from_value::<f64>(val.clone()) {
-            Ok(v) => v,
-            Err(_) => {
-                return Err(tera::Error::msg(format!(
-                    "Function `range` received step_by={val} but `step` can only be a number"
-                )));
-            }
-        },
-        None => 1.,
-    };
-    let end = match args.get("end") {
-        Some(val) => match from_value::<f64>(val.clone()) {
-            Ok(v) => v,
-            Err(_) => {
-                return Err(tera::Error::msg(format!(
-                    "Function `range` received end={val} but `end` can only be a number"
-                )));
-            }
-        },
-        None => {
-            return Err(tera::Error::msg(
-                "Function `range` was called without a `end` argument",
-            ));
-        }
-    };
+    let start = get_optional_numeric_arg(args, "range", "start", 0.)?;
+    let end = get_required_numeric_arg(args, "range", "end")?;
+    let step_by = get_optional_numeric_arg(args, "range", "step_by", 1.)?;
 
     if start > end {
         return Err(tera::Error::msg(
@@ -124,4 +71,45 @@ pub fn range(args: &HashMap<String, Value>) -> tera::Result<Value> {
         i += step_by;
     }
     Ok(to_value(res).unwrap())
+}
+
+fn get_required_numeric_arg(
+    args: &HashMap<String, Value>,
+    fn_name: &str,
+    arg_name: &str,
+) -> tera::Result<f64> {
+    match args.get(arg_name) {
+        Some(val) => match from_value::<f64>(val.clone()) {
+            Ok(v) => Ok(v),
+            Err(_) => {
+                return Err(tera::Error::msg(format!(
+                    "Function `{fn_name}` received end={val} but `{arg_name}` can only be a number"
+                )));
+            }
+        },
+        None => {
+            return Err(tera::Error::msg(format!(
+                "Function `{fn_name}` was called without a `{arg_name}` argument"
+            )));
+        }
+    }
+}
+
+fn get_optional_numeric_arg(
+    args: &HashMap<String, Value>,
+    fn_name: &str,
+    arg_name: &str,
+    default_val: f64,
+) -> tera::Result<f64> {
+    match args.get(arg_name) {
+        Some(val) => match from_value::<f64>(val.clone()) {
+            Ok(v) => Ok(v),
+            Err(_) => {
+                return Err(tera::Error::msg(format!(
+                    "Function `{fn_name}` received end={val} but `{arg_name}` can only be a number"
+                )));
+            }
+        },
+        None => Ok(default_val),
+    }
 }

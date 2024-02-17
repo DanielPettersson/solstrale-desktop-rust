@@ -27,6 +27,7 @@ mod normal_shader;
 mod normal_texture;
 mod obj_model;
 mod path_tracing_shader;
+mod plastic;
 mod pos;
 mod post_processor;
 mod quad;
@@ -193,9 +194,6 @@ mod test {
     fn serde() {
         let scene = Scene {
             world: vec![Hittable {
-                sphere: None,
-                model: None,
-                quad: None,
                 r#box: Some(crate::model::r#box::Box {
                     a: Pos {
                         x: 1.,
@@ -208,10 +206,6 @@ mod test {
                         z: 6.,
                     },
                     material: Some(Material {
-                        lambertian: None,
-                        glass: None,
-                        metal: None,
-                        light: None,
                         blend: Some(Box::new(Blend {
                             first: Material {
                                 lambertian: Some(Lambertian {
@@ -225,14 +219,9 @@ mod test {
                                     }),
                                     normal: None,
                                 }),
-                                glass: None,
-                                metal: None,
-                                light: None,
-                                blend: None,
+                                ..Default::default()
                             },
                             second: Material {
-                                lambertian: None,
-                                glass: None,
                                 metal: Some(Metal {
                                     albedo: Some(Texture {
                                         color: Some(Rgb {
@@ -245,21 +234,18 @@ mod test {
                                     normal: None,
                                     fuzz: Some(0.1),
                                 }),
-                                light: None,
-                                blend: None,
+                                ..Default::default()
                             },
                             blend_factor: Some(0.5),
                         })),
+                        ..Default::default()
                     }),
                     transformations: vec![Transformation {
-                        translation: None,
-                        scale: None,
                         rotation_x: Some(30.),
-                        rotation_y: None,
-                        rotation_z: None,
+                        ..Default::default()
                     }],
                 }),
-                constant_medium: None,
+                ..Default::default()
             }],
             camera: CameraConfig {
                 vertical_fov_degrees: Some(0.0),
