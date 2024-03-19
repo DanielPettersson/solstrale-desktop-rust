@@ -11,7 +11,7 @@ lto = true
 solstrale = { git = "https://github.com/DanielPettersson/solstrale-rust.git", branch = "main" }
 eframe = { version = "0.26.2", features = ["persistence", "wayland", "wgpu"] }
 egui_file = "0.16.3"
-image = "0.25.0"
+image = "0.24.9"
 serde = { version = "1.0.197", features = ["derive"] }
 serde_json = "1.0.114"
 serde_yaml = "0.9.33"
