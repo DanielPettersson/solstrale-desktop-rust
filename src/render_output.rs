@@ -112,7 +112,7 @@ fn render(
     let ctx2 = ctx.clone();
 
     thread::spawn(move || {
-        let res = (|| match parse_scene_yaml(&scene_yaml_str)?.create(&CreatorContext {
+        let res = (|| match parse_scene_yaml(&scene_yaml_str, 0)?.create(&CreatorContext {
             screen_width: render_size.x as usize,
             screen_height: render_size.y as usize,
         }) {

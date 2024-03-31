@@ -153,8 +153,8 @@ pub fn get_documentation_structure_by_yaml_path(
     }
 }
 
-pub fn parse_scene_yaml(templated_yaml: &str) -> Result<Scene, Box<dyn Error>> {
-    let yaml = apply_template(templated_yaml)?;
+pub fn parse_scene_yaml(templated_yaml: &str, frame_index: usize) -> Result<Scene, Box<dyn Error>> {
+    let yaml = apply_template(templated_yaml, frame_index)?;
     let scene: Scene = serde_yaml::from_str(&yaml)?;
     Ok(scene)
 }
