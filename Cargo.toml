@@ -27,3 +27,5 @@ hhmmss = "0.1.0"
 regex = "1.10.3"
 dark-light = "1.0.0"
 tera = { version = "1.19.1", default-features = false }
+clap = { version = "4.5.4", features = ["derive"] }
+indicatif = "0.17.8"
