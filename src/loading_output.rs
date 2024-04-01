@@ -1,13 +1,11 @@
 use std::f64::consts::TAU;
 
-use eframe::egui::{
-    pos2, Align2, Color32, FontId, Margin, Pos2, Rect, Stroke, TextureHandle, Ui, Vec2,
-};
+use eframe::egui::{Align2, Color32, FontId, Margin, Pos2, Rect, Stroke, Ui, Vec2};
 use eframe::{egui, emath, epaint};
 use emath::RectTransform;
 use epaint::Shape;
 
-pub fn show(ui: &mut Ui, background_texture: Option<TextureHandle>) {
+pub fn show(ui: &mut Ui) {
     egui::Frame::canvas(ui.style())
         .inner_margin(Margin::same(0.))
         .show(ui, |ui| {
@@ -24,15 +22,6 @@ pub fn show(ui: &mut Ui, background_texture: Option<TextureHandle>) {
                 RectTransform::from_to(Rect::from_x_y_ranges(0.0..=1.0, -1.0..=1.0), rect);
 
             let mut shapes = vec![];
-
-            if let Some(tex) = background_texture {
-                shapes.push(Shape::image(
-                    tex.id(),
-                    rect,
-                    Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0)),
-                    Color32::WHITE,
-                ))
-            }
 
             for &(mode, color) in &[
                 (2., Color32::from_rgba_unmultiplied(200, 0, 0, 15)),

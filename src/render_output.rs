@@ -13,7 +13,7 @@ pub fn render_output<'a>(
     rendered_image: &mut RenderedImage,
     error_info: &mut ErrorInfo,
     scene_yaml: &str,
-    render_size: Vec2,
+    viewport_size: Vec2,
     ctx: &Context,
 ) -> Option<Image<'a>> {
     if render_control.render_requested {
@@ -23,9 +23,8 @@ pub fn render_output<'a>(
     }
 
     if render_control.abort_sender.is_none() && render_control.render_requested {
-        rendered_image.num_pixels = render_size.x as u32 * render_size.y as u32;
-
-        let res = render(scene_yaml, render_size, ctx);
+        let res = render(scene_yaml, viewport_size, ctx);
+        rendered_image.texture_handle = None;
         render_control.render_receiver = Some(res.0);
         render_control.abort_sender = Some(res.1);
         render_control.render_requested = false;
@@ -42,7 +41,8 @@ pub fn render_output<'a>(
                             [image.width() as usize, image.height() as usize],
                             fs.as_slice(),
                         );
-                        rendered_image.num_pixels = image.width() * image.height();
+                        rendered_image.width = image.width();
+                        rendered_image.height = image.height();
                         rendered_image.rgb_image = Some(image);
                         match rendered_image.texture_handle.as_mut() {
                             None => {
@@ -82,24 +82,21 @@ pub fn render_output<'a>(
         let texture_handle = rendered_image.texture_handle.get_or_insert_with(|| {
             ctx.load_texture(
                 "",
-                ColorImage::new(
-                    [render_size.x as usize, render_size.y as usize],
-                    Color32::BLACK,
-                ),
+                ColorImage::new([1, 1], Color32::BLACK),
                 TextureOptions::default(),
             )
         });
 
         Some(Image::from_texture(SizedTexture::new(
             texture_handle,
-            render_size,
+            Vec2::new(rendered_image.width as f32, rendered_image.height as f32),
         )))
     }
 }
 
 fn render(
     scene_yaml: &str,
-    render_size: Vec2,
+    viewport_size: Vec2,
     ctx: &Context,
 ) -> (Receiver<RenderMessage>, Sender<bool>) {
     let (output_sender, output_receiver) = channel();
@@ -113,8 +110,8 @@ fn render(
 
     thread::spawn(move || {
         let res = (|| match parse_scene_yaml(&scene_yaml_str, 0)?.create(&CreatorContext {
-            screen_width: render_size.x as usize,
-            screen_height: render_size.y as usize,
+            screen_width: viewport_size.x as usize,
+            screen_height: viewport_size.y as usize,
         }) {
             Ok(scene) => ray_trace(scene, &output_sender, &abort_receiver),
             Err(err) => Err(err),

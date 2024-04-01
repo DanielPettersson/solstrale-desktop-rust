@@ -1,53 +1,34 @@
-use std::error::Error;
 use std::str::FromStr;
-use std::sync::mpsc::{Receiver, Sender};
-use std::time::Duration;
 
 use dark_light::Mode;
 use eframe::egui::Event::CompositionUpdate;
 use eframe::egui::{
-    Align, Button, Context, Layout, Margin, ProgressBar, SidePanel, TopBottomPanel, Vec2,
-    ViewportBuilder, Visuals,
+    Align, Button, Context, Direction, Layout, Margin, ProgressBar, SidePanel, TopBottomPanel,
+    Vec2, ViewportBuilder, Visuals,
 };
-use eframe::epaint::TextureHandle;
 use eframe::{egui, icon_data, run_native, App, Frame, NativeOptions, Storage};
 use egui::{CentralPanel, ScrollArea, Window};
 use egui_file::FileDialog;
 use hhmmss::Hhmmss;
-use image::RgbImage;
 use once_cell::sync::Lazy;
-use solstrale::renderer::RenderProgress;
 
-use yaml_editor::yaml_editor;
-
-use crate::keyboard::{is_ctrl_space, is_enter};
-use crate::model::scene::Scene;
-use crate::model::{
+use solstrale_desktop_rust::keyboard::{is_ctrl_space, is_enter};
+use solstrale_desktop_rust::model::scene::Scene;
+use solstrale_desktop_rust::model::{
     get_documentation_structure_by_yaml_path, DocumentationStructure, HelpDocumentation,
 };
-use crate::render_output::render_output;
-use crate::yaml_editor::create_layouter;
-
-mod help;
-mod keyboard;
-mod load_scene;
-mod loading_output;
-mod model;
-mod render_button;
-mod render_output;
-mod reset_confirm;
-mod save_image;
-mod save_scene;
-mod yaml_editor;
+use solstrale_desktop_rust::render_output::render_output;
+use solstrale_desktop_rust::yaml_editor::{create_layouter, yaml_editor};
+use solstrale_desktop_rust::{
+    help, load_scene, loading_output, render_button, reset_confirm, save_image, save_scene,
+    yaml_editor, ErrorInfo, RenderControl, RenderedImage, DEFAULT_SCENE,
+};
 
 static ROOT_DOCUMENTATION_STRUCTURE: Lazy<DocumentationStructure> =
     Lazy::new(|| Scene::get_documentation_structure(0));
 
-pub static DEFAULT_SCENE: Lazy<String> =
-    Lazy::new(|| include_str!("../resources/scene.yaml").to_owned());
-
 fn main() -> eframe::Result<()> {
-    let icon_bytes = include_bytes!("../resources/icon.png");
+    let icon_bytes = include_bytes!("../../resources/icon.png");
     let icon = icon_data::from_png_bytes(icon_bytes).expect("Failed to load application icon");
 
     let native_options = NativeOptions {
@@ -95,53 +76,6 @@ impl Default for Dialogs {
             save_output_dialog: save_image::create(),
             show_reset_confirm_dialog: false,
         }
-    }
-}
-
-#[derive(Default)]
-pub struct RenderControl {
-    pub abort_sender: Option<Sender<bool>>,
-    pub render_receiver: Option<Receiver<RenderMessage>>,
-    pub render_requested: bool,
-    pub loading_scene: bool,
-    initial_render_started: bool,
-    previous_frame_render_size: Vec2,
-}
-
-pub enum RenderMessage {
-    SampleRendered(RenderProgress),
-    Error(String),
-}
-
-#[derive(Default)]
-pub struct RenderedImage {
-    pub texture_handle: Option<TextureHandle>,
-    pub rgb_image: Option<RgbImage>,
-    pub progress: f64,
-    pub fps: f64,
-    pub estimated_time_left: Duration,
-    pub num_pixels: u32,
-}
-
-#[derive(Default)]
-pub struct ErrorInfo {
-    pub show_error: bool,
-    pub error_message: String,
-}
-
-impl ErrorInfo {
-    pub fn handle(&mut self, err: Box<dyn Error>) {
-        self.show_error = true;
-
-        let mut err_msg = format!("{}", err);
-        if let Some(s) = err.source() {
-            err_msg = err_msg + &format!("\n{}", s);
-        }
-        self.error_message = err_msg;
-    }
-    pub fn handle_str(&mut self, err: &str) {
-        self.show_error = true;
-        self.error_message = err.to_string();
     }
 }
 
@@ -265,7 +199,9 @@ impl App for SolstraleApp {
                             self.rendered_image.progress * 100.,
                             self.rendered_image.estimated_time_left.hhmmss(),
                             self.rendered_image.fps,
-                            self.rendered_image.fps * self.rendered_image.num_pixels as f64
+                            self.rendered_image.fps
+                                * self.rendered_image.width as f64
+                                * self.rendered_image.height as f64
                                 / 1_000_000.,
                         )),
                     )
@@ -339,10 +275,26 @@ impl App for SolstraleApp {
                     ui.ctx(),
                 ) {
                     None => {
-                        loading_output::show(ui, self.rendered_image.texture_handle.clone());
+                        loading_output::show(ui);
                     }
                     Some(im) => {
-                        ui.add(im);
+                        let ri_aspect =
+                            self.rendered_image.width as f32 / self.rendered_image.height as f32;
+                        let ui_aspect = ui.available_size().x / ui.available_size().y;
+
+                        ui.with_layout(
+                            Layout::from_main_dir_and_cross_align(
+                                if ri_aspect > ui_aspect {
+                                    Direction::LeftToRight
+                                } else {
+                                    Direction::TopDown
+                                },
+                                Align::Center,
+                            ),
+                            |ui| {
+                                ui.add(im.maintain_aspect_ratio(true).shrink_to_fit());
+                            },
+                        );
                     }
                 };
             });
