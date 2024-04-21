@@ -59,6 +59,7 @@ struct SolstraleApp {
     error_info: ErrorInfo,
     dialogs: Dialogs,
     display_help: bool,
+    dark_mode: bool,
 }
 
 pub struct Dialogs {
@@ -104,6 +105,7 @@ impl SolstraleApp {
         SolstraleApp {
             scene_yaml: yaml,
             display_help,
+            dark_mode: mode == Mode::Dark,
             ..Default::default()
         }
     }
@@ -152,7 +154,14 @@ impl App for SolstraleApp {
                 }
 
                 ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                    ui.checkbox(&mut self.display_help, "Display help")
+                    ui.checkbox(&mut self.display_help, "Display help");
+                    if ui.checkbox(&mut self.dark_mode, "Dark mode").changed() {
+                        ctx.set_visuals(if self.dark_mode {
+                            Visuals::dark()
+                        } else {
+                            Visuals::light()
+                        })
+                    }
                 });
             });
         });
