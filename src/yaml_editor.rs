@@ -42,7 +42,7 @@ pub fn get_yaml_path(yaml: &dyn TextBuffer, ctx: &Context) -> Vec<String> {
             let mut ret = Vec::new();
 
             let char_range = yaml.char_range(0..idx);
-            if char_range.ends_with("\n") {
+            if char_range.ends_with('\n') {
                 return vec![];
             }
 

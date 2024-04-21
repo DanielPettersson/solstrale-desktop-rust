@@ -31,7 +31,7 @@ impl Creator<solstrale::camera::CameraConfig> for CameraConfig {
             vertical_fov_degrees: self.vertical_fov_degrees.unwrap_or(60.),
             aperture_size: self.aperture_size.unwrap_or(0.),
             look_from: self.look_from.create(ctx)?,
-            look_at: self.look_at.unwrap_or(Pos::default()).create(ctx)?,
+            look_at: self.look_at.unwrap_or_default().create(ctx)?,
             up: self.up.unwrap_or(Pos::new(0., 1., 0.)).create(ctx)?,
         })
     }
