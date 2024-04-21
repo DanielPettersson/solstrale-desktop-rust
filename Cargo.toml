@@ -8,8 +8,11 @@ license = "Apache-2.0"
 lto = true
 codegen-units = 1
 
+[features]
+oidn-postprocessor = ["solstrale/oidn-postprocessor"]
+
 [dependencies]
-solstrale = { git = "https://github.com/DanielPettersson/solstrale-rust.git", branch = "main", features = ["oidn-postprocessor"] }
+solstrale = { git = "https://github.com/DanielPettersson/solstrale-rust.git", branch = "main" }
 eframe = { version = "0.27.2", features = ["persistence", "wayland", "wgpu"] }
 egui_file = "0.17.0"
 image = "0.25.1"
