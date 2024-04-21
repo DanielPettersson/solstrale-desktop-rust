@@ -50,6 +50,12 @@ impl HelpDocumentation for Scene {
         DocumentationStructure {
             description:
                 "The scene YAML is used to configure all aspects of the rendered image.\n\n\
+            To help with repetitive configuration the yaml can be templated using Tera templates. For example: \n\n\
+            {% for x in range(end=10) %}\n\
+            \x20\x20- sphere:\n\
+            \x20\x20\x20\x20\x20\x20center: {{ x }}, 0, 0\n\
+            \x20\x20\x20\x20\x20\x20radius: 1\n\
+            {% endfor %}\n\n\
             Use ctrl+space to autocomplete configuration keys and ctrl+r to restart the rendering\n\n\
             Progress bar shows percentage completed, remaining time, FPS (frames rendered per second) and MPPS (Million pixel samples rendered per second)"
                     .to_string(),

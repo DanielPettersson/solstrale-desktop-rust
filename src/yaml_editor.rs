@@ -41,7 +41,12 @@ pub fn get_yaml_path(yaml: &dyn TextBuffer, ctx: &Context) -> Vec<String> {
             let mut max_indentation: usize = usize::MAX;
             let mut ret = Vec::new();
 
-            for line in yaml.char_range(0..idx).lines().rev() {
+            let char_range = yaml.char_range(0..idx);
+            if char_range.ends_with("\n") {
+                return vec![];
+            }
+
+            for line in char_range.lines().rev() {
                 if TEMPLATE_REGEX.captures(line).is_some() {
                     continue;
                 }

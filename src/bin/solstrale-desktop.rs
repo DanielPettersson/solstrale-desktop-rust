@@ -84,12 +84,11 @@ impl SolstraleApp {
     fn new(ctx: &eframe::CreationContext<'_>) -> Self {
         let mut yaml = DEFAULT_SCENE.to_owned();
 
-        let mode = dark_light::detect();
-        match mode {
-            Mode::Dark => ctx.egui_ctx.set_visuals(Visuals::dark()),
-            Mode::Light => ctx.egui_ctx.set_visuals(Visuals::light()),
-            Mode::Default => ctx.egui_ctx.set_visuals(Visuals::default()),
-        }
+        let mut dark_mode = match dark_light::detect() {
+            Mode::Dark => Some(true),
+            Mode::Light => Some(false),
+            Mode::Default => None,
+        };
 
         let mut display_help = true;
         if let Some(storage) = ctx.storage {
@@ -97,15 +96,24 @@ impl SolstraleApp {
                 display_help =
                     bool::from_str(&value).expect("Invalid app configuration for display help");
             }
+            if let Some(value) = storage.get_string("dark_mode") {
+                dark_mode =
+                    Some(bool::from_str(&value).expect("Invalid app configuration for dark mode"));
+            }
             if let Some(value) = storage.get_string("scene_yaml") {
                 yaml = value;
             }
         }
 
+        if let Some(d) = dark_mode {
+            ctx.egui_ctx
+                .set_visuals(if d { Visuals::dark() } else { Visuals::light() });
+        }
+
         SolstraleApp {
             scene_yaml: yaml,
             display_help,
-            dark_mode: mode == Mode::Dark,
+            dark_mode: dark_mode.unwrap_or(false),
             ..Default::default()
         }
     }
@@ -117,32 +125,45 @@ impl App for SolstraleApp {
             ui.horizontal(|ui| {
                 ui.menu_button("File", |ui| {
                     ui.menu_button("Scene", |ui| {
-                        if ui.button("Load").clicked() {
+                        if ui
+                            .button("Load")
+                            .on_hover_text("Load scene configuration from a file")
+                            .clicked()
+                        {
                             ui.close_menu();
                             self.dialogs.load_scene_dialog.open();
                         }
-                        if ui.button("Save").clicked() {
+                        if ui
+                            .button("Save")
+                            .on_hover_text("Save the current scene configuration to a file")
+                            .clicked()
+                        {
                             ui.close_menu();
                             self.dialogs.save_scene_dialog.open();
                         }
                     });
-                    let save_output_button_clicked = ui
+                    let save_output_button = ui
                         .add_enabled(self.rendered_image.progress > 0., Button::new("Save image"))
-                        .clicked();
+                        .on_hover_text(
+                            "Saves the currently showing render output to an image file",
+                        );
+                    let save_output_button_clicked = save_output_button.clicked();
                     if save_output_button_clicked {
                         ui.close_menu();
                         self.dialogs.save_output_dialog.open();
                     }
                 });
 
-                if ui.button("Reset").clicked() {
+                let reset_button = ui.button("Reset");
+                if reset_button.clicked() {
                     self.dialogs.show_reset_confirm_dialog = true;
                 }
+                reset_button.on_hover_text("Resets the scene configuration to the default example");
 
                 let render_button_enabled = render_button::is_enabled(&self.render_control);
-                let render_button_clicked = ui
-                    .add_enabled(render_button_enabled, Button::new("Render"))
-                    .clicked();
+                let render_button = ui.add_enabled(render_button_enabled, Button::new("Render"));
+                let render_button_clicked = render_button.clicked();
+                render_button.on_hover_text("Restart the image rendering");
 
                 if render_button_enabled {
                     render_button::handle_click(
@@ -333,6 +354,7 @@ impl App for SolstraleApp {
 
     fn save(&mut self, storage: &mut dyn Storage) {
         storage.set_string("display_help", self.display_help.to_string());
+        storage.set_string("dark_mode", self.dark_mode.to_string());
         storage.set_string("scene_yaml", self.scene_yaml.to_owned())
     }
 
