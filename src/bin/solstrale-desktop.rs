@@ -1,7 +1,6 @@
 use std::str::FromStr;
 
 use dark_light::Mode;
-use eframe::egui::Event::CompositionUpdate;
 use eframe::egui::{
     Align, Button, Context, Direction, Layout, Margin, ProgressBar, SidePanel, TopBottomPanel,
     Vec2, ViewportBuilder, Visuals,
@@ -47,7 +46,7 @@ fn main() -> eframe::Result<()> {
     run_native(
         "Solstrale",
         native_options,
-        Box::new(|cc| Box::new(SolstraleApp::new(cc))),
+        Box::new(|cc| Ok(Box::new(SolstraleApp::new(cc)))),
     )
 }
 
@@ -336,20 +335,6 @@ impl App for SolstraleApp {
                     ui.label(&self.error_info.error_message);
                 });
         }
-
-        // Work around suspected eframe bug that caused new frames to be requested
-        // all the time when yaml editor had focused caused by there always being
-        // and empty IME composition update event. So just delete it here seems to work
-        // without any noticeable side effects.
-        ctx.input_mut(|i| {
-            i.events.retain(|e| {
-                if let CompositionUpdate(s) = e {
-                    !s.eq("")
-                } else {
-                    true
-                }
-            })
-        });
     }
 
     fn save(&mut self, storage: &mut dyn Storage) {
