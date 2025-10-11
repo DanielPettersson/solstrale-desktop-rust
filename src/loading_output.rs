@@ -7,7 +7,7 @@ use epaint::Shape;
 
 pub fn show(ui: &mut Ui) {
     egui::Frame::canvas(ui.style())
-        .inner_margin(Margin::same(0.))
+        .inner_margin(Margin::same(0))
         .show(ui, |ui| {
             ui.ctx().request_repaint();
             let time = ui.input(|i| i.time);
@@ -45,7 +45,7 @@ pub fn show(ui: &mut Ui) {
                 let thickness = 40.0 / mode as f32;
                 shapes.push(Shape::line(points, Stroke::new(thickness, color)));
             }
-            ui.fonts(|fonts| {
+            ui.fonts_mut(|fonts| {
                 for &offset in &[
                     Vec2::new(0.002, 0.002),
                     Vec2::new(0.002, -0.002),

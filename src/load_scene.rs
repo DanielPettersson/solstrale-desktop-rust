@@ -2,18 +2,14 @@ use crate::{save_scene, ErrorInfo, RenderControl};
 use eframe::egui;
 use eframe::egui::TextBuffer;
 use egui::Context;
-use egui_file::FileDialog;
+use egui_file_dialog::FileDialog;
 use std::fs::File;
 use std::io::Read;
-use std::path::PathBuf;
 
 pub fn create() -> FileDialog {
-    let mut dialog = FileDialog::open_file(None);
-    dialog = dialog.show_files_filter(Box::new(|f| match f.extension() {
-        None => false,
-        Some(ext) => ext.eq_ignore_ascii_case("yaml"),
-    }));
-    dialog
+    FileDialog::new()
+        .add_save_extension("Yaml", "yaml")
+        .add_file_filter_extensions("Yaml files", vec!["yaml"])
 }
 
 pub fn handle_dialog(
@@ -24,23 +20,23 @@ pub fn handle_dialog(
     render_control: &mut RenderControl,
     ctx: &Context,
 ) {
-    if load_scene_dialog.show(ctx).selected() {
-        if let Some(file_path) = load_scene_dialog.path() {
-            match File::open(file_path) {
-                Ok(mut f) => {
-                    let mut file_content = String::new();
-                    match f.read_to_string(&mut file_content) {
-                        Ok(_) => {
-                            scene_yaml.replace_with(&file_content);
-                            *save_scene_dialog = save_scene::create(Some(PathBuf::from(file_path)));
-                            error_info.show_error = false;
-                            render_control.render_requested = true;
-                        }
-                        Err(err) => error_info.handle(Box::new(err)),
-                    };
-                }
-                Err(err) => error_info.handle(Box::new(err)),
+    load_scene_dialog.update(ctx);
+
+    if let Some(file_path) = load_scene_dialog.take_picked() {
+        match File::open(&file_path) {
+            Ok(mut f) => {
+                let mut file_content = String::new();
+                match f.read_to_string(&mut file_content) {
+                    Ok(_) => {
+                        scene_yaml.replace_with(&file_content);
+                        *save_scene_dialog = save_scene::create(Some(file_path));
+                        error_info.show_error = false;
+                        render_control.render_requested = true;
+                    }
+                    Err(err) => error_info.handle(Box::new(err)),
+                };
             }
+            Err(err) => error_info.handle(Box::new(err)),
         }
     }
 }

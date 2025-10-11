@@ -6,8 +6,9 @@ use eframe::egui::{
     Vec2, ViewportBuilder, Visuals,
 };
 use eframe::{egui, icon_data, run_native, App, Frame, NativeOptions, Storage};
+use egui::UiKind::Menu;
 use egui::{CentralPanel, ScrollArea, Window};
-use egui_file::FileDialog;
+use egui_file_dialog::FileDialog;
 use hhmmss::Hhmmss;
 use once_cell::sync::Lazy;
 
@@ -83,11 +84,7 @@ impl SolstraleApp {
     fn new(ctx: &eframe::CreationContext<'_>) -> Self {
         let mut yaml = DEFAULT_SCENE.to_owned();
 
-        let mut dark_mode = match dark_light::detect() {
-            Mode::Dark => Some(true),
-            Mode::Light => Some(false),
-            Mode::Default => None,
-        };
+        let mut dark_mode = dark_light::detect().map_or(None, |m| Some(m == Mode::Dark));
 
         let mut display_help = true;
         if let Some(storage) = ctx.storage {
@@ -129,16 +126,16 @@ impl App for SolstraleApp {
                             .on_hover_text("Load scene configuration from a file")
                             .clicked()
                         {
-                            ui.close_menu();
-                            self.dialogs.load_scene_dialog.open();
+                            ui.close_kind(Menu);
+                            self.dialogs.load_scene_dialog.pick_file();
                         }
                         if ui
                             .button("Save")
                             .on_hover_text("Save the current scene configuration to a file")
                             .clicked()
                         {
-                            ui.close_menu();
-                            self.dialogs.save_scene_dialog.open();
+                            ui.close_kind(Menu);
+                            self.dialogs.save_scene_dialog.save_file();
                         }
                     });
                     let save_output_button = ui
@@ -148,8 +145,8 @@ impl App for SolstraleApp {
                         );
                     let save_output_button_clicked = save_output_button.clicked();
                     if save_output_button_clicked {
-                        ui.close_menu();
-                        self.dialogs.save_output_dialog.open();
+                        ui.close_kind(Menu);
+                        self.dialogs.save_output_dialog.save_file();
                     }
                 });
 
@@ -218,7 +215,7 @@ impl App for SolstraleApp {
         TopBottomPanel::bottom("bottom-panel").show(ctx, |ui| {
             egui::Frame::side_top_panel(ui.style())
                 .inner_margin(Margin {
-                    top: 3.,
+                    top: 3,
                     ..Margin::default()
                 })
                 .show(ui, |ui| {
@@ -244,7 +241,7 @@ impl App for SolstraleApp {
 
         SidePanel::left("code-panel").show(ctx, |ui| {
             egui::Frame::side_top_panel(ui.style())
-                .inner_margin(Margin::same(0.))
+                .inner_margin(Margin::same(0))
                 .show(ui, |ui| {
                     ScrollArea::both().min_scrolled_width(300.).show(ui, |ui| {
                         ui.add(yaml_editor(
@@ -280,7 +277,7 @@ impl App for SolstraleApp {
 
         CentralPanel::default()
             .frame(egui::Frame {
-                inner_margin: Margin::same(0.),
+                inner_margin: Margin::same(0),
                 ..Default::default()
             })
             .show(ctx, |ui| {

@@ -20,7 +20,7 @@ pub fn yaml_editor<'a, L>(
     min_size: Vec2,
 ) -> TextEdit<'a>
 where
-    L: Fn(&Ui, &str, f32) -> Arc<Galley>,
+    L: Fn(&Ui, &dyn TextBuffer, f32) -> Arc<Galley>,
 {
     TextEdit::multiline(text)
         .id(*YAML_EDITOR_ID)
@@ -130,22 +130,22 @@ pub fn indent_new_line(text: &mut dyn TextBuffer, ctx: &Context) {
     }
 }
 
-pub fn create_layouter() -> fn(&Ui, &str, f32) -> Arc<Galley> {
-    |ui: &Ui, string: &str, _wrap_width: f32| {
-        let layout_job = highlight(ui.ctx(), string);
-        ui.fonts(|f| f.layout_job(layout_job))
+pub fn create_layouter() -> fn(&Ui, &dyn TextBuffer, f32) -> Arc<Galley> {
+    |ui: &Ui, string: &dyn TextBuffer, _wrap_width: f32| {
+        let layout_job = highlight(ui.ctx(), string.as_str());
+        ui.fonts_mut(|f| f.layout_job(layout_job))
     }
 }
 
 fn highlight(ctx: &Context, code: &str) -> LayoutJob {
-    impl ComputerMut<&str, LayoutJob> for Highlighter {
-        fn compute(&mut self, code: &str) -> LayoutJob {
-            self.highlight(code)
-        }
-    }
-
     type HighlightCache = FrameCache<LayoutJob, Highlighter>;
     ctx.memory_mut(|mem| mem.caches.cache::<HighlightCache>().get(code))
+}
+
+impl ComputerMut<&str, LayoutJob> for Highlighter {
+    fn compute(&mut self, code: &str) -> LayoutJob {
+        self.highlight(code)
+    }
 }
 
 struct Highlighter {
