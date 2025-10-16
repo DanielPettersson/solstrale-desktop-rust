@@ -25,17 +25,17 @@ pub fn apply_template(templated_yaml: &str, frame_index: usize) -> Result<String
 
 pub fn sin(args: &HashMap<String, Value>) -> tera::Result<Value> {
     let v = get_required_numeric_arg(args, "sin", "v")?;
-    Ok(to_value(v.sin()).unwrap())
+    Ok(to_value(v.sin())?)
 }
 
 pub fn cos(args: &HashMap<String, Value>) -> tera::Result<Value> {
     let v = get_required_numeric_arg(args, "cos", "v")?;
-    Ok(to_value(v.cos()).unwrap())
+    Ok(to_value(v.cos())?)
 }
 
 pub fn abs(args: &HashMap<String, Value>) -> tera::Result<Value> {
     let v = get_required_numeric_arg(args, "abs", "v")?;
-    Ok(to_value(v.abs()).unwrap())
+    Ok(to_value(v.abs())?)
 }
 
 pub fn len(args: &HashMap<String, Value>) -> tera::Result<Value> {
@@ -43,7 +43,7 @@ pub fn len(args: &HashMap<String, Value>) -> tera::Result<Value> {
     let y = get_optional_numeric_arg(args, "len", "y", 0.)?;
     let z = get_optional_numeric_arg(args, "len", "z", 0.)?;
 
-    Ok(to_value(Vec3::new(x, y, z).length()).unwrap())
+    Ok(to_value(Vec3::new(x, y, z).length())?)
 }
 
 pub fn sqrt(args: &HashMap<String, Value>) -> tera::Result<Value> {
@@ -55,7 +55,7 @@ pub fn sqrt(args: &HashMap<String, Value>) -> tera::Result<Value> {
         )));
     }
 
-    Ok(to_value(v.sqrt()).unwrap())
+    Ok(to_value(v.sqrt())?)
 }
 
 pub fn range(args: &HashMap<String, Value>) -> tera::Result<Value> {
@@ -75,7 +75,7 @@ pub fn range(args: &HashMap<String, Value>) -> tera::Result<Value> {
         res.push(i);
         i += step_by;
     }
-    Ok(to_value(res).unwrap())
+    Ok(to_value(res)?)
 }
 
 fn get_required_numeric_arg(

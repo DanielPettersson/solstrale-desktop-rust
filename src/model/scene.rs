@@ -56,6 +56,15 @@ impl HelpDocumentation for Scene {
             \x20\x20\x20\x20\x20\x20center: {{ x }}, 0, 0\n\
             \x20\x20\x20\x20\x20\x20radius: 1\n\
             {% endfor %}\n\n\
+            The templates have access to the following functions:\n\
+            \x20\x20- sin(v)\n\
+            \x20\x20- cos(v)\n\
+            \x20\x20- sqrt(v)\n\
+            \x20\x20- abs(v)\n\
+            \x20\x20- len(x, y, z)\n\
+            \x20\x20- range(start, end, step_by)\n\n\
+            The following variables are also available:\n\
+            \x20\x20- frameIndex (Useful for batch rendering)\n\n\
             Use ctrl+space to autocomplete configuration keys and ctrl+r to restart the rendering\n\n\
             Progress bar shows percentage completed, remaining time, FPS (frames rendered per second) and MPPS (Million pixel samples rendered per second)"
                     .to_string(),
