@@ -25,6 +25,8 @@ pub fn render_output<'a>(
     if render_control.abort_sender.is_none() && render_control.render_requested {
         let res = render(scene_yaml, viewport_size, ctx);
         rendered_image.texture_handle = None;
+        rendered_image.width = viewport_size.x as u32;
+        rendered_image.height = viewport_size.y as u32;
         render_control.render_receiver = Some(res.0);
         render_control.abort_sender = Some(res.1);
         render_control.render_requested = false;

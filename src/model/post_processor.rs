@@ -1,5 +1,6 @@
 use crate::model::bloom_post_processor::BloomPostProcessor;
 use crate::model::denoise_post_processor::DenoisePostProcessor;
+use crate::model::saturation_post_processor::SaturationPostProcessor;
 use crate::model::FieldType::Optional;
 use crate::model::{
     Creator, CreatorContext, DocumentationStructure, FieldInfo, HelpDocumentation, ModelError,
@@ -16,6 +17,8 @@ pub struct PostProcessor {
     pub bloom: Option<BloomPostProcessor>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub denoise: Option<DenoisePostProcessor>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub saturation: Option<SaturationPostProcessor>,
 }
 
 impl Creator<PostProcessors> for PostProcessor {
@@ -24,10 +27,17 @@ impl Creator<PostProcessors> for PostProcessor {
             PostProcessor {
                 bloom: Some(b),
                 denoise: None,
+                saturation: None,
             } => b.create(ctx),
             PostProcessor {
                 bloom: None,
                 denoise: Some(d),
+                saturation: None,
+            } => d.create(ctx),
+            PostProcessor {
+                bloom: None,
+                denoise: None,
+                saturation: Some(d),
             } => d.create(ctx),
             _ => Err(From::from(ModelError::new(
                 "PostProcessor should have single field defined",
@@ -50,6 +60,11 @@ impl HelpDocumentation for PostProcessor {
                     "A post processor that applies a de-noising filter to the image. Which gives the appearance of a higher number of samples rendered.",
                     Optional,
                     DenoisePostProcessor::get_documentation_structure(depth + 1),
+                )),
+                ("saturation".to_string(), FieldInfo::new(
+                    "A post processor that applies saturation to the image.",
+                    Optional,
+                    SaturationPostProcessor::get_documentation_structure(depth + 1),
                 )),
             ]),
         }

@@ -10,9 +10,12 @@ codegen-units = 1
 
 [features]
 oidn-postprocessor = ["solstrale/oidn-postprocessor"]
+gpu = ["solstrale/gpu"]
+
+default = ["gpu"]
 
 [dependencies]
-solstrale = { git = "https://github.com/DanielPettersson/solstrale-rust.git", branch = "main" }
+solstrale = { git = "https://github.com/DanielPettersson/solstrale-rust.git", branch = "main", default-features = false }
 eframe = { version = "0.33.0", features = ["persistence", "wayland", "wgpu"] }
 egui = "0.33.0"
 egui-file-dialog = "0.12.0"

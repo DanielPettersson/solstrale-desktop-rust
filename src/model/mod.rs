@@ -34,6 +34,7 @@ mod quad;
 mod quarter_screen_width_height;
 mod render_config;
 mod rgb;
+mod saturation_post_processor;
 pub mod scene;
 mod screen_width_height;
 mod shader;
@@ -298,10 +299,12 @@ mod test {
                             max_intensity: None,
                         }),
                         denoise: None,
+                        saturation: None,
                     },
                     PostProcessor {
                         bloom: None,
                         denoise: Some(DenoisePostProcessor {}),
+                        saturation: None,
                     },
                 ],
                 preview_interval_ms: Some(1000),
