@@ -76,6 +76,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             ray_trace(scene, &output_sender, &abort_receiver).unwrap();
         });
 
+        /*
         let mut image = RgbImage::new(screen_width as u32, screen_height as u32);
         for render_output in output_receiver {
             if let Some(render_image) = render_output.render_image {
@@ -86,6 +87,11 @@ fn main() -> Result<(), Box<dyn Error>> {
         }
 
         image.save(format!("frame_{:0>8}.png", frame_index))?;
+        */
+        for _ in output_receiver {
+            total_progress_bar.inc(1);
+            frame_progress_bar.inc(1);
+        }
         multi_progress.remove(&frame_progress_bar);
     }
 

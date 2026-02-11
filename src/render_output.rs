@@ -1,3 +1,4 @@
+use std::sync::Arc;
 use std::sync::mpsc::{channel, Receiver, Sender, TryRecvError};
 use std::thread;
 
@@ -7,34 +8,7 @@ use eframe::wgpu;
 use solstrale::ray_trace;
 
 use crate::model::{parse_scene_yaml, Creator, CreatorContext};
-use crate::{ErrorInfo, RenderControl, RenderMessage, RenderedImage};
-
-struct RenderResources {
-    pipeline: wgpu::RenderPipeline,
-    bind_group_layout: wgpu::BindGroupLayout,
-    viewport_size_buffer: wgpu::Buffer,
-}
-
-impl eframe::egui_wgpu::CallbackTrait for RenderResources {
-    fn prepare(
-        &self,
-        _device: &wgpu::Device,
-        _queue: &wgpu::Queue,
-        _screen_descriptor: &eframe::egui_wgpu::ScreenDescriptor,
-        _egui_encoder: &mut wgpu::CommandEncoder,
-        _callback_resources: &mut eframe::egui_wgpu::CallbackResources,
-    ) -> Vec<wgpu::CommandBuffer> {
-        Vec::new()
-    }
-
-    fn paint(
-        &self,
-        _info: eframe::egui::PaintCallbackInfo,
-        _render_pass: &mut wgpu::RenderPass<'static>,
-        _callback_resources: &eframe::egui_wgpu::CallbackResources,
-    ) {
-    }
-}
+use crate::{ErrorInfo, RenderControl, RenderMessage, RenderedImage, RenderResources};
 
 const SHADER: &str = r#"
 struct VertexOutput {
@@ -88,28 +62,7 @@ pub fn render_output<'a>(
         match render_receiver.try_recv() {
             Ok(render_message) => match render_message {
                 RenderMessage::SampleRendered(render_progress) => {
-                    /*
-                    if let Some(image) = render_progress.render_image {
-                        let fs = image.as_flat_samples();
-                        let color_image = ColorImage::from_rgb(
-                            [image.width() as usize, image.height() as usize],
-                            fs.as_slice(),
-                        );
-                        rendered_image.width = image.width();
-                        rendered_image.height = image.height();
-                        rendered_image.rgb_image = Some(image);
-                        match rendered_image.texture_handle.as_mut() {
-                            None => {
-                                rendered_image.texture_handle = Some(ctx.load_texture(
-                                    "render_texture",
-                                    color_image,
-                                    TextureOptions::default(),
-                                ))
-                            }
-                            Some(handle) => handle.set(color_image, TextureOptions::default()),
-                        };
-                    }
-                    */
+                    rendered_image.output_buffer = Some(Arc::new(render_progress.output_buffer));
                     rendered_image.progress = render_progress.progress;
                     if let Some(fps) = render_progress.fps {
                         rendered_image.fps = fps;

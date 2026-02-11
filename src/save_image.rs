@@ -17,6 +17,7 @@ pub fn handle_dialog(
     dialog.update(ctx);
 
     if let Some(file_path) = dialog.take_picked() {
+        /*
         let image = rendered_image
             .rgb_image
             .as_ref()
@@ -30,5 +31,6 @@ pub fn handle_dialog(
         ) {
             error_info.handle(Box::new(err));
         }
+        */
     }
 }

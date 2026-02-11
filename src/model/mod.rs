@@ -293,14 +293,10 @@ mod test {
       width: 200
       height: 100
   samples_per_pixel: 50
-  shader:
-    path_tracing:
-      max_depth: 50
   post_processors:
   - bloom:
       kernel_size_fraction: 0.1
       threshold: 1.5
-  - denoise: {}
   preview_interval_ms: 1000
 background_color: 0, 0, 0
 camera:
