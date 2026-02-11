@@ -15,8 +15,8 @@ Prepare the necessary `wgpu` structures and the embedded shader.
 ## Phase 2: Refactor render_output.rs
 Modify the existing UI component to handle the new buffer-based progress.
 
-- [ ] Task: Update Data Structures
-    - [ ] Update `RenderOutput` and related structs to store references or IDs to the `wgpu::Buffer` instead of `RetainedImage` or similar.
+- [x] Task: Update Data Structures 04f01fd
+    - [x] Update `RenderOutput` and related structs to store references or IDs to the `wgpu::Buffer` instead of `RetainedImage` or similar.
 - [ ] Task: Implement PaintCallback Logic
     - [ ] Create the `egui::PaintCallback` in the `ui` function of `RenderOutput`.
     - [ ] Ensure the callback correctly passes the current `output_buffer` to the GPU pipeline.
