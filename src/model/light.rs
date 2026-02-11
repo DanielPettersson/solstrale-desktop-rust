@@ -20,12 +20,7 @@ pub struct Light {
 impl Creator<Materials> for Light {
     fn create(&self, _: &CreatorContext) -> Result<Materials, Box<dyn Error>> {
         let c = self.color.unwrap_or(Rgb::new(15.0, 15.0, 15.0));
-        Ok(DiffuseLight::new(
-            c.r,
-            c.g,
-            c.b,
-            self.attenuation_half_length,
-        ))
+        Ok(DiffuseLight::new(c.r, c.g, c.b, self.attenuation_half_length).into())
     }
 }
 

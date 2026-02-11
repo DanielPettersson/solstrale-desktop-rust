@@ -25,7 +25,8 @@ impl Creator<Hittables> for Sphere {
                 .as_ref()
                 .unwrap_or(&Material::default())
                 .create(ctx)?,
-        ))
+        )
+        .into())
     }
 }
 

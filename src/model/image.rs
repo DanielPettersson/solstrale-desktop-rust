@@ -13,7 +13,7 @@ pub struct Image {
 
 impl Creator<Textures> for Image {
     fn create(&self, _: &CreatorContext) -> Result<Textures, Box<dyn Error>> {
-        ImageMap::load(self.file.as_ref())
+        ImageMap::load(self.file.as_ref()).map(|t| t.into())
     }
 }
 

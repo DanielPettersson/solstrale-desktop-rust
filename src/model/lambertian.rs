@@ -29,7 +29,8 @@ impl Creator<Materials> for Lambertian {
                 None => None,
                 Some(n) => Some(n.create(ctx)?),
             },
-        ))
+        )
+        .into())
     }
 }
 

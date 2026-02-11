@@ -24,7 +24,7 @@ impl Creator<Textures> for Texture {
             Texture {
                 color: Some(c),
                 image: None,
-            } => Ok(SolidColor::new(c.r, c.g, c.b)),
+            } => Ok(SolidColor::new(c.r, c.g, c.b).into()),
             Texture {
                 color: None,
                 image: Some(im),
@@ -32,7 +32,7 @@ impl Creator<Textures> for Texture {
             Texture {
                 color: None,
                 image: None,
-            } => Ok(SolidColor::new(0.8, 0.8, 0.8)),
+            } => Ok(SolidColor::new(0.8, 0.8, 0.8).into()),
             _ => Err(From::from(ModelError::new(
                 "Texture should have max a single field defined",
             ))),

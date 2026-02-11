@@ -16,9 +16,10 @@ pub struct PathTracingShader {
 
 impl Creator<Shaders> for PathTracingShader {
     fn create(&self, _: &CreatorContext) -> Result<Shaders, Box<dyn Error>> {
-        Ok(solstrale::renderer::shader::PathTracingShader::new(
-            self.max_depth.unwrap_or(50),
-        ))
+        Ok(
+            solstrale::renderer::shader::PathTracingShader::new(self.max_depth.unwrap_or(50))
+                .into(),
+        )
     }
 }
 

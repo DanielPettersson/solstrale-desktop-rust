@@ -9,7 +9,7 @@ pub struct AlbedoShader {}
 
 impl Creator<Shaders> for AlbedoShader {
     fn create(&self, _: &CreatorContext) -> Result<Shaders, Box<dyn Error>> {
-        Ok(solstrale::renderer::shader::AlbedoShader::new())
+        Ok(solstrale::renderer::shader::AlbedoShader::new().into())
     }
 }
 

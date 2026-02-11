@@ -11,7 +11,7 @@ pub struct SimpleShader {}
 
 impl Creator<Shaders> for SimpleShader {
     fn create(&self, _: &CreatorContext) -> Result<Shaders, Box<dyn Error>> {
-        Ok(solstrale::renderer::shader::SimpleShader::new())
+        Ok(solstrale::renderer::shader::SimpleShader::new().into())
     }
 }
 

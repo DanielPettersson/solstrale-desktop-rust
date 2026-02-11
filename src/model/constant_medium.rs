@@ -26,15 +26,20 @@ pub struct ConstantMedium {
 impl Creator<Hittables> for ConstantMedium {
     fn create(&self, ctx: &CreatorContext) -> Result<Hittables, Box<dyn Error>> {
         Ok(solstrale::hittable::ConstantMedium::new(
-            Bvh::new(Quad::new_box(
-                self.a.create(ctx)?,
-                self.b.create(ctx)?,
-                Lambertian::new(SolidColor::new(0., 0., 0.), None),
-                &NopTransformer {},
-            )),
+            Bvh::new(
+                Quad::new_box(
+                    self.a.create(ctx)?,
+                    self.b.create(ctx)?,
+                    Lambertian::new(SolidColor::new(0., 0., 0.).into(), None).into(),
+                    &NopTransformer {},
+                )
+                .into(),
+            )
+            .into(),
             self.density.unwrap_or(0.01),
             self.color.unwrap_or(Rgb::new(0.9, 0.9, 0.9)).into(),
-        ))
+        )
+        .into())
     }
 }
 

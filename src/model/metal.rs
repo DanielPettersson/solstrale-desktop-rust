@@ -31,7 +31,8 @@ impl Creator<Materials> for Metal {
                 Some(n) => Some(n.create(ctx)?),
             },
             self.fuzz.unwrap_or(0.05),
-        ))
+        )
+        .into())
     }
 }
 

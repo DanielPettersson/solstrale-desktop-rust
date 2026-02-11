@@ -30,7 +30,7 @@ impl Creator<solstrale::renderer::Scene> for Scene {
         }
 
         Ok(solstrale::renderer::Scene {
-            world: Bvh::new(list),
+            world: Bvh::new(list).into(),
             camera: self.camera.create(ctx)?,
             background_color: self
                 .background_color

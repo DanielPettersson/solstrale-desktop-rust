@@ -11,7 +11,7 @@ pub struct DenoisePostProcessor {}
 
 impl Creator<PostProcessors> for DenoisePostProcessor {
     fn create(&self, _: &CreatorContext) -> Result<PostProcessors, Box<dyn Error>> {
-        Ok(solstrale::post::OidnPostProcessor::new())
+        Ok(solstrale::post::OidnPostProcessor::new().into())
     }
 }
 

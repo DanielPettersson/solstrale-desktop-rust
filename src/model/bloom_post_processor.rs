@@ -24,7 +24,8 @@ impl Creator<PostProcessors> for BloomPostProcessor {
             self.kernel_size_fraction.unwrap_or(0.1),
             self.threshold,
             self.max_intensity,
-        )?)
+        )?
+        .into())
     }
 }
 

@@ -33,7 +33,8 @@ impl Creator<Hittables> for Quad {
                 .unwrap_or(&Material::default())
                 .create(ctx)?,
             &create_transformation(&self.transformations, ctx)?,
-        ))
+        )
+        .into())
     }
 }
 

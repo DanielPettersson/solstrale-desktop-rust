@@ -32,7 +32,8 @@ impl Creator<Materials> for Glass {
                 Some(n) => Some(n.create(ctx)?),
             },
             self.index_of_refraction.unwrap_or(1.5),
-        ))
+        )
+        .into())
     }
 }
 

@@ -9,7 +9,7 @@ pub struct NormalShader {}
 
 impl Creator<Shaders> for NormalShader {
     fn create(&self, _: &CreatorContext) -> Result<Shaders, Box<dyn Error>> {
-        Ok(solstrale::renderer::shader::NormalShader::new())
+        Ok(solstrale::renderer::shader::NormalShader::new().into())
     }
 }
 

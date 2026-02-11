@@ -15,7 +15,7 @@ pub struct NormalTexture {
 
 impl Creator<Textures> for NormalTexture {
     fn create(&self, _: &CreatorContext) -> Result<Textures, Box<dyn Error>> {
-        load_normal_texture(self.file.as_ref())
+        load_normal_texture(self.file.as_ref()).map(|t| t.into())
     }
 }
 

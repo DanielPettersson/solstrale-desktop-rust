@@ -22,7 +22,8 @@ impl Creator<Materials> for Blend {
             self.first.create(ctx)?,
             self.second.create(ctx)?,
             self.blend_factor.unwrap_or(0.5),
-        ))
+        )
+        .into())
     }
 }
 
