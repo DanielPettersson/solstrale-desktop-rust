@@ -8,6 +8,29 @@ use solstrale::ray_trace;
 use crate::model::{parse_scene_yaml, Creator, CreatorContext};
 use crate::{ErrorInfo, RenderControl, RenderMessage, RenderedImage};
 
+const SHADER: &str = r#"
+struct VertexOutput {
+    @builtin(position) position: vec4<f32>,
+    @location(0) uv: vec2<f32>,
+};
+
+@group(0) @binding(0) var<uniform> viewport_size: vec2<f32>;
+@group(0) @binding(1) var<storage, read> buffer: array<f32>;
+
+@fragment
+fn main(in: VertexOutput) -> @location(0) vec4<f32> {
+    let x = u32(in.uv.x * viewport_size.x);
+    let y = u32(in.uv.y * viewport_size.y);
+    let index = (y * u32(viewport_size.x) + x) * 3u;
+
+    let r = buffer[index];
+    let g = buffer[index + 1u];
+    let b = buffer[index + 2u];
+
+    return vec4<f32>(r, g, b, 1.0);
+}
+"#;
+
 pub fn render_output<'a>(
     render_control: &mut RenderControl,
     rendered_image: &mut RenderedImage,
@@ -37,6 +60,7 @@ pub fn render_output<'a>(
         match render_receiver.try_recv() {
             Ok(render_message) => match render_message {
                 RenderMessage::SampleRendered(render_progress) => {
+                    /*
                     if let Some(image) = render_progress.render_image {
                         let fs = image.as_flat_samples();
                         let color_image = ColorImage::from_rgb(
@@ -57,6 +81,7 @@ pub fn render_output<'a>(
                             Some(handle) => handle.set(color_image, TextureOptions::default()),
                         };
                     }
+                    */
                     rendered_image.progress = render_progress.progress;
                     if let Some(fps) = render_progress.fps {
                         rendered_image.fps = fps;
@@ -142,4 +167,15 @@ fn render(
     });
 
     (render_receiver, abort_sender)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_shader_presence() {
+        assert!(!SHADER.is_empty());
+        assert!(SHADER.contains("@fragment"));
+    }
 }
