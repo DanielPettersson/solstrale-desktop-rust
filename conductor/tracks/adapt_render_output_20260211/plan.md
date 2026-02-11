@@ -8,9 +8,9 @@ Prepare the necessary `wgpu` structures and the embedded shader.
 - [x] Task: Define Embedded WGSL Shader 8f0a7d6
     - [x] Create a constant string in `render_output.rs` containing the WGSL shader code.
     - [x] Implement a basic fragment shader that samples from a buffer/texture (depending on buffer layout).
-- [ ] Task: Define Render Resources Structure
-    - [ ] Define a struct to hold `wgpu` resources (Pipeline, BindGroupLayout, etc.) needed for the `PaintCallback`.
-    - [ ] Implement `egui_wgpu::CallbackTrait` for this struct.
+- [x] Task: Define Render Resources Structure ec84ed9
+    - [x] Define a struct to hold `wgpu` resources (Pipeline, BindGroupLayout, etc.) needed for the `PaintCallback`.
+    - [x] Implement `egui_wgpu::CallbackTrait` for this struct.
 
 ## Phase 2: Refactor render_output.rs
 Modify the existing UI component to handle the new buffer-based progress.
