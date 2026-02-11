@@ -3,10 +3,38 @@ use std::thread;
 
 use eframe::egui::load::SizedTexture;
 use eframe::egui::{Color32, ColorImage, Context, Image, TextureOptions, Vec2};
+use eframe::wgpu;
 use solstrale::ray_trace;
 
 use crate::model::{parse_scene_yaml, Creator, CreatorContext};
 use crate::{ErrorInfo, RenderControl, RenderMessage, RenderedImage};
+
+struct RenderResources {
+    pipeline: wgpu::RenderPipeline,
+    bind_group_layout: wgpu::BindGroupLayout,
+    viewport_size_buffer: wgpu::Buffer,
+}
+
+impl eframe::egui_wgpu::CallbackTrait for RenderResources {
+    fn prepare(
+        &self,
+        _device: &wgpu::Device,
+        _queue: &wgpu::Queue,
+        _screen_descriptor: &eframe::egui_wgpu::ScreenDescriptor,
+        _egui_encoder: &mut wgpu::CommandEncoder,
+        _callback_resources: &mut eframe::egui_wgpu::CallbackResources,
+    ) -> Vec<wgpu::CommandBuffer> {
+        Vec::new()
+    }
+
+    fn paint(
+        &self,
+        _info: eframe::egui::PaintCallbackInfo,
+        _render_pass: &mut wgpu::RenderPass<'static>,
+        _callback_resources: &eframe::egui_wgpu::CallbackResources,
+    ) {
+    }
+}
 
 const SHADER: &str = r#"
 struct VertexOutput {
@@ -177,5 +205,11 @@ mod tests {
     fn test_shader_presence() {
         assert!(!SHADER.is_empty());
         assert!(SHADER.contains("@fragment"));
+    }
+
+    #[test]
+    fn test_render_resources_presence() {
+        // This test just ensures the type exists and can be referenced
+        let _ : Option<RenderResources> = None;
     }
 }
