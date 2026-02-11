@@ -5,9 +5,9 @@ This plan outlines the steps to transition `render_output.rs` from image-based r
 ## Phase 1: Infrastructure and Shader Setup
 Prepare the necessary `wgpu` structures and the embedded shader.
 
-- [ ] Task: Define Embedded WGSL Shader
-    - [ ] Create a constant string in `render_output.rs` containing the WGSL shader code.
-    - [ ] Implement a basic fragment shader that samples from a buffer/texture (depending on buffer layout).
+- [x] Task: Define Embedded WGSL Shader 8f0a7d6
+    - [x] Create a constant string in `render_output.rs` containing the WGSL shader code.
+    - [x] Implement a basic fragment shader that samples from a buffer/texture (depending on buffer layout).
 - [ ] Task: Define Render Resources Structure
     - [ ] Define a struct to hold `wgpu` resources (Pipeline, BindGroupLayout, etc.) needed for the `PaintCallback`.
     - [ ] Implement `egui_wgpu::CallbackTrait` for this struct.
