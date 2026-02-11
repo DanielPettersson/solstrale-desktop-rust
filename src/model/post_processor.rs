@@ -1,5 +1,4 @@
 use crate::model::bloom_post_processor::BloomPostProcessor;
-use crate::model::denoise_post_processor::DenoisePostProcessor;
 use crate::model::saturation_post_processor::SaturationPostProcessor;
 use crate::model::FieldType::Optional;
 use crate::model::{
@@ -16,8 +15,6 @@ pub struct PostProcessor {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub bloom: Option<BloomPostProcessor>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub denoise: Option<DenoisePostProcessor>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub saturation: Option<SaturationPostProcessor>,
 }
 
@@ -26,17 +23,10 @@ impl Creator<PostProcessors> for PostProcessor {
         match self {
             PostProcessor {
                 bloom: Some(b),
-                denoise: None,
                 saturation: None,
             } => b.create(ctx),
             PostProcessor {
                 bloom: None,
-                denoise: Some(d),
-                saturation: None,
-            } => d.create(ctx),
-            PostProcessor {
-                bloom: None,
-                denoise: None,
                 saturation: Some(d),
             } => d.create(ctx),
             _ => Err(From::from(ModelError::new(
@@ -49,23 +39,26 @@ impl Creator<PostProcessors> for PostProcessor {
 impl HelpDocumentation for PostProcessor {
     fn get_documentation_structure(depth: u8) -> DocumentationStructure {
         DocumentationStructure {
-            description: "A post processor is applied to the image after rendering for various effects".to_string(),
+            description:
+                "A post processor is applied to the image after rendering for various effects"
+                    .to_string(),
             fields: HashMap::from([
-                ("bloom".to_string(), FieldInfo::new(
-                    "A post processor that applies a bloom effect to bright areas of the image",
-                    Optional,
-                    BloomPostProcessor::get_documentation_structure(depth + 1),
-                )),
-                ("denoise".to_string(), FieldInfo::new(
-                    "A post processor that applies a de-noising filter to the image. Which gives the appearance of a higher number of samples rendered.",
-                    Optional,
-                    DenoisePostProcessor::get_documentation_structure(depth + 1),
-                )),
-                ("saturation".to_string(), FieldInfo::new(
-                    "A post processor that applies saturation to the image.",
-                    Optional,
-                    SaturationPostProcessor::get_documentation_structure(depth + 1),
-                )),
+                (
+                    "bloom".to_string(),
+                    FieldInfo::new(
+                        "A post processor that applies a bloom effect to bright areas of the image",
+                        Optional,
+                        BloomPostProcessor::get_documentation_structure(depth + 1),
+                    ),
+                ),
+                (
+                    "saturation".to_string(),
+                    FieldInfo::new(
+                        "A post processor that applies saturation to the image.",
+                        Optional,
+                        SaturationPostProcessor::get_documentation_structure(depth + 1),
+                    ),
+                ),
             ]),
         }
     }

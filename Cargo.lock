@@ -2051,7 +2051,7 @@ dependencies = [
  "log",
  "presser",
  "thiserror 2.0.17",
- "windows 0.61.3",
+ "windows 0.58.0",
 ]
 
 [[package]]
@@ -2161,7 +2161,7 @@ dependencies = [
  "js-sys",
  "log",
  "wasm-bindgen",
- "windows-core 0.61.2",
+ "windows-core 0.58.0",
 ]
 
 [[package]]
@@ -4120,12 +4120,11 @@ dependencies = [
 [[package]]
 name = "solstrale"
 version = "0.1.11"
-source = "git+https://github.com/DanielPettersson/solstrale-rust.git?branch=wgpu-render#99232e7abf9c3a1fc95462d76634b2637f715e00"
+source = "git+https://github.com/DanielPettersson/solstrale-rust.git?branch=wgpu-render#a8c36d6dc54a1ecb923f53d31d34e5f2767f5ec7"
 dependencies = [
  "bytemuck",
  "derive_more",
  "enum_dispatch",
- "fastrand",
  "image",
  "once_cell",
  "pollster",
@@ -5343,7 +5342,7 @@ version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2a7b1c03c876122aa43f3020e6c3c3ee5c05081c9a00739faf7503aeba10d22"
 dependencies = [
- "windows-sys 0.48.0",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
