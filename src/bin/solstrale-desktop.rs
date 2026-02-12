@@ -2,8 +2,8 @@ use std::str::FromStr;
 
 use dark_light::Mode;
 use eframe::egui::{
-    Align, Button, Context, Direction, Layout, Margin, ProgressBar, SidePanel, TopBottomPanel,
-    Vec2, ViewportBuilder, Visuals,
+    Align, Button, Context, Layout, Margin, ProgressBar, SidePanel, TopBottomPanel, Vec2,
+    ViewportBuilder, Visuals,
 };
 use eframe::{egui, icon_data, run_native, App, Frame, NativeOptions, Storage};
 use egui::UiKind::Menu;
@@ -11,6 +11,7 @@ use egui::{CentralPanel, ScrollArea, Window};
 use egui_file_dialog::FileDialog;
 use hhmmss::Hhmmss;
 use once_cell::sync::Lazy;
+use std::sync::Arc;
 
 use solstrale_desktop_rust::keyboard::{is_ctrl_space, is_enter};
 use solstrale_desktop_rust::model::scene::Scene;
@@ -106,10 +107,21 @@ impl SolstraleApp {
                 .set_visuals(if d { Visuals::dark() } else { Visuals::light() });
         }
 
+        let mut rendered_image = RenderedImage::default();
+        if let Some(render_state) = &ctx.wgpu_render_state {
+            rendered_image.render_resources = Some(Arc::new(
+                solstrale_desktop_rust::render_output::create_render_resources(
+                    &render_state.device,
+                    render_state.target_format,
+                ),
+            ));
+        }
+
         SolstraleApp {
             scene_yaml: yaml,
             display_help,
             dark_mode: dark_mode.unwrap_or(false),
+            rendered_image,
             ..Default::default()
         }
     }
@@ -292,37 +304,17 @@ impl App for SolstraleApp {
                     self.render_control.previous_frame_render_size = ui.available_size();
                 }
 
-                match render_output(
+                if self.render_control.loading_scene || self.render_control.render_requested {
+                    loading_output::show(ui);
+                }
+
+                render_output(
+                    ui,
                     &mut self.render_control,
                     &mut self.rendered_image,
                     &mut self.error_info,
                     &self.scene_yaml,
-                    ui.available_size(),
-                    ui.ctx(),
-                ) {
-                    None => {
-                        loading_output::show(ui);
-                    }
-                    Some(im) => {
-                        let ri_aspect =
-                            self.rendered_image.width as f32 / self.rendered_image.height as f32;
-                        let ui_aspect = ui.available_size().x / ui.available_size().y;
-
-                        ui.with_layout(
-                            Layout::from_main_dir_and_cross_align(
-                                if ri_aspect > ui_aspect {
-                                    Direction::LeftToRight
-                                } else {
-                                    Direction::TopDown
-                                },
-                                Align::Center,
-                            ),
-                            |ui| {
-                                ui.add(im.maintain_aspect_ratio(true).shrink_to_fit());
-                            },
-                        );
-                    }
-                };
+                );
             });
 
         if self.error_info.show_error {

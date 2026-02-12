@@ -1,4 +1,4 @@
-use eframe::egui::{TextureHandle, Vec2};
+use eframe::egui::Vec2;
 use eframe::wgpu;
 use once_cell::sync::Lazy;
 use solstrale::renderer::RenderProgress;
@@ -6,6 +6,8 @@ use std::error::Error;
 use std::sync::mpsc::{Receiver, Sender};
 use std::sync::Arc;
 use std::time::Duration;
+
+use std::sync::Mutex;
 
 pub mod help;
 pub mod keyboard;
@@ -65,29 +67,62 @@ pub struct RenderResources {
     pub viewport_size_buffer: wgpu::Buffer,
 }
 
-impl eframe::egui_wgpu::CallbackTrait for RenderResources {
+pub struct RenderCallback {
+    pub resources: Arc<RenderResources>,
+    pub output_buffer: Arc<wgpu::Buffer>,
+    pub bind_group: Mutex<Option<wgpu::BindGroup>>,
+    pub width: u32,
+    pub height: u32,
+}
+
+impl eframe::egui_wgpu::CallbackTrait for RenderCallback {
     fn prepare(
         &self,
-        _device: &wgpu::Device,
-        _queue: &wgpu::Queue,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
         _screen_descriptor: &eframe::egui_wgpu::ScreenDescriptor,
         _egui_encoder: &mut wgpu::CommandEncoder,
         _callback_resources: &mut eframe::egui_wgpu::CallbackResources,
     ) -> Vec<wgpu::CommandBuffer> {
+        queue.write_buffer(
+            &self.resources.viewport_size_buffer,
+            0,
+            bytemuck::cast_slice(&[self.width as f32, self.height as f32]),
+        );
+
+        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: None,
+            layout: &self.resources.bind_group_layout,
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: self.resources.viewport_size_buffer.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: self.output_buffer.as_entire_binding(),
+                },
+            ],
+        });
+        *self.bind_group.lock().unwrap() = Some(bind_group);
         Vec::new()
     }
 
     fn paint(
         &self,
         _info: eframe::egui::PaintCallbackInfo,
-        _render_pass: &mut wgpu::RenderPass<'static>,
+        render_pass: &mut wgpu::RenderPass<'static>,
         _callback_resources: &eframe::egui_wgpu::CallbackResources,
     ) {
+        if let Some(bind_group) = self.bind_group.lock().unwrap().as_ref() {
+            render_pass.set_pipeline(&self.resources.pipeline);
+            render_pass.set_bind_group(0, bind_group, &[]);
+            render_pass.draw(0..3, 0..1);
+        }
     }
 }
 
 pub struct RenderedImage {
-    pub texture_handle: Option<TextureHandle>,
     pub output_buffer: Option<Arc<wgpu::Buffer>>,
     pub render_resources: Option<Arc<RenderResources>>,
     pub progress: f64,
@@ -100,7 +135,6 @@ pub struct RenderedImage {
 impl Default for RenderedImage {
     fn default() -> Self {
         Self {
-            texture_handle: None,
             output_buffer: None,
             render_resources: None,
             progress: 0.0,

@@ -1,14 +1,14 @@
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::sync::mpsc::{channel, Receiver, Sender, TryRecvError};
 use std::thread;
 
-use eframe::egui::load::SizedTexture;
-use eframe::egui::{Color32, ColorImage, Context, Image, TextureOptions, Vec2};
+use eframe::egui::{Context, Sense, Ui, Vec2};
 use eframe::wgpu;
+use eframe::wgpu::util::DeviceExt;
 use solstrale::ray_trace;
 
 use crate::model::{parse_scene_yaml, Creator, CreatorContext};
-use crate::{ErrorInfo, RenderControl, RenderMessage, RenderedImage, RenderResources};
+use crate::{ErrorInfo, RenderCallback, RenderControl, RenderMessage, RenderedImage, RenderResources};
 
 const SHADER: &str = r#"
 struct VertexOutput {
@@ -16,11 +16,21 @@ struct VertexOutput {
     @location(0) uv: vec2<f32>,
 };
 
+@vertex
+fn vs_main(@builtin(vertex_index) in_vertex_index: u32) -> VertexOutput {
+    var out: VertexOutput;
+    let x = f32(i32(in_vertex_index) << 1u & 2u) - 1.0;
+    let y = f32(i32(in_vertex_index & 2u)) - 1.0;
+    out.position = vec4<f32>(x, y, 0.0, 1.0);
+    out.uv = vec2<f32>((x + 1.0) * 0.5, 1.0 - (y + 1.0) * 0.5);
+    return out;
+}
+
 @group(0) @binding(0) var<uniform> viewport_size: vec2<f32>;
 @group(0) @binding(1) var<storage, read> buffer: array<f32>;
 
 @fragment
-fn main(in: VertexOutput) -> @location(0) vec4<f32> {
+fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     let x = u32(in.uv.x * viewport_size.x);
     let y = u32(in.uv.y * viewport_size.y);
     let index = (y * u32(viewport_size.x) + x) * 3u;
@@ -33,14 +43,96 @@ fn main(in: VertexOutput) -> @location(0) vec4<f32> {
 }
 "#;
 
-pub fn render_output<'a>(
+pub fn create_render_resources(
+    device: &wgpu::Device,
+    target_format: wgpu::TextureFormat,
+) -> RenderResources {
+    let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+        label: Some("Render Shader"),
+        source: wgpu::ShaderSource::Wgsl(SHADER.into()),
+    });
+
+    let bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+        label: Some("Render Bind Group Layout"),
+        entries: &[
+            wgpu::BindGroupLayoutEntry {
+                binding: 0,
+                visibility: wgpu::ShaderStages::FRAGMENT,
+                ty: wgpu::BindingType::Buffer {
+                    ty: wgpu::BufferBindingType::Uniform,
+                    has_dynamic_offset: false,
+                    min_binding_size: None,
+                },
+                count: None,
+            },
+            wgpu::BindGroupLayoutEntry {
+                binding: 1,
+                visibility: wgpu::ShaderStages::FRAGMENT,
+                ty: wgpu::BindingType::Buffer {
+                    ty: wgpu::BufferBindingType::Storage { read_only: true },
+                    has_dynamic_offset: false,
+                    min_binding_size: None,
+                },
+                count: None,
+            },
+        ],
+    });
+
+    let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+        label: Some("Render Pipeline Layout"),
+        bind_group_layouts: &[&bind_group_layout],
+        push_constant_ranges: &[],
+    });
+
+    let pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+        label: Some("Render Pipeline"),
+        layout: Some(&pipeline_layout),
+        vertex: wgpu::VertexState {
+            module: &shader,
+            entry_point: Some("vs_main"),
+            buffers: &[],
+            compilation_options: Default::default(),
+        },
+        fragment: Some(wgpu::FragmentState {
+            module: &shader,
+            entry_point: Some("fs_main"),
+            targets: &[Some(wgpu::ColorTargetState {
+                format: target_format,
+                blend: Some(wgpu::BlendState::REPLACE),
+                write_mask: wgpu::ColorWrites::ALL,
+            })],
+            compilation_options: Default::default(),
+        }),
+        primitive: wgpu::PrimitiveState::default(),
+        depth_stencil: None,
+        multisample: wgpu::MultisampleState::default(),
+        multiview: None,
+        cache: None,
+    });
+
+    let viewport_size_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+        label: Some("Viewport Size Buffer"),
+        contents: bytemuck::cast_slice(&[0.0f32, 0.0f32]),
+        usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+    });
+
+    RenderResources {
+        pipeline,
+        bind_group_layout,
+        viewport_size_buffer,
+    }
+}
+
+pub fn render_output(
+    ui: &mut Ui,
     render_control: &mut RenderControl,
     rendered_image: &mut RenderedImage,
     error_info: &mut ErrorInfo,
     scene_yaml: &str,
-    viewport_size: Vec2,
-    ctx: &Context,
-) -> Option<Image<'a>> {
+) {
+    let viewport_size = ui.available_size();
+    let ctx = ui.ctx();
+
     if render_control.render_requested {
         if let Some(sender) = &render_control.abort_sender {
             sender.send(true).ok();
@@ -49,7 +141,6 @@ pub fn render_output<'a>(
 
     if render_control.abort_sender.is_none() && render_control.render_requested {
         let res = render(scene_yaml, viewport_size, ctx);
-        rendered_image.texture_handle = None;
         rendered_image.width = viewport_size.x as u32;
         rendered_image.height = viewport_size.y as u32;
         render_control.render_receiver = Some(res.0);
@@ -84,21 +175,24 @@ pub fn render_output<'a>(
         }
     }
 
-    if render_control.loading_scene || render_control.render_requested {
-        None
-    } else {
-        let texture_handle = rendered_image.texture_handle.get_or_insert_with(|| {
-            ctx.load_texture(
-                "",
-                ColorImage::new([1, 1], vec![Color32::BLACK]),
-                TextureOptions::default(),
-            )
-        });
+    if !render_control.loading_scene && !render_control.render_requested {
+        let (rect, _response) = ui.allocate_exact_size(viewport_size, Sense::hover());
 
-        Some(Image::from_texture(SizedTexture::new(
-            texture_handle,
-            Vec2::new(rendered_image.width as f32, rendered_image.height as f32),
-        )))
+        if let (Some(resources), Some(output_buffer)) = (
+            &rendered_image.render_resources,
+            &rendered_image.output_buffer,
+        ) {
+            ui.painter().add(eframe::egui_wgpu::Callback::new_paint_callback(
+                rect,
+                RenderCallback {
+                    resources: resources.clone(),
+                    output_buffer: output_buffer.clone(),
+                    bind_group: Mutex::new(None),
+                    width: rendered_image.width,
+                    height: rendered_image.height,
+                },
+            ));
+        }
     }
 }
 

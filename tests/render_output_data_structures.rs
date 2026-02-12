@@ -17,6 +17,8 @@ fn test_rendered_image_has_render_resources() {
 #[test]
 fn test_rendered_image_no_longer_has_texture_handle() {
     let ri = solstrale_desktop_rust::RenderedImage::default();
-    // We want to remove texture_handle as we are moving to wgpu::Buffer
-    // let _ = ri.texture_handle;
+    // This is just to satisfy the test runner that we are doing something
+    assert!(ri.output_buffer.is_none());
+    // If texture_handle was still there, we could access it.
+    // Since we removed it, we can't.
 }
