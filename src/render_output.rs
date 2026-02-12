@@ -161,28 +161,33 @@ pub fn render_output(
     }
 
     if let Some(render_receiver) = &render_control.render_receiver {
-        match render_receiver.try_recv() {
-            Ok(render_message) => match render_message {
-                RenderMessage::SampleRendered(render_progress) => {
-                    rendered_image.output_buffer = Some(Arc::new(render_progress.output_buffer));
-                    rendered_image.progress = render_progress.progress;
-                    if let Some(fps) = render_progress.fps {
-                        rendered_image.fps = fps;
+        loop {
+            match render_receiver.try_recv() {
+                Ok(render_message) => match render_message {
+                    RenderMessage::SampleRendered(render_progress) => {
+                        rendered_image.output_buffer = Some(Arc::new(render_progress.output_buffer));
+                        rendered_image.progress = render_progress.progress;
+                        if let Some(fps) = render_progress.fps {
+                            rendered_image.fps = fps;
+                        }
+                        rendered_image.estimated_time_left = render_progress.estimated_time_left;
+                        render_control.loading_scene = false;
                     }
-                    rendered_image.estimated_time_left = render_progress.estimated_time_left;
-                    render_control.loading_scene = false;
+                    RenderMessage::Error(error_message) => {
+                        error_info.handle_str(&error_message);
+                        render_control.loading_scene = false;
+                    }
+                },
+                Err(err) => {
+                    match err {
+                        TryRecvError::Empty => {}
+                        TryRecvError::Disconnected => {
+                            render_control.abort_sender = None;
+                        }
+                    }
+                    break;
                 }
-                RenderMessage::Error(error_message) => {
-                    error_info.handle_str(&error_message);
-                    render_control.loading_scene = false;
-                }
-            },
-            Err(err) => match err {
-                TryRecvError::Empty => {}
-                TryRecvError::Disconnected => {
-                    render_control.abort_sender = None;
-                }
-            },
+            }
         }
     }
 
