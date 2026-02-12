@@ -26,9 +26,9 @@ Modify the existing UI component to handle the new buffer-based progress.
 ## Phase 3: Verification and Cleanup
 Ensure everything works as expected and adheres to the project's quality standards.
 
-- [ ] Task: Verify Compilation and Rendering
-    - [ ] Fix any type errors arising from the `solstrale` dependency update.
-    - [ ] Run the application and confirm the render output is displayed.
-- [ ] Task: Test Window Resizing
-    - [ ] Manually verify that the output scales correctly when the window is resized.
-- [ ] Task: Conductor - User Manual Verification 'Adapt Render Output' (Protocol in workflow.md)
+- [x] Task: Verify Compilation and Rendering 26ebfe8
+    - [x] Fix any type errors arising from the `solstrale` dependency update.
+    - [x] Run the application and confirm the render output is displayed.
+- [x] Task: Test Window Resizing 26ebfe8
+    - [x] Manually verify that the output scales correctly when the window is resized.
+- [~] Task: Conductor - User Manual Verification 'Adapt Render Output' (Protocol in workflow.md)
