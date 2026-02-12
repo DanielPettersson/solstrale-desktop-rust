@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::error::Error;
 
 use derive_more::Display;
+use eframe::wgpu;
 
 use crate::model::pos::Pos;
 use crate::model::scene::Scene;
@@ -59,9 +60,11 @@ impl ModelError {
 
 impl Error for ModelError {}
 
-pub struct CreatorContext {
+pub struct CreatorContext<'a> {
     pub screen_width: usize,
     pub screen_height: usize,
+    pub device: &'a wgpu::Device,
+    pub queue: &'a wgpu::Queue,
 }
 
 pub trait Creator<T> {

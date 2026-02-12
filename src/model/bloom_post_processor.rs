@@ -19,11 +19,12 @@ pub struct BloomPostProcessor {
 }
 
 impl Creator<PostProcessors> for BloomPostProcessor {
-    fn create(&self, _: &CreatorContext) -> Result<PostProcessors, Box<dyn Error>> {
+    fn create(&self, ctx: &CreatorContext) -> Result<PostProcessors, Box<dyn Error>> {
         Ok(solstrale::post::BloomPostProcessor::new(
             self.kernel_size_fraction.unwrap_or(0.1),
             self.threshold,
             self.max_intensity,
+            ctx.device,
         )?
         .into())
     }

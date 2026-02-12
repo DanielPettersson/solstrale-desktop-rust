@@ -1,5 +1,5 @@
-use std::sync::{Arc, Mutex};
 use std::sync::mpsc::{channel, Receiver, Sender, TryRecvError};
+use std::sync::{Arc, Mutex};
 use std::thread;
 
 use eframe::egui::{Context, Sense, Ui, Vec2};
@@ -8,7 +8,9 @@ use eframe::wgpu::util::DeviceExt;
 use solstrale::ray_trace;
 
 use crate::model::{parse_scene_yaml, Creator, CreatorContext};
-use crate::{ErrorInfo, RenderCallback, RenderControl, RenderMessage, RenderedImage, RenderResources};
+use crate::{
+    ErrorInfo, RenderCallback, RenderControl, RenderMessage, RenderResources, RenderedImage,
+};
 
 const SHADER: &str = r#"
 struct VertexOutput {
@@ -19,10 +21,9 @@ struct VertexOutput {
 @vertex
 fn vs_main(@builtin(vertex_index) in_vertex_index: u32) -> VertexOutput {
     var out: VertexOutput;
-    let x = f32(i32(in_vertex_index) << 1u & 2u) - 1.0;
-    let y = f32(i32(in_vertex_index & 2u)) - 1.0;
-    out.position = vec4<f32>(x, y, 0.0, 1.0);
-    out.uv = vec2<f32>((x + 1.0) * 0.5, 1.0 - (y + 1.0) * 0.5);
+    out.uv = vec2<f32>(f32((in_vertex_index << 1u) & 2u), f32(in_vertex_index & 2u));
+    out.position = vec4<f32>(out.uv * 2.0 - 1.0, 0.0, 1.0);
+    out.uv.y = 1.0 - out.uv.y;
     return out;
 }
 
@@ -31,8 +32,8 @@ fn vs_main(@builtin(vertex_index) in_vertex_index: u32) -> VertexOutput {
 
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
-    let x = u32(in.uv.x * viewport_size.x);
-    let y = u32(in.uv.y * viewport_size.y);
+    let x = min(u32(in.uv.x * viewport_size.x), u32(viewport_size.x) - 1u);
+    let y = min(u32(in.uv.y * viewport_size.y), u32(viewport_size.y) - 1u);
     let index = (y * u32(viewport_size.x) + x) * 3u;
 
     let r = buffer[index];
@@ -45,6 +46,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
 
 pub fn create_render_resources(
     device: &wgpu::Device,
+    queue: &wgpu::Queue,
     target_format: wgpu::TextureFormat,
 ) -> RenderResources {
     let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
@@ -120,6 +122,9 @@ pub fn create_render_resources(
         pipeline,
         bind_group_layout,
         viewport_size_buffer,
+        target_format,
+        device: device.clone(),
+        queue: queue.clone(),
     }
 }
 
@@ -129,8 +134,8 @@ pub fn render_output(
     rendered_image: &mut RenderedImage,
     error_info: &mut ErrorInfo,
     scene_yaml: &str,
+    viewport_size: Vec2,
 ) {
-    let viewport_size = ui.available_size();
     let ctx = ui.ctx();
 
     if render_control.render_requested {
@@ -139,20 +144,27 @@ pub fn render_output(
         }
     }
 
-    if render_control.abort_sender.is_none() && render_control.render_requested {
-        let res = render(scene_yaml, viewport_size, ctx);
-        rendered_image.width = viewport_size.x as u32;
-        rendered_image.height = viewport_size.y as u32;
-        render_control.render_receiver = Some(res.0);
-        render_control.abort_sender = Some(res.1);
-        render_control.render_requested = false;
-        render_control.loading_scene = true;
+    if render_control.abort_sender.is_none()
+        && render_control.render_requested
+        && viewport_size.x > 0.0
+        && viewport_size.y > 0.0
+    {
+        if let Some(resources) = rendered_image.render_resources.as_ref() {
+            let res = render(scene_yaml, viewport_size, ctx, resources.clone());
+            rendered_image.width = viewport_size.x as u32;
+            rendered_image.height = viewport_size.y as u32;
+            render_control.render_receiver = Some(res.0);
+            render_control.abort_sender = Some(res.1);
+            render_control.render_requested = false;
+            render_control.loading_scene = true;
+        }
     }
 
     if let Some(render_receiver) = &render_control.render_receiver {
         match render_receiver.try_recv() {
             Ok(render_message) => match render_message {
                 RenderMessage::SampleRendered(render_progress) => {
+                    println!("Received sample: progress={}", render_progress.progress);
                     rendered_image.output_buffer = Some(Arc::new(render_progress.output_buffer));
                     rendered_image.progress = render_progress.progress;
                     if let Some(fps) = render_progress.fps {
@@ -175,23 +187,34 @@ pub fn render_output(
         }
     }
 
-    if !render_control.loading_scene && !render_control.render_requested {
+    if !render_control.loading_scene
+        && !render_control.render_requested
+        && viewport_size.x > 0.0
+        && viewport_size.y > 0.0
+    {
         let (rect, _response) = ui.allocate_exact_size(viewport_size, Sense::hover());
 
         if let (Some(resources), Some(output_buffer)) = (
             &rendered_image.render_resources,
             &rendered_image.output_buffer,
         ) {
-            ui.painter().add(eframe::egui_wgpu::Callback::new_paint_callback(
-                rect,
-                RenderCallback {
-                    resources: resources.clone(),
-                    output_buffer: output_buffer.clone(),
-                    bind_group: Mutex::new(None),
-                    width: rendered_image.width,
-                    height: rendered_image.height,
-                },
-            ));
+            if output_buffer.size() > 0 {
+                println!(
+                    "Adding PaintCallback for output buffer of size: {}",
+                    output_buffer.size()
+                );
+                ui.painter()
+                    .add(eframe::egui_wgpu::Callback::new_paint_callback(
+                        rect,
+                        RenderCallback {
+                            resources: resources.clone(),
+                            output_buffer: output_buffer.clone(),
+                            width: rendered_image.width,
+                            height: rendered_image.height,
+                            bind_group: Arc::new(Mutex::new(None)),
+                        },
+                    ));
+            }
         }
     }
 }
@@ -200,10 +223,15 @@ fn render(
     scene_yaml: &str,
     viewport_size: Vec2,
     ctx: &Context,
+    resources: Arc<RenderResources>,
 ) -> (Receiver<RenderMessage>, Sender<bool>) {
     let (output_sender, output_receiver) = channel();
     let (abort_sender, abort_receiver) = channel();
     let (render_sender, render_receiver) = channel();
+
+    if viewport_size.x <= 0.0 || viewport_size.y <= 0.0 {
+        return (render_receiver, abort_sender);
+    }
 
     let render_sender_clone = render_sender.clone();
     let scene_yaml_str = scene_yaml.to_string();
@@ -211,12 +239,21 @@ fn render(
     let ctx2 = ctx.clone();
 
     thread::spawn(move || {
-        let res = (|| match parse_scene_yaml(&scene_yaml_str, 0)?.create(&CreatorContext {
-            screen_width: viewport_size.x as usize,
-            screen_height: viewport_size.y as usize,
-        }) {
-            Ok(scene) => ray_trace(scene, &output_sender, &abort_receiver),
-            Err(err) => Err(err),
+        let res = (|| {
+            let scene = parse_scene_yaml(&scene_yaml_str, 0)?.create(&CreatorContext {
+                screen_width: viewport_size.x as usize,
+                screen_height: viewport_size.y as usize,
+                device: &resources.device,
+                queue: &resources.queue,
+            })?;
+
+            ray_trace(
+                scene,
+                &output_sender,
+                &abort_receiver,
+                &resources.device,
+                &resources.queue,
+            )
         })();
 
         if let Err(err) = res {
@@ -252,11 +289,12 @@ mod tests {
     fn test_shader_presence() {
         assert!(!SHADER.is_empty());
         assert!(SHADER.contains("@fragment"));
+        assert!(SHADER.contains("@vertex"));
     }
 
     #[test]
     fn test_render_resources_presence() {
         // This test just ensures the type exists and can be referenced
-        let _ : Option<RenderResources> = None;
+        let _: Option<RenderResources> = None;
     }
 }

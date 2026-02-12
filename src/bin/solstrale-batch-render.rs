@@ -40,6 +40,32 @@ fn main() -> Result<(), Box<dyn Error>> {
     let screen_height = cli.height as usize;
     let scene_path = cli.scene_path;
 
+    let (device, queue) = pollster::block_on(async {
+        let instance = eframe::wgpu::Instance::default();
+        let adapter = instance
+            .request_adapter(&eframe::wgpu::RequestAdapterOptions {
+                power_preference: eframe::wgpu::PowerPreference::HighPerformance,
+                compatible_surface: None,
+                force_fallback_adapter: false,
+            })
+            .await
+            .expect("Failed to find an appropriate adapter");
+
+        adapter
+            .request_device(
+                &eframe::wgpu::DeviceDescriptor {
+                    label: None,
+                    required_features: eframe::wgpu::Features::empty(),
+                    required_limits: eframe::wgpu::Limits::default(),
+                    memory_hints: Default::default(),
+                    experimental_features: Default::default(),
+                    trace: eframe::wgpu::Trace::Off,
+                }
+            )
+            .await
+            .expect("Failed to create device")
+    });
+
     let multi_progress = MultiProgress::new();
     let total_progress_style = ProgressStyle::with_template(
         "[elapsed: {elapsed}, eta: {eta}] {wide_bar:.green/blue} {percent:>3}% Total progress",
@@ -61,6 +87,8 @@ fn main() -> Result<(), Box<dyn Error>> {
         let mut scene = parse_scene_yaml(&scene_yaml, frame_index)?.create(&CreatorContext {
             screen_width,
             screen_height,
+            device: &device,
+            queue: &queue,
         })?;
         scene.render_config.render_image_strategy = OnlyFinal;
 
@@ -72,8 +100,17 @@ fn main() -> Result<(), Box<dyn Error>> {
         let (output_sender, output_receiver) = channel();
         let (_, abort_receiver) = channel();
 
+        let device_clone = device.clone();
+        let queue_clone = queue.clone();
         thread::spawn(move || {
-            ray_trace(scene, &output_sender, &abort_receiver).unwrap();
+            ray_trace(
+                scene,
+                &output_sender,
+                &abort_receiver,
+                &device_clone,
+                &queue_clone,
+            )
+            .unwrap();
         });
 
         /*

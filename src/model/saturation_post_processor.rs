@@ -15,11 +15,12 @@ pub struct SaturationPostProcessor {
 }
 
 impl Creator<PostProcessors> for SaturationPostProcessor {
-    fn create(&self, _: &CreatorContext) -> Result<PostProcessors, Box<dyn Error>> {
-        Ok(
-            solstrale::post::SaturationPostProcessor::new(self.saturation_factor.unwrap_or(0.5))?
-                .into(),
-        )
+    fn create(&self, ctx: &CreatorContext) -> Result<PostProcessors, Box<dyn Error>> {
+        Ok(solstrale::post::SaturationPostProcessor::new(
+            self.saturation_factor.unwrap_or(0.5),
+            ctx.device,
+        )?
+        .into())
     }
 }
 

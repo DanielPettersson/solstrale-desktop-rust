@@ -65,14 +65,17 @@ pub struct RenderResources {
     pub pipeline: wgpu::RenderPipeline,
     pub bind_group_layout: wgpu::BindGroupLayout,
     pub viewport_size_buffer: wgpu::Buffer,
+    pub target_format: wgpu::TextureFormat,
+    pub device: wgpu::Device,
+    pub queue: wgpu::Queue,
 }
 
 pub struct RenderCallback {
     pub resources: Arc<RenderResources>,
     pub output_buffer: Arc<wgpu::Buffer>,
-    pub bind_group: Mutex<Option<wgpu::BindGroup>>,
     pub width: u32,
     pub height: u32,
+    pub bind_group: Arc<Mutex<Option<Arc<wgpu::BindGroup>>>>,
 }
 
 impl eframe::egui_wgpu::CallbackTrait for RenderCallback {
@@ -104,7 +107,7 @@ impl eframe::egui_wgpu::CallbackTrait for RenderCallback {
                 },
             ],
         });
-        *self.bind_group.lock().unwrap() = Some(bind_group);
+        *self.bind_group.lock().unwrap() = Some(Arc::new(bind_group));
         Vec::new()
     }
 
@@ -116,7 +119,7 @@ impl eframe::egui_wgpu::CallbackTrait for RenderCallback {
     ) {
         if let Some(bind_group) = self.bind_group.lock().unwrap().as_ref() {
             render_pass.set_pipeline(&self.resources.pipeline);
-            render_pass.set_bind_group(0, bind_group, &[]);
+            render_pass.set_bind_group(0, Some(bind_group.as_ref()), &[]);
             render_pass.draw(0..3, 0..1);
         }
     }
