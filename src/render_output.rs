@@ -34,7 +34,7 @@ fn vs_main(@builtin(vertex_index) in_vertex_index: u32) -> VertexOutput {
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     let x = min(u32(in.uv.x * viewport_size.x), u32(viewport_size.x) - 1u);
     let y = min(u32(in.uv.y * viewport_size.y), u32(viewport_size.y) - 1u);
-    let index = (y * u32(viewport_size.x) + x) * 3u;
+    let index = (y * u32(viewport_size.x) + x) * 4u;
 
     let r = buffer[index];
     let g = buffer[index + 1u];
@@ -164,7 +164,6 @@ pub fn render_output(
         match render_receiver.try_recv() {
             Ok(render_message) => match render_message {
                 RenderMessage::SampleRendered(render_progress) => {
-                    println!("Received sample: progress={}", render_progress.progress);
                     rendered_image.output_buffer = Some(Arc::new(render_progress.output_buffer));
                     rendered_image.progress = render_progress.progress;
                     if let Some(fps) = render_progress.fps {
@@ -199,10 +198,6 @@ pub fn render_output(
             &rendered_image.output_buffer,
         ) {
             if output_buffer.size() > 0 {
-                println!(
-                    "Adding PaintCallback for output buffer of size: {}",
-                    output_buffer.size()
-                );
                 ui.painter()
                     .add(eframe::egui_wgpu::Callback::new_paint_callback(
                         rect,
