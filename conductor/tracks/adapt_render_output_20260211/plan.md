@@ -12,16 +12,16 @@ Prepare the necessary `wgpu` structures and the embedded shader.
     - [x] Define a struct to hold `wgpu` resources (Pipeline, BindGroupLayout, etc.) needed for the `PaintCallback`.
     - [x] Implement `egui_wgpu::CallbackTrait` for this struct.
 
-## Phase 2: Refactor render_output.rs
+## Phase 2: Refactor render_output.rs [checkpoint: bbf28fb]
 Modify the existing UI component to handle the new buffer-based progress.
 
 - [x] Task: Update Data Structures 04f01fd
     - [x] Update `RenderOutput` and related structs to store references or IDs to the `wgpu::Buffer` instead of `RetainedImage` or similar.
-- [ ] Task: Implement PaintCallback Logic
-    - [ ] Create the `egui::PaintCallback` in the `ui` function of `RenderOutput`.
-    - [ ] Ensure the callback correctly passes the current `output_buffer` to the GPU pipeline.
-- [ ] Task: Handle Scaling and Resizing
-    - [ ] Update the vertex/fragment shader logic or the callback's transformation matrix to implement "Stretch to Fit".
+- [x] Task: Implement PaintCallback Logic bbf28fb
+    - [x] Create the `egui::PaintCallback` in the `ui` function of `RenderOutput`.
+    - [x] Ensure the callback correctly passes the current `output_buffer` to the GPU pipeline.
+- [x] Task: Handle Scaling and Resizing bbf28fb
+    - [x] Update the vertex/fragment shader logic or the callback's transformation matrix to implement "Stretch to Fit".
 
 ## Phase 3: Verification and Cleanup
 Ensure everything works as expected and adheres to the project's quality standards.
