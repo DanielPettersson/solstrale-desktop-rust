@@ -5,13 +5,13 @@ Implement OrbitControls-style mouse interactions (orbit, pan, zoom) with damping
 ## Phase 1: Camera Model and Logic Extensions
 Extend the internal camera model to support the target-based transformations required for OrbitControls and implement the damping logic.
 
-- [ ] Task: Create `src/model/orbit_camera.rs` to wrap existing camera with orbit logic.
-- [ ] Task: Implement `OrbitCamera` struct with properties for `target`, `distance`, `azimuth`, `polar`, and damping state.
-- [ ] Task: Implement conversion logic between `OrbitCamera` spherical coordinates and the underlying camera's `look_from`/`look_at`.
-- [ ] Task: Write Tests: Verify `OrbitCamera` correctly calculates positions based on spherical coordinates.
-- [ ] Task: Implement: `OrbitCamera` transformation logic.
-- [ ] Task: Write Tests: Verify damping calculations correctly interpolate values over time.
-- [ ] Task: Implement: Damping logic in `OrbitCamera::update()`.
+- [x] Task: Create `src/model/orbit_camera.rs` to wrap existing camera with orbit logic. dbfb7bf
+- [x] Task: Implement `OrbitCamera` struct with properties for `target`, `distance`, `azimuth`, `polar`, and damping state. dbfb7bf
+- [x] Task: Implement conversion logic between `OrbitCamera` spherical coordinates and the underlying camera's `look_from`/`look_at`. dbfb7bf
+- [x] Task: Write Tests: Verify `OrbitCamera` correctly calculates positions based on spherical coordinates. dbfb7bf
+- [x] Task: Implement: `OrbitCamera` transformation logic. dbfb7bf
+- [x] Task: Write Tests: Verify damping calculations correctly interpolate values over time. dbfb7bf
+- [x] Task: Implement: Damping logic in `OrbitCamera::update()`. dbfb7bf
 - [ ] Task: Conductor - User Manual Verification 'Phase 1: Camera Model and Logic Extensions' (Protocol in workflow.md)
 
 ## Phase 2: Input Handling and State Management
