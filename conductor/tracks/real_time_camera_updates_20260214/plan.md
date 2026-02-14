@@ -7,13 +7,13 @@ Update internal data structures to support persistent camera communication and t
 - [x] Task: Update `render` function signature in `src/render_output.rs` to return `(Receiver<RenderMessage>, Sender<bool>, Sender<solstrale::camera::CameraConfig>)`. a023d64
 - [x] Task: Conductor - User Manual Verification 'Infrastructure & Model Updates' (Protocol in workflow.md) 404f40d
 
-## Phase 2: Core Rendering Integration
+## Phase 2: Core Rendering Integration [checkpoint: 5baa8db]
 Integrate the new `camera_config` receiver and `idle` parameter into the rendering thread lifecycle.
 
-- [ ] Task: In `src/render_output.rs`, update the `thread::spawn` block in the `render` function to pass the `camera_config_receiver` and `idle: true` to the `ray_trace` call.
-- [ ] Task: Implement the logic in `render` to return the `camera_config_sender`.
-- [ ] Task: Write a unit test in `src/render_output.rs` or a new test file to verify that the `render` function correctly returns the expected channels.
-- [ ] Task: Conductor - User Manual Verification 'Core Rendering Integration' (Protocol in workflow.md)
+- [x] Task: In `src/render_output.rs`, update the `thread::spawn` block in the `render` function to pass the `camera_config_receiver` and `idle: true` to the `ray_trace` call. 3745131
+- [x] Task: Implement the logic in `render` to return the `camera_config_sender`. 3745131
+- [x] Task: Write a unit test in `src/render_output.rs` or a new test file to verify that the `render` function correctly returns the expected channels. 3745131
+- [x] Task: Conductor - User Manual Verification 'Core Rendering Integration' (Protocol in workflow.md) 5baa8db
 
 ## Phase 3: UI Interaction Logic
 Refactor the UI loop to use the persistent channel for camera updates.
