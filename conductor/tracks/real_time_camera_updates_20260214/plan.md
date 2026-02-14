@@ -28,6 +28,6 @@ Refactor the UI loop to use the persistent channel for camera updates.
 Ensure stability across all interaction types (YAML change, resize, camera move).
 
 - [x] Task: Verify that resizing the window still triggers a full restart (correctly setting `render_control.render_requested = true`). f9280f0
-- [ ] Task: Verify that YAML changes still trigger a full restart.
+- [x] Task: Verify that YAML changes still trigger a full restart. 859eacd
 - [ ] Task: Run full project tests and linting.
 - [ ] Task: Conductor - User Manual Verification 'Final Verification & Cleanup' (Protocol in workflow.md)
