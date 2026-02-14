@@ -1,0 +1,8 @@
+{
+  "track_id": "real_time_camera_updates_20260214",
+  "type": "feature",
+  "status": "new",
+  "created_at": "2026-02-14T10:00:00Z",
+  "updated_at": "2026-02-14T10:00:00Z",
+  "description": "Solstrale ray_trace function has two new parameters: camera_config receiver and an idle parameter. We want to change the orbit camera controls to use this new functionality instead of recreating the scene and calling ray_trace again."
+}
