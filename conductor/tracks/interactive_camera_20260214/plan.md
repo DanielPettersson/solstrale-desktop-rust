@@ -17,11 +17,11 @@ Extend the internal camera model to support the target-based transformations req
 ## Phase 2: Input Handling and State Management
 Capture mouse events in the render output area and map them to `OrbitCamera` mutations.
 
-- [ ] Task: Update `RenderOutput` state to hold an optional `OrbitCamera` instance.
-- [ ] Task: Implement input capturing in `src/render_output.rs` for `PointerButton::Primary` (Orbit), `Secondary` (Pan), and `Scroll` (Zoom).
-- [ ] Task: Write Tests: Verify mouse drag deltas are correctly converted to angle/position changes in `OrbitCamera`.
-- [ ] Task: Implement: Input to `OrbitCamera` mapping.
-- [ ] Task: Integrate `OrbitCamera` update loop into the UI `update` function to handle damping/animations.
+- [x] Task: Update `RenderOutput` state to hold an optional `OrbitCamera` instance. 908769c
+- [x] Task: Implement input capturing in `src/render_output.rs` for `PointerButton::Primary` (Orbit), `Secondary` (Pan), and `Scroll` (Zoom). 908769c
+- [x] Task: Write Tests: Verify mouse drag deltas are correctly converted to angle/position changes in `OrbitCamera`. 908769c
+- [x] Task: Implement: Input to `OrbitCamera` mapping. 908769c
+- [x] Task: Integrate `OrbitCamera` update loop into the UI `update` function to handle damping/animations. 908769c
 - [ ] Task: Conductor - User Manual Verification 'Phase 2: Input Handling and State Management' (Protocol in workflow.md)
 
 ## Phase 3: Efficient Render Restart
