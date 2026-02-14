@@ -5,5 +5,5 @@
 
 ---
 
-- [ ] **Track: Real-time Camera Updates**
+- [x] **Track: Real-time Camera Updates**
 *Link: [./tracks/real_time_camera_updates_20260214/](./tracks/real_time_camera_updates_20260214/)*
