@@ -15,14 +15,14 @@ Integrate the new `camera_config` receiver and `idle` parameter into the renderi
 - [x] Task: Write a unit test in `src/render_output.rs` or a new test file to verify that the `render` function correctly returns the expected channels. 3745131
 - [x] Task: Conductor - User Manual Verification 'Core Rendering Integration' (Protocol in workflow.md) 5baa8db
 
-## Phase 3: UI Interaction Logic
+## Phase 3: UI Interaction Logic [checkpoint: 8538d46]
 Refactor the UI loop to use the persistent channel for camera updates.
 
-- [ ] Task: Modify `render_output` in `src/render_output.rs` to detect if a render is already active when a camera update occurs.
-- [ ] Task: If active and only the camera changed, use `render_control.camera_config_sender` to send the new `solstrale::camera::CameraConfig`.
-- [ ] Task: Ensure the `loading_scene` flag is not set to `true` when performing a camera-only update.
-- [ ] Task: Update the "Handle render restarts" logic to preserve the `render_receiver` and thread if only the camera moved.
-- [ ] Task: Conductor - User Manual Verification 'UI Interaction Logic' (Protocol in workflow.md)
+- [x] Task: Modify `render_output` in `src/render_output.rs` to detect if a render is already active when a camera update occurs. c0b58f8
+- [x] Task: If active and only the camera changed, use `render_control.camera_config_sender` to send the new `solstrale::camera::CameraConfig`. c0b58f8
+- [x] Task: Ensure the `loading_scene` flag is not set to `true` when performing a camera-only update. c0b58f8
+- [x] Task: Update the "Handle render restarts" logic to preserve the `render_receiver` and thread if only the camera moved. c0b58f8
+- [x] Task: Conductor - User Manual Verification 'UI Interaction Logic' (Protocol in workflow.md) 8538d46
 
 ## Phase 4: Final Verification & Cleanup
 Ensure stability across all interaction types (YAML change, resize, camera move).
