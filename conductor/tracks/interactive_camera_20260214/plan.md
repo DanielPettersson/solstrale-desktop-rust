@@ -14,7 +14,7 @@ Extend the internal camera model to support the target-based transformations req
 - [x] Task: Implement: Damping logic in `OrbitCamera::update()`. dbfb7bf
 - [x] Task: Conductor - User Manual Verification 'Phase 1: Camera Model and Logic Extensions' (Protocol in workflow.md) 372ede6
 
-## Phase 2: Input Handling and State Management
+## Phase 2: Input Handling and State Management [checkpoint: c0c1b5d]
 Capture mouse events in the render output area and map them to `OrbitCamera` mutations.
 
 - [x] Task: Update `RenderOutput` state to hold an optional `OrbitCamera` instance. 908769c
@@ -22,7 +22,7 @@ Capture mouse events in the render output area and map them to `OrbitCamera` mut
 - [x] Task: Write Tests: Verify mouse drag deltas are correctly converted to angle/position changes in `OrbitCamera`. 908769c
 - [x] Task: Implement: Input to `OrbitCamera` mapping. 908769c
 - [x] Task: Integrate `OrbitCamera` update loop into the UI `update` function to handle damping/animations. 908769c
-- [ ] Task: Conductor - User Manual Verification 'Phase 2: Input Handling and State Management' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Phase 2: Input Handling and State Management' (Protocol in workflow.md) c0c1b5d
 
 ## Phase 3: Efficient Render Restart
 Enable mutating the camera in the active render without re-parsing the scene YAML.
