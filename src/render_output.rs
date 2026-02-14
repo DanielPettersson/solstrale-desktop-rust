@@ -226,7 +226,6 @@ pub fn render_output(
             }
 
             if orbit_camera.update() || input_changed {
-                render_control.render_requested = true;
                 render_control.camera_updated = true;
                 ui.ctx().request_repaint();
             }
@@ -235,25 +234,13 @@ pub fn render_output(
 
     // Handle render restarts
 
-    if render_control.render_requested {
-        if render_control.camera_updated {
-            if let (Some(sender), Some(orbit_camera)) = (
-                &render_control.camera_config_sender,
-                &render_control.orbit_camera,
-            ) {
-                if sender
-                    .send(solstrale::camera::CameraConfig {
-                        vertical_fov_degrees: 60., // Defaulting for now as we don't have it in OrbitCamera
-                        aperture_size: 0.,
-                        look_from: orbit_camera.look_from(),
-                        look_at: orbit_camera.look_at(),
-                        up: Vec3::new(0., 1., 0.),
-                    })
-                    .is_ok()
-                {
-                    render_control.render_requested = false;
-                    render_control.camera_updated = false;
-                }
+    if render_control.camera_updated {
+        if let (Some(sender), Some(orbit_camera)) = (
+            &render_control.camera_config_sender,
+            &render_control.orbit_camera,
+        ) {
+            if sender.send(orbit_camera.into()).is_ok() {
+                render_control.camera_updated = false;
             }
         }
     }
@@ -284,19 +271,7 @@ pub fn render_output(
                         queue: &resources.queue,
                     };
 
-                    let look_from = s
-                        .camera
-                        .look_from
-                        .create(&ctx)
-                        .unwrap_or(Vec3::new(0.0, 0.0, 10.0));
-                    let look_at = s
-                        .camera
-                        .look_at
-                        .unwrap_or_default()
-                        .create(&ctx)
-                        .unwrap_or(Vec3::new(0.0, 0.0, 0.0));
-
-                    render_control.orbit_camera = Some(OrbitCamera::new(look_from, look_at, 0.1));
+                    render_control.orbit_camera = Some(OrbitCamera::new(&s.camera, &ctx, 1.));
                     render_control.scene = Some(s);
                 }
             }
@@ -312,7 +287,7 @@ pub fn render_output(
                 scene_yaml,
                 render_control.scene.clone(),
                 viewport_size,
-                &ui.ctx(),
+                ui.ctx(),
                 resources.clone(),
             );
             rendered_image.width = viewport_size.x as u32;
@@ -386,7 +361,7 @@ fn render(
 
             render_sender_clone
                 .send(RenderMessage::Error(err_msg))
-                .unwrap();
+                .unwrap_or(());
             ctx1.request_repaint();
         };
     });
@@ -395,7 +370,7 @@ fn render(
         for render_output in output_receiver {
             render_sender
                 .send(RenderMessage::SampleRendered(render_output))
-                .unwrap();
+                .unwrap_or(());
             ctx2.request_repaint();
         }
     });

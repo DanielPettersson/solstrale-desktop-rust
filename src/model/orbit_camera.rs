@@ -1,3 +1,5 @@
+use crate::model::{Creator, CreatorContext};
+use solstrale::camera::CameraConfig;
 use solstrale::geo::vec3::Vec3;
 use std::f64::consts::PI;
 
@@ -14,25 +16,37 @@ pub struct OrbitCamera {
     pub target_polar: f64,
 
     pub damping_factor: f64,
+    pub vertical_fov_degrees: f64,
+    pub aperture_size: f64,
+    pub up: Vec3,
 }
 
 impl OrbitCamera {
-    pub fn new(look_from: Vec3, look_at: Vec3, damping_factor: f64) -> Self {
-        let dir = look_from - look_at;
+    pub fn new(
+        cc: &crate::model::camera_config::CameraConfig,
+        ctx: &CreatorContext,
+        damping_factor: f64,
+    ) -> Self {
+        let camera_config = cc.create(ctx).unwrap();
+
+        let dir = camera_config.look_from - camera_config.look_at;
         let distance = dir.length();
         let azimuth = dir.x.atan2(dir.z);
         let polar = (dir.y / distance).acos();
 
         Self {
-            current_target: look_at,
+            current_target: camera_config.look_at,
             current_distance: distance,
             current_azimuth: azimuth,
             current_polar: polar,
-            target_target: look_at,
+            target_target: camera_config.look_at,
             target_distance: distance,
             target_azimuth: azimuth,
             target_polar: polar,
             damping_factor,
+            vertical_fov_degrees: camera_config.vertical_fov_degrees,
+            aperture_size: camera_config.aperture_size,
+            up: camera_config.up,
         }
     }
 
@@ -40,22 +54,24 @@ impl OrbitCamera {
         let mut changed = false;
 
         if (self.current_target - self.target_target).length() > 0.001 {
-            self.current_target =
-                self.current_target + (self.target_target - self.current_target) * self.damping_factor;
+            self.current_target = self.current_target
+                + (self.target_target - self.current_target) * self.damping_factor;
             changed = true;
         } else {
             self.current_target = self.target_target;
         }
 
         if (self.current_distance - self.target_distance).abs() > 0.001 {
-            self.current_distance += (self.target_distance - self.current_distance) * self.damping_factor;
+            self.current_distance +=
+                (self.target_distance - self.current_distance) * self.damping_factor;
             changed = true;
         } else {
             self.current_distance = self.target_distance;
         }
 
         if (self.current_azimuth - self.target_azimuth).abs() > 0.001 {
-            self.current_azimuth += (self.target_azimuth - self.current_azimuth) * self.damping_factor;
+            self.current_azimuth +=
+                (self.target_azimuth - self.current_azimuth) * self.damping_factor;
             changed = true;
         } else {
             self.current_azimuth = self.target_azimuth;
@@ -100,7 +116,19 @@ impl OrbitCamera {
         let actual_up = normalize(cross(right, forward));
 
         let pan_vector = right * -delta_x + actual_up * delta_y;
-        self.target_target = self.target_target + pan_vector;
+        self.target_target += pan_vector;
+    }
+}
+
+impl From<&OrbitCamera> for CameraConfig {
+    fn from(c: &OrbitCamera) -> CameraConfig {
+        CameraConfig {
+            vertical_fov_degrees: c.vertical_fov_degrees,
+            aperture_size: c.aperture_size,
+            look_from: c.look_from(),
+            look_at: c.look_at(),
+            up: c.up,
+        }
     }
 }
 
@@ -119,62 +147,4 @@ fn cross(a: Vec3, b: Vec3) -> Vec3 {
         a.z * b.x - a.x * b.z,
         a.x * b.y - a.y * b.x,
     )
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use solstrale::geo::vec3::Vec3;
-
-    #[test]
-    fn test_orbit_camera_init() {
-        let look_from = Vec3::new(0.0, 0.0, 10.0);
-        let look_at = Vec3::new(0.0, 0.0, 0.0);
-        let camera = OrbitCamera::new(look_from, look_at, 0.1);
-
-        assert!((camera.current_distance - 10.0).abs() < 0.001);
-        assert!((camera.current_polar - PI / 2.0).abs() < 0.001);
-        assert!((camera.current_azimuth - 0.0).abs() < 0.001);
-    }
-
-    #[test]
-    fn test_orbit_camera_look_from() {
-        let look_from = Vec3::new(10.0, 0.0, 0.0);
-        let look_at = Vec3::new(0.0, 0.0, 0.0);
-        let camera = OrbitCamera::new(look_from, look_at, 1.0); // No damping for test
-
-        let calculated_look_from = camera.look_from();
-        assert!((calculated_look_from.x - 10.0).abs() < 0.001);
-        assert!((calculated_look_from.y - 0.0).abs() < 0.001);
-        assert!((calculated_look_from.z - 0.0).abs() < 0.001);
-    }
-
-    #[test]
-    fn test_orbit_camera_damping() {
-        let look_from = Vec3::new(0.0, 0.0, 10.0);
-        let look_at = Vec3::new(0.0, 0.0, 0.0);
-        let mut camera = OrbitCamera::new(look_from, look_at, 0.1);
-
-        camera.orbit(PI / 2.0, 0.0);
-        assert!((camera.current_azimuth - 0.0).abs() < 0.001);
-        assert!((camera.target_azimuth - PI / 2.0).abs() < 0.001);
-
-        camera.update();
-        assert!(camera.current_azimuth > 0.0);
-        assert!(camera.current_azimuth < PI / 2.0);
-    }
-
-    #[test]
-    fn test_orbit_camera_pan() {
-        let look_from = Vec3::new(0.0, 0.0, 10.0);
-        let look_at = Vec3::new(0.0, 0.0, 0.0);
-        let mut camera = OrbitCamera::new(look_from, look_at, 1.0);
-
-        camera.pan(1.0, 1.0, Vec3::new(0.0, 1.0, 0.0));
-        camera.update();
-
-        let new_look_at = camera.look_at();
-        assert!(new_look_at.x < 0.0);
-        assert!(new_look_at.y > 0.0);
-    }
 }

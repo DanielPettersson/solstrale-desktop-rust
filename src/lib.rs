@@ -8,6 +8,7 @@ use std::sync::mpsc::{Receiver, Sender};
 use std::sync::Arc;
 use std::time::Duration;
 
+use model::scene::Scene;
 use std::sync::Mutex;
 
 pub mod help;
@@ -57,7 +58,7 @@ pub struct RenderControl {
     pub initial_render_started: bool,
     pub previous_frame_render_size: Vec2,
     pub orbit_camera: Option<OrbitCamera>,
-    pub scene: Option<crate::model::scene::Scene>,
+    pub scene: Option<Scene>,
     pub camera_updated: bool,
 }
 
