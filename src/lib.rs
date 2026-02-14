@@ -1,3 +1,4 @@
+use crate::model::orbit_camera::OrbitCamera;
 use eframe::egui::Vec2;
 use eframe::wgpu;
 use once_cell::sync::Lazy;
@@ -54,6 +55,7 @@ pub struct RenderControl {
     pub loading_scene: bool,
     pub initial_render_started: bool,
     pub previous_frame_render_size: Vec2,
+    pub orbit_camera: Option<OrbitCamera>,
 }
 
 pub enum RenderMessage {

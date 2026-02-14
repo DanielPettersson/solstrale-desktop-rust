@@ -163,4 +163,18 @@ mod tests {
         assert!(camera.current_azimuth > 0.0);
         assert!(camera.current_azimuth < PI / 2.0);
     }
+
+    #[test]
+    fn test_orbit_camera_pan() {
+        let look_from = Vec3::new(0.0, 0.0, 10.0);
+        let look_at = Vec3::new(0.0, 0.0, 0.0);
+        let mut camera = OrbitCamera::new(look_from, look_at, 1.0);
+
+        camera.pan(1.0, 1.0, Vec3::new(0.0, 1.0, 0.0));
+        camera.update();
+
+        let new_look_at = camera.look_at();
+        assert!(new_look_at.x < 0.0);
+        assert!(new_look_at.y > 0.0);
+    }
 }

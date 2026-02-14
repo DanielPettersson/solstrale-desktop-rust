@@ -2,9 +2,10 @@ use std::sync::mpsc::{channel, Receiver, Sender, TryRecvError};
 use std::sync::{Arc, Mutex};
 use std::thread;
 
-use eframe::egui::{Context, Sense, Ui, Vec2};
+use eframe::egui::{Context, PointerButton, Sense, Ui, Vec2};
 use eframe::wgpu;
 use eframe::wgpu::util::DeviceExt;
+use solstrale::geo::vec3::Vec3;
 use solstrale::ray_trace;
 
 use crate::model::{parse_scene_yaml, Creator, CreatorContext};
@@ -136,8 +137,6 @@ pub fn render_output(
     scene_yaml: &str,
     viewport_size: Vec2,
 ) {
-    let ctx = ui.ctx();
-
     if render_control.render_requested {
         if let Some(sender) = &render_control.abort_sender {
             sender.send(true).ok();
@@ -150,7 +149,7 @@ pub fn render_output(
         && viewport_size.y > 0.0
     {
         if let Some(resources) = rendered_image.render_resources.as_ref() {
-            let res = render(scene_yaml, viewport_size, ctx, resources.clone());
+            let res = render(scene_yaml, viewport_size, &ui.ctx(), resources.clone());
             rendered_image.width = viewport_size.x as u32;
             rendered_image.height = viewport_size.y as u32;
             render_control.render_receiver = Some(res.0);
@@ -191,12 +190,45 @@ pub fn render_output(
         }
     }
 
-    if !render_control.loading_scene
-        && !render_control.render_requested
+    if !render_control.render_requested
         && viewport_size.x > 0.0
         && viewport_size.y > 0.0
     {
-        let (rect, _response) = ui.allocate_exact_size(viewport_size, Sense::hover());
+        let (rect, response) = ui.allocate_exact_size(viewport_size, Sense::drag());
+
+        if let Some(orbit_camera) = &mut render_control.orbit_camera {
+            let mut input_changed = false;
+            if response.dragged_by(PointerButton::Primary) {
+                let delta = response.drag_delta();
+                if delta.x != 0.0 || delta.y != 0.0 {
+                    orbit_camera.orbit(-delta.x as f64 * 0.01, -delta.y as f64 * 0.01);
+                    input_changed = true;
+                }
+            }
+            if response.dragged_by(PointerButton::Secondary)
+                || response.dragged_by(PointerButton::Middle)
+            {
+                let delta = response.drag_delta();
+                if delta.x != 0.0 || delta.y != 0.0 {
+                    orbit_camera.pan(
+                        delta.x as f64 * 0.001 * orbit_camera.current_distance,
+                        delta.y as f64 * 0.001 * orbit_camera.current_distance,
+                        Vec3::new(0., 1., 0.),
+                    );
+                    input_changed = true;
+                }
+            }
+            let scroll = ui.input(|i| i.smooth_scroll_delta.y);
+            if scroll != 0.0 {
+                orbit_camera.zoom(-scroll as f64 * 0.1);
+                input_changed = true;
+            }
+
+            if orbit_camera.update() || input_changed {
+                render_control.render_requested = true;
+                ui.ctx().request_repaint();
+            }
+        }
 
         if let (Some(resources), Some(output_buffer)) = (
             &rendered_image.render_resources,
