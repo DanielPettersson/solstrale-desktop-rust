@@ -3,7 +3,7 @@
 ## Phase 1: Infrastructure & Model Updates
 Update internal data structures to support persistent camera communication and the new `ray_trace` parameters.
 
-- [ ] Task: Update `RenderControl` struct in `src/lib.rs` to include `camera_config_sender: Option<Sender<solstrale::camera::CameraConfig>>`.
+- [x] Task: Update `RenderControl` struct in `src/lib.rs` to include `camera_config_sender: Option<Sender<solstrale::camera::CameraConfig>>`. 1280ecc
 - [ ] Task: Update `render` function signature in `src/render_output.rs` to return `(Receiver<RenderMessage>, Sender<bool>, Sender<solstrale::camera::CameraConfig>)`.
 - [ ] Task: Conductor - User Manual Verification 'Infrastructure & Model Updates' (Protocol in workflow.md)
 
