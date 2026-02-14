@@ -9,6 +9,7 @@ use solstrale::geo::vec3::Vec3;
 use solstrale::ray_trace;
 
 use crate::model::scene::Scene;
+use crate::model::orbit_camera::OrbitCamera;
 use crate::model::{parse_scene_yaml, Creator, CreatorContext};
 use crate::{
     ErrorInfo, RenderCallback, RenderControl, RenderMessage, RenderResources, RenderedImage,
@@ -155,7 +156,25 @@ pub fn render_output(
     {
         if let Some(resources) = rendered_image.render_resources.as_ref() {
             if render_control.scene.is_none() {
-                render_control.scene = parse_scene_yaml(scene_yaml, 0).ok();
+                if let Ok(s) = parse_scene_yaml(scene_yaml, 0) {
+                    let ctx = CreatorContext {
+                        screen_width: viewport_size.x as usize,
+                        screen_height: viewport_size.y as usize,
+                        device: &resources.device,
+                        queue: &resources.queue,
+                    };
+
+                    let look_from = s.camera.look_from.create(&ctx).unwrap_or(Vec3::new(0.0, 0.0, 10.0));
+                    let look_at = s
+                        .camera
+                        .look_at
+                        .unwrap_or_default()
+                        .create(&ctx)
+                        .unwrap_or(Vec3::new(0.0, 0.0, 0.0));
+
+                    render_control.orbit_camera = Some(OrbitCamera::new(look_from, look_at, 0.1));
+                    render_control.scene = Some(s);
+                }
             }
 
             if let (Some(scene), Some(orbit_camera)) =
