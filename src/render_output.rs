@@ -139,21 +139,136 @@ pub fn render_output(
     scene_yaml: &str,
     viewport_size: Vec2,
 ) {
-    if render_control.render_requested {
-        if let Some(sender) = &render_control.abort_sender {
-            sender.send(true).ok();
-        }
-        if !render_control.camera_updated {
-            render_control.scene = None;
-            render_control.orbit_camera = None;
+    // Process messages from the renderer
+    if let Some(render_receiver) = &render_control.render_receiver {
+        loop {
+            match render_receiver.try_recv() {
+                Ok(render_message) => match render_message {
+                    RenderMessage::SampleRendered(render_progress) => {
+                        rendered_image.output_buffer = Some(Arc::new(render_progress.output_buffer));
+                        rendered_image.progress = render_progress.progress;
+                        if let Some(fps) = render_progress.fps {
+                            rendered_image.fps = fps;
+                        }
+                        rendered_image.estimated_time_left = render_progress.estimated_time_left;
+                        render_control.loading_scene = false;
+                    }
+                    RenderMessage::Error(error_message) => {
+                        error_info.handle_str(&error_message);
+                        render_control.loading_scene = false;
+                    }
+                },
+                Err(err) => {
+                    match err {
+                        TryRecvError::Empty => {}
+                        TryRecvError::Disconnected => {
+                            render_control.abort_sender = None;
+                        }
+                    }
+                    break;
+                }
+            }
         }
     }
 
-    if render_control.abort_sender.is_none()
-        && render_control.render_requested
-        && viewport_size.x > 0.0
-        && viewport_size.y > 0.0
-    {
+    // UI and Interaction
+    if viewport_size.x > 0.0 && viewport_size.y > 0.0 {
+        let (rect, response) = ui.allocate_exact_size(viewport_size, Sense::drag());
+
+        // Paint the last rendered image
+        if let (Some(resources), Some(output_buffer)) = (
+            &rendered_image.render_resources,
+            &rendered_image.output_buffer,
+        ) {
+            if output_buffer.size() > 0 {
+                ui.painter()
+                    .add(eframe::egui_wgpu::Callback::new_paint_callback(
+                        rect,
+                        RenderCallback {
+                            resources: resources.clone(),
+                            output_buffer: output_buffer.clone(),
+                            width: rendered_image.width,
+                            height: rendered_image.height,
+                            bind_group: Arc::new(Mutex::new(None)),
+                        },
+                    ));
+            }
+        }
+
+        // Handle camera interactions
+        if let Some(orbit_camera) = &mut render_control.orbit_camera {
+            let mut input_changed = false;
+            if response.dragged_by(PointerButton::Primary) {
+                let delta = response.drag_delta();
+                if delta.x != 0.0 || delta.y != 0.0 {
+                    orbit_camera.orbit(-delta.x as f64 * 0.01, -delta.y as f64 * 0.01);
+                    input_changed = true;
+                }
+            }
+            if response.dragged_by(PointerButton::Secondary)
+                || response.dragged_by(PointerButton::Middle)
+            {
+                let delta = response.drag_delta();
+                if delta.x != 0.0 || delta.y != 0.0 {
+                    orbit_camera.pan(
+                        delta.x as f64 * 0.001 * orbit_camera.current_distance,
+                        delta.y as f64 * 0.001 * orbit_camera.current_distance,
+                        Vec3::new(0., 1., 0.),
+                    );
+                    input_changed = true;
+                }
+            }
+            let scroll = ui.input(|i| i.smooth_scroll_delta.y);
+            if scroll != 0.0 {
+                orbit_camera.zoom(-scroll as f64 * 0.1);
+                input_changed = true;
+            }
+
+            if orbit_camera.update() || input_changed {
+                render_control.render_requested = true;
+                render_control.camera_updated = true;
+                ui.ctx().request_repaint();
+            }
+        }
+    }
+
+        // Handle render restarts
+
+        if render_control.render_requested {
+
+            if let Some(sender) = &render_control.abort_sender {
+
+                sender.send(true).ok();
+
+            }
+
+            render_control.abort_sender = None;
+
+            render_control.render_receiver = None;
+
+    
+
+            if !render_control.camera_updated {
+
+                render_control.scene = None;
+
+                render_control.orbit_camera = None;
+
+            }
+
+        }
+
+    
+
+        if render_control.render_requested
+
+            && viewport_size.x > 0.0
+
+            && viewport_size.y > 0.0
+
+        {
+
+    
         if let Some(resources) = rendered_image.render_resources.as_ref() {
             if render_control.scene.is_none() {
                 if let Ok(s) = parse_scene_yaml(scene_yaml, 0) {
@@ -196,100 +311,10 @@ pub fn render_output(
             render_control.render_receiver = Some(res.0);
             render_control.abort_sender = Some(res.1);
             render_control.render_requested = false;
+            if !render_control.camera_updated {
+                render_control.loading_scene = true;
+            }
             render_control.camera_updated = false;
-            render_control.loading_scene = true;
-        }
-    }
-
-    if let Some(render_receiver) = &render_control.render_receiver {
-        loop {
-            match render_receiver.try_recv() {
-                Ok(render_message) => match render_message {
-                    RenderMessage::SampleRendered(render_progress) => {
-                        rendered_image.output_buffer = Some(Arc::new(render_progress.output_buffer));
-                        rendered_image.progress = render_progress.progress;
-                        if let Some(fps) = render_progress.fps {
-                            rendered_image.fps = fps;
-                        }
-                        rendered_image.estimated_time_left = render_progress.estimated_time_left;
-                        render_control.loading_scene = false;
-                    }
-                    RenderMessage::Error(error_message) => {
-                        error_info.handle_str(&error_message);
-                        render_control.loading_scene = false;
-                    }
-                },
-                Err(err) => {
-                    match err {
-                        TryRecvError::Empty => {}
-                        TryRecvError::Disconnected => {
-                            render_control.abort_sender = None;
-                        }
-                    }
-                    break;
-                }
-            }
-        }
-    }
-
-    if !render_control.render_requested
-        && viewport_size.x > 0.0
-        && viewport_size.y > 0.0
-    {
-        let (rect, response) = ui.allocate_exact_size(viewport_size, Sense::drag());
-
-        if let Some(orbit_camera) = &mut render_control.orbit_camera {
-            let mut input_changed = false;
-            if response.dragged_by(PointerButton::Primary) {
-                let delta = response.drag_delta();
-                if delta.x != 0.0 || delta.y != 0.0 {
-                    orbit_camera.orbit(-delta.x as f64 * 0.01, -delta.y as f64 * 0.01);
-                    input_changed = true;
-                }
-            }
-            if response.dragged_by(PointerButton::Secondary)
-                || response.dragged_by(PointerButton::Middle)
-            {
-                let delta = response.drag_delta();
-                if delta.x != 0.0 || delta.y != 0.0 {
-                    orbit_camera.pan(
-                        delta.x as f64 * 0.001 * orbit_camera.current_distance,
-                        delta.y as f64 * 0.001 * orbit_camera.current_distance,
-                        Vec3::new(0., 1., 0.),
-                    );
-                    input_changed = true;
-                }
-            }
-            let scroll = ui.input(|i| i.smooth_scroll_delta.y);
-            if scroll != 0.0 {
-                orbit_camera.zoom(-scroll as f64 * 0.1);
-                input_changed = true;
-            }
-
-            if orbit_camera.update() || input_changed {
-                render_control.render_requested = true;
-                render_control.camera_updated = true;
-                ui.ctx().request_repaint();
-            }
-        }
-
-        if let (Some(resources), Some(output_buffer)) = (
-            &rendered_image.render_resources,
-            &rendered_image.output_buffer,
-        ) {
-            if output_buffer.size() > 0 {
-                ui.painter()
-                    .add(eframe::egui_wgpu::Callback::new_paint_callback(
-                        rect,
-                        RenderCallback {
-                            resources: resources.clone(),
-                            output_buffer: output_buffer.clone(),
-                            width: rendered_image.width,
-                            height: rendered_image.height,
-                            bind_group: Arc::new(Mutex::new(None)),
-                        },
-                    ));
-            }
         }
     }
 }

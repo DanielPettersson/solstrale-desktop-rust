@@ -307,7 +307,9 @@ impl App for SolstraleApp {
                     self.render_control.previous_frame_render_size = available_size;
                 }
 
-                if self.render_control.loading_scene || self.render_control.render_requested {
+                if (self.render_control.loading_scene || self.render_control.render_requested)
+                    && !self.render_control.camera_updated
+                {
                     loading_output::show(ui);
                 }
 
