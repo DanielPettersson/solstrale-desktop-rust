@@ -24,10 +24,10 @@ Refactor the UI loop to use the persistent channel for camera updates.
 - [x] Task: Update the "Handle render restarts" logic to preserve the `render_receiver` and thread if only the camera moved. c0b58f8
 - [x] Task: Conductor - User Manual Verification 'UI Interaction Logic' (Protocol in workflow.md) 8538d46
 
-## Phase 4: Final Verification & Cleanup
+## Phase 4: Final Verification & Cleanup [checkpoint: e242f5c]
 Ensure stability across all interaction types (YAML change, resize, camera move).
 
 - [x] Task: Verify that resizing the window still triggers a full restart (correctly setting `render_control.render_requested = true`). f9280f0
 - [x] Task: Verify that YAML changes still trigger a full restart. 859eacd
 - [x] Task: Run full project tests and linting. ca21874
-- [ ] Task: Conductor - User Manual Verification 'Final Verification & Cleanup' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Final Verification & Cleanup' (Protocol in workflow.md) e242f5c
