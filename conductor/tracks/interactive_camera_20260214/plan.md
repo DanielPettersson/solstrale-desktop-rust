@@ -24,14 +24,14 @@ Capture mouse events in the render output area and map them to `OrbitCamera` mut
 - [x] Task: Integrate `OrbitCamera` update loop into the UI `update` function to handle damping/animations. 908769c
 - [x] Task: Conductor - User Manual Verification 'Phase 2: Input Handling and State Management' (Protocol in workflow.md) c0c1b5d
 
-## Phase 3: Efficient Render Restart
+## Phase 3: Efficient Render Restart [checkpoint: 1d828e5]
 Enable mutating the camera in the active render without re-parsing the scene YAML.
 
 - [x] Task: Add a method to `RenderConfig` or `Scene` to update only the camera configuration. 2b6c97e
 - [x] Task: Modify the rendering loop in `src/lib.rs` (or the relevant render controller) to accept camera mutations and trigger a reset of the `solstrale` engine. 2b6c97e
 - [x] Task: Write Tests: Verify that updating the camera and restarting the render doesn't trigger a full scene reload. 2b6c97e
 - [x] Task: Implement: Camera mutation and render restart trigger. 2b6c97e
-- [ ] Task: Conductor - User Manual Verification 'Phase 3: Efficient Render Restart' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Phase 3: Efficient Render Restart' (Protocol in workflow.md) 1d828e5
 
 ## Phase 4: Final Integration and Polishing
 Connect all components and ensure a smooth user experience.
