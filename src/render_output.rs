@@ -8,8 +8,8 @@ use eframe::wgpu::util::DeviceExt;
 use solstrale::geo::vec3::Vec3;
 use solstrale::ray_trace;
 
-use crate::model::scene::Scene;
 use crate::model::orbit_camera::OrbitCamera;
+use crate::model::scene::Scene;
 use crate::model::{parse_scene_yaml, Creator, CreatorContext};
 use crate::{
     ErrorInfo, RenderCallback, RenderControl, RenderMessage, RenderResources, RenderedImage,
@@ -145,7 +145,8 @@ pub fn render_output(
             match render_receiver.try_recv() {
                 Ok(render_message) => match render_message {
                     RenderMessage::SampleRendered(render_progress) => {
-                        rendered_image.output_buffer = Some(Arc::new(render_progress.output_buffer));
+                        rendered_image.output_buffer =
+                            Some(Arc::new(render_progress.output_buffer));
                         rendered_image.progress = render_progress.progress;
                         if let Some(fps) = render_progress.fps {
                             rendered_image.fps = fps;
@@ -220,7 +221,7 @@ pub fn render_output(
             }
             let scroll = ui.input(|i| i.smooth_scroll_delta.y);
             if scroll != 0.0 {
-                orbit_camera.zoom(-scroll as f64 * 0.1);
+                orbit_camera.zoom(-scroll as f64);
                 input_changed = true;
             }
 
@@ -232,43 +233,25 @@ pub fn render_output(
         }
     }
 
-        // Handle render restarts
+    // Handle render restarts
 
-        if render_control.render_requested {
-
-            if let Some(sender) = &render_control.abort_sender {
-
-                sender.send(true).ok();
-
-            }
-
-            render_control.abort_sender = None;
-
-            render_control.render_receiver = None;
-
-    
-
-            if !render_control.camera_updated {
-
-                render_control.scene = None;
-
-                render_control.orbit_camera = None;
-
-            }
-
+    if render_control.render_requested {
+        if let Some(sender) = &render_control.abort_sender {
+            sender.send(true).ok();
         }
 
-    
+        render_control.abort_sender = None;
 
-        if render_control.render_requested
+        render_control.render_receiver = None;
 
-            && viewport_size.x > 0.0
+        if !render_control.camera_updated {
+            render_control.scene = None;
 
-            && viewport_size.y > 0.0
+            render_control.orbit_camera = None;
+        }
+    }
 
-        {
-
-    
+    if render_control.render_requested && viewport_size.x > 0.0 && viewport_size.y > 0.0 {
         if let Some(resources) = rendered_image.render_resources.as_ref() {
             if render_control.scene.is_none() {
                 if let Ok(s) = parse_scene_yaml(scene_yaml, 0) {
@@ -279,7 +262,11 @@ pub fn render_output(
                         queue: &resources.queue,
                     };
 
-                    let look_from = s.camera.look_from.create(&ctx).unwrap_or(Vec3::new(0.0, 0.0, 10.0));
+                    let look_from = s
+                        .camera
+                        .look_from
+                        .create(&ctx)
+                        .unwrap_or(Vec3::new(0.0, 0.0, 10.0));
                     let look_at = s
                         .camera
                         .look_at
