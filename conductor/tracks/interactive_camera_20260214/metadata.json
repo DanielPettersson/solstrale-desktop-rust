@@ -1,0 +1,8 @@
+{
+  "track_id": "interactive_camera_20260214",
+  "type": "feature",
+  "status": "new",
+  "created_at": "2026-02-14T12:00:00Z",
+  "updated_at": "2026-02-14T12:00:00Z",
+  "description": "I want to be able to move the camera by dragging with the mouse in the render output. This should work much like Three.js OrbitControls. When camera moves the render should restart, but without recreating the scene from the yaml, just mutate the camera fields in the existing scene."
+}
