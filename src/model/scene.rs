@@ -11,7 +11,7 @@ use crate::model::rgb::Rgb;
 use crate::model::FieldType::{List, Normal, Optional};
 use crate::model::{Creator, CreatorContext, DocumentationStructure, FieldInfo, HelpDocumentation};
 
-#[derive(Serialize, Deserialize, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct Scene {
     #[serde(skip_serializing_if = "Option::is_none")]

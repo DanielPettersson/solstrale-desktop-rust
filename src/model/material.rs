@@ -13,7 +13,7 @@ use solstrale::material::Materials;
 use std::collections::HashMap;
 use std::error::Error;
 
-#[derive(Serialize, Deserialize, PartialEq, Debug, Default)]
+#[derive(Serialize, Deserialize, PartialEq, Debug, Default, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct Material {
     #[serde(skip_serializing_if = "Option::is_none")]

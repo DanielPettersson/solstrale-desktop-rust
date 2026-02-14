@@ -1,3 +1,4 @@
+use crate::model::orbit_camera::OrbitCamera;
 use eframe::egui::Vec2;
 use eframe::wgpu;
 use once_cell::sync::Lazy;
@@ -7,6 +8,7 @@ use std::sync::mpsc::{Receiver, Sender};
 use std::sync::Arc;
 use std::time::Duration;
 
+use model::scene::Scene;
 use std::sync::Mutex;
 
 pub mod help;
@@ -50,10 +52,14 @@ impl ErrorInfo {
 pub struct RenderControl {
     pub abort_sender: Option<Sender<bool>>,
     pub render_receiver: Option<Receiver<RenderMessage>>,
+    pub camera_config_sender: Option<Sender<solstrale::camera::CameraConfig>>,
     pub render_requested: bool,
     pub loading_scene: bool,
     pub initial_render_started: bool,
     pub previous_frame_render_size: Vec2,
+    pub orbit_camera: Option<OrbitCamera>,
+    pub scene: Option<Scene>,
+    pub camera_updated: bool,
 }
 
 pub enum RenderMessage {

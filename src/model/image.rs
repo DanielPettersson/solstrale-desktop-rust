@@ -5,7 +5,7 @@ use solstrale::material::texture::{ImageMap, Textures};
 use std::collections::HashMap;
 use std::error::Error;
 
-#[derive(Serialize, Deserialize, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct Image {
     pub file: String,

@@ -21,6 +21,7 @@ mod lambertian;
 mod light;
 mod material;
 mod metal;
+pub mod orbit_camera;
 mod normal_texture;
 mod obj_model;
 mod plastic;

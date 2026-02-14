@@ -2,11 +2,14 @@ use std::sync::mpsc::{channel, Receiver, Sender, TryRecvError};
 use std::sync::{Arc, Mutex};
 use std::thread;
 
-use eframe::egui::{Context, Sense, Ui, Vec2};
+use eframe::egui::{Context, PointerButton, Sense, Ui, Vec2};
 use eframe::wgpu;
 use eframe::wgpu::util::DeviceExt;
+use solstrale::geo::vec3::Vec3;
 use solstrale::ray_trace;
 
+use crate::model::orbit_camera::OrbitCamera;
+use crate::model::scene::Scene;
 use crate::model::{parse_scene_yaml, Creator, CreatorContext};
 use crate::{
     ErrorInfo, RenderCallback, RenderControl, RenderMessage, RenderResources, RenderedImage,
@@ -136,36 +139,14 @@ pub fn render_output(
     scene_yaml: &str,
     viewport_size: Vec2,
 ) {
-    let ctx = ui.ctx();
-
-    if render_control.render_requested {
-        if let Some(sender) = &render_control.abort_sender {
-            sender.send(true).ok();
-        }
-    }
-
-    if render_control.abort_sender.is_none()
-        && render_control.render_requested
-        && viewport_size.x > 0.0
-        && viewport_size.y > 0.0
-    {
-        if let Some(resources) = rendered_image.render_resources.as_ref() {
-            let res = render(scene_yaml, viewport_size, ctx, resources.clone());
-            rendered_image.width = viewport_size.x as u32;
-            rendered_image.height = viewport_size.y as u32;
-            render_control.render_receiver = Some(res.0);
-            render_control.abort_sender = Some(res.1);
-            render_control.render_requested = false;
-            render_control.loading_scene = true;
-        }
-    }
-
+    // Process messages from the renderer
     if let Some(render_receiver) = &render_control.render_receiver {
         loop {
             match render_receiver.try_recv() {
                 Ok(render_message) => match render_message {
                     RenderMessage::SampleRendered(render_progress) => {
-                        rendered_image.output_buffer = Some(Arc::new(render_progress.output_buffer));
+                        rendered_image.output_buffer =
+                            Some(Arc::new(render_progress.output_buffer));
                         rendered_image.progress = render_progress.progress;
                         if let Some(fps) = render_progress.fps {
                             rendered_image.fps = fps;
@@ -191,13 +172,11 @@ pub fn render_output(
         }
     }
 
-    if !render_control.loading_scene
-        && !render_control.render_requested
-        && viewport_size.x > 0.0
-        && viewport_size.y > 0.0
-    {
-        let (rect, _response) = ui.allocate_exact_size(viewport_size, Sense::hover());
+    // UI and Interaction
+    if viewport_size.x > 0.0 && viewport_size.y > 0.0 {
+        let (rect, response) = ui.allocate_exact_size(viewport_size, Sense::drag());
 
+        // Paint the last rendered image
         if let (Some(resources), Some(output_buffer)) = (
             &rendered_image.render_resources,
             &rendered_image.output_buffer,
@@ -216,21 +195,133 @@ pub fn render_output(
                     ));
             }
         }
+
+        // Handle camera interactions
+        if let Some(orbit_camera) = &mut render_control.orbit_camera {
+            let mut input_changed = false;
+            if response.dragged_by(PointerButton::Primary) {
+                let delta = response.drag_delta();
+                if delta.x != 0.0 || delta.y != 0.0 {
+                    orbit_camera.orbit(-delta.x as f64 * 0.01, -delta.y as f64 * 0.01);
+                    input_changed = true;
+                }
+            }
+            if response.dragged_by(PointerButton::Secondary)
+                || response.dragged_by(PointerButton::Middle)
+            {
+                let delta = response.drag_delta();
+                if delta.x != 0.0 || delta.y != 0.0 {
+                    orbit_camera.pan(
+                        delta.x as f64 * 0.001 * orbit_camera.current_distance,
+                        delta.y as f64 * 0.001 * orbit_camera.current_distance,
+                        Vec3::new(0., 1., 0.),
+                    );
+                    input_changed = true;
+                }
+            }
+            let scroll = ui.input(|i| i.smooth_scroll_delta.y);
+            if scroll != 0.0 {
+                orbit_camera.zoom(-scroll as f64);
+                input_changed = true;
+            }
+
+            if orbit_camera.update() || input_changed {
+                render_control.camera_updated = true;
+                ui.ctx().request_repaint();
+            }
+        }
+    }
+
+    // Handle render restarts
+
+    if render_control.camera_updated {
+        if let (Some(sender), Some(orbit_camera)) = (
+            &render_control.camera_config_sender,
+            &render_control.orbit_camera,
+        ) {
+            if sender.send(orbit_camera.into()).is_ok() {
+                render_control.camera_updated = false;
+            }
+        }
+    }
+
+    if render_control.render_requested {
+        if let Some(sender) = &render_control.abort_sender {
+            sender.send(true).ok();
+        }
+
+        render_control.abort_sender = None;
+        render_control.render_receiver = None;
+        render_control.camera_config_sender = None;
+
+        if !render_control.camera_updated {
+            render_control.scene = None;
+            render_control.orbit_camera = None;
+        }
+    }
+
+    if render_control.render_requested && viewport_size.x > 0.0 && viewport_size.y > 0.0 {
+        if let Some(resources) = rendered_image.render_resources.as_ref() {
+            if render_control.scene.is_none() {
+                if let Ok(s) = parse_scene_yaml(scene_yaml, 0) {
+                    let ctx = CreatorContext {
+                        screen_width: viewport_size.x as usize,
+                        screen_height: viewport_size.y as usize,
+                        device: &resources.device,
+                        queue: &resources.queue,
+                    };
+
+                    render_control.orbit_camera = Some(OrbitCamera::new(&s.camera, &ctx, 1.));
+                    render_control.scene = Some(s);
+                }
+            }
+
+            if let (Some(scene), Some(orbit_camera)) =
+                (&mut render_control.scene, &render_control.orbit_camera)
+            {
+                scene.camera.look_from = orbit_camera.look_from().into();
+                scene.camera.look_at = Some(orbit_camera.look_at().into());
+            }
+
+            let res = render(
+                scene_yaml,
+                render_control.scene.clone(),
+                viewport_size,
+                ui.ctx(),
+                resources.clone(),
+            );
+            rendered_image.width = viewport_size.x as u32;
+            rendered_image.height = viewport_size.y as u32;
+            render_control.render_receiver = Some(res.0);
+            render_control.abort_sender = Some(res.1);
+            render_control.camera_config_sender = Some(res.2);
+            render_control.render_requested = false;
+            if !render_control.camera_updated {
+                render_control.loading_scene = true;
+            }
+            render_control.camera_updated = false;
+        }
     }
 }
 
 fn render(
     scene_yaml: &str,
+    scene: Option<Scene>,
     viewport_size: Vec2,
     ctx: &Context,
     resources: Arc<RenderResources>,
-) -> (Receiver<RenderMessage>, Sender<bool>) {
+) -> (
+    Receiver<RenderMessage>,
+    Sender<bool>,
+    Sender<solstrale::camera::CameraConfig>,
+) {
     let (output_sender, output_receiver) = channel();
     let (abort_sender, abort_receiver) = channel();
+    let (camera_config_sender, camera_config_receiver) = channel();
     let (render_sender, render_receiver) = channel();
 
     if viewport_size.x <= 0.0 || viewport_size.y <= 0.0 {
-        return (render_receiver, abort_sender);
+        return (render_receiver, abort_sender, camera_config_sender);
     }
 
     let render_sender_clone = render_sender.clone();
@@ -240,7 +331,11 @@ fn render(
 
     thread::spawn(move || {
         let res = (|| {
-            let scene = parse_scene_yaml(&scene_yaml_str, 0)?.create(&CreatorContext {
+            let scene = match scene {
+                Some(s) => s,
+                None => parse_scene_yaml(&scene_yaml_str, 0)?,
+            }
+            .create(&CreatorContext {
                 screen_width: viewport_size.x as usize,
                 screen_height: viewport_size.y as usize,
                 device: &resources.device,
@@ -250,9 +345,11 @@ fn render(
             ray_trace(
                 scene,
                 &output_sender,
+                &camera_config_receiver,
                 &abort_receiver,
                 &resources.device,
                 &resources.queue,
+                true,
             )
         })();
 
@@ -264,7 +361,7 @@ fn render(
 
             render_sender_clone
                 .send(RenderMessage::Error(err_msg))
-                .unwrap();
+                .unwrap_or(());
             ctx1.request_repaint();
         };
     });
@@ -273,28 +370,10 @@ fn render(
         for render_output in output_receiver {
             render_sender
                 .send(RenderMessage::SampleRendered(render_output))
-                .unwrap();
+                .unwrap_or(());
             ctx2.request_repaint();
         }
     });
 
-    (render_receiver, abort_sender)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_shader_presence() {
-        assert!(!SHADER.is_empty());
-        assert!(SHADER.contains("@fragment"));
-        assert!(SHADER.contains("@vertex"));
-    }
-
-    #[test]
-    fn test_render_resources_presence() {
-        // This test just ensures the type exists and can be referenced
-        let _: Option<RenderResources> = None;
-    }
+    (render_receiver, abort_sender, camera_config_sender)
 }

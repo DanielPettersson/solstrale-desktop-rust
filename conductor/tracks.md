@@ -1,4 +1,3 @@
-
 ---
 
 - [~] **Track: Adapt Render Output to wgpu::Buffer**

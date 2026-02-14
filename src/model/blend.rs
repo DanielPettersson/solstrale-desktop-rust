@@ -8,7 +8,7 @@ use crate::model::material::Material;
 use crate::model::FieldType::{Normal, Optional};
 use crate::model::{Creator, CreatorContext, DocumentationStructure, FieldInfo, HelpDocumentation};
 
-#[derive(Serialize, Deserialize, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct Blend {
     pub first: Material,

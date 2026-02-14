@@ -17,7 +17,7 @@ use std::error::Error;
 static MODEL_CACHE: Lazy<Cache<String, Result<Hittables, ModelError>>> =
     Lazy::new(|| Cache::new(4));
 
-#[derive(Serialize, Deserialize, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct ObjModel {
     pub path: String,
@@ -42,7 +42,7 @@ impl Creator<Hittables> for ObjModel {
         let key = format!("{:?}", self);
         let model_result = MODEL_CACHE.get_with(key.to_owned(), || {
             Obj::new(&self.path, &self.name)
-                .load(&transformation, Some(material.into()))
+                .load(&transformation, Some(material))
                 .map_err(ModelError::new_from_err)
                 .map(|m| m.into())
         });

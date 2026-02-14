@@ -12,3 +12,4 @@
 - **Caching:** `moka` - For efficient data management.
 - **Templating:** `tera` - For dynamic content generation.
 - **CLI Utilities:** `clap` (Command Line Argument Parser) and `indicatif` (Progress reporting).
+- **Math Utilities:** Custom implementation of spherical coordinates and damping for interactive camera movement.
