@@ -299,20 +299,13 @@ impl App for SolstraleApp {
                 // When window is first displayed, the available size can change in the
                 // first few frames. So here we wait until the layout stabilizes until kicking off
                 // the initial rendering, as to get 1:1 match to display pixel size
-                if self.render_control.previous_frame_render_size != available_size
-                    && available_size.x > 0.
-                    && available_size.y > 0.
-                {
-                    if !self.render_control.initial_render_started {
-                        if self.render_control.previous_frame_render_size == available_size {
-                            self.render_control.render_requested = true;
-                            self.render_control.initial_render_started = true;
-                        }
-                    } else {
+                if !self.render_control.initial_render_started {
+                    if self.render_control.previous_frame_render_size == available_size && available_size.x > 0. && available_size.y > 0. {
                         self.render_control.render_requested = true;
+                        self.render_control.initial_render_started = true;
                     }
+                    self.render_control.previous_frame_render_size = available_size;
                 }
-                self.render_control.previous_frame_render_size = available_size;
 
                 if (self.render_control.loading_scene || self.render_control.render_requested)
                     && !self.render_control.camera_updated
