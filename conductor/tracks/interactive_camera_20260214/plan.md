@@ -2,7 +2,7 @@
 
 Implement OrbitControls-style mouse interactions (orbit, pan, zoom) with damping and efficient render restarts.
 
-## Phase 1: Camera Model and Logic Extensions
+## Phase 1: Camera Model and Logic Extensions [checkpoint: 372ede6]
 Extend the internal camera model to support the target-based transformations required for OrbitControls and implement the damping logic.
 
 - [x] Task: Create `src/model/orbit_camera.rs` to wrap existing camera with orbit logic. dbfb7bf
@@ -12,7 +12,7 @@ Extend the internal camera model to support the target-based transformations req
 - [x] Task: Implement: `OrbitCamera` transformation logic. dbfb7bf
 - [x] Task: Write Tests: Verify damping calculations correctly interpolate values over time. dbfb7bf
 - [x] Task: Implement: Damping logic in `OrbitCamera::update()`. dbfb7bf
-- [ ] Task: Conductor - User Manual Verification 'Phase 1: Camera Model and Logic Extensions' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Phase 1: Camera Model and Logic Extensions' (Protocol in workflow.md) 372ede6
 
 ## Phase 2: Input Handling and State Management
 Capture mouse events in the render output area and map them to `OrbitCamera` mutations.
