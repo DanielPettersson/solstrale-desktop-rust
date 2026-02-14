@@ -105,8 +105,8 @@ fn main() -> Result<(), Box<dyn Error>> {
             ray_trace(
                 scene,
                 &output_sender,
-                &camera_config_receiver,
                 &abort_receiver,
+                &camera_config_receiver,
                 &device_clone,
                 &queue_clone,
                 false,

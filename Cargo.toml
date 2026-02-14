@@ -9,7 +9,7 @@ lto = true
 codegen-units = 1
 
 [dependencies]
-solstrale = { path = "../solstrale-rust" }
+solstrale = { git = "https://github.com/DanielPettersson/solstrale-rust.git", branch = "wgpu-render" }
 eframe = { version = "0.33.0", features = ["persistence", "wayland", "wgpu"] }
 egui = "0.33.0"
 egui-file-dialog = "0.12.0"
