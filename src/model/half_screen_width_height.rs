@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::model::{Creator, CreatorContext, DocumentationStructure, HelpDocumentation};
 
-#[derive(Serialize, Deserialize, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct HalfScreenWidthHeight {}
 

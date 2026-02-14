@@ -9,7 +9,7 @@ use solstrale::post::PostProcessors;
 use std::collections::HashMap;
 use std::error::Error;
 
-#[derive(Serialize, Deserialize, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct PostProcessor {
     #[serde(skip_serializing_if = "Option::is_none")]

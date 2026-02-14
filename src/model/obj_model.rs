@@ -17,7 +17,7 @@ use std::error::Error;
 static MODEL_CACHE: Lazy<Cache<String, Result<Hittables, ModelError>>> =
     Lazy::new(|| Cache::new(4));
 
-#[derive(Serialize, Deserialize, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct ObjModel {
     pub path: String,

@@ -27,10 +27,10 @@ Capture mouse events in the render output area and map them to `OrbitCamera` mut
 ## Phase 3: Efficient Render Restart
 Enable mutating the camera in the active render without re-parsing the scene YAML.
 
-- [ ] Task: Add a method to `RenderConfig` or `Scene` to update only the camera configuration.
-- [ ] Task: Modify the rendering loop in `src/lib.rs` (or the relevant render controller) to accept camera mutations and trigger a reset of the `solstrale` engine.
-- [ ] Task: Write Tests: Verify that updating the camera and restarting the render doesn't trigger a full scene reload.
-- [ ] Task: Implement: Camera mutation and render restart trigger.
+- [x] Task: Add a method to `RenderConfig` or `Scene` to update only the camera configuration.
+- [x] Task: Modify the rendering loop in `src/lib.rs` (or the relevant render controller) to accept camera mutations and trigger a reset of the `solstrale` engine.
+- [x] Task: Write Tests: Verify that updating the camera and restarting the render doesn't trigger a full scene reload.
+- [x] Task: Implement: Camera mutation and render restart trigger.
 - [ ] Task: Conductor - User Manual Verification 'Phase 3: Efficient Render Restart' (Protocol in workflow.md)
 
 ## Phase 4: Final Integration and Polishing

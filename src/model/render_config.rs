@@ -11,7 +11,7 @@ use crate::model::width_height::WidthHeight;
 use crate::model::FieldType::{Optional, OptionalList};
 use crate::model::{Creator, CreatorContext, DocumentationStructure, FieldInfo, HelpDocumentation};
 
-#[derive(Serialize, Deserialize, PartialEq, Debug, Default)]
+#[derive(Serialize, Deserialize, PartialEq, Debug, Default, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct RenderConfig {
     #[serde(skip_serializing_if = "Option::is_none")]

@@ -12,7 +12,7 @@ use crate::model::{
     Creator, CreatorContext, DocumentationStructure, FieldInfo, HelpDocumentation, ModelError,
 };
 
-#[derive(Serialize, Deserialize, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct WidthHeight {
     #[serde(skip_serializing_if = "Option::is_none")]

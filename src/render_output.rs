@@ -8,6 +8,7 @@ use eframe::wgpu::util::DeviceExt;
 use solstrale::geo::vec3::Vec3;
 use solstrale::ray_trace;
 
+use crate::model::scene::Scene;
 use crate::model::{parse_scene_yaml, Creator, CreatorContext};
 use crate::{
     ErrorInfo, RenderCallback, RenderControl, RenderMessage, RenderResources, RenderedImage,
@@ -141,6 +142,10 @@ pub fn render_output(
         if let Some(sender) = &render_control.abort_sender {
             sender.send(true).ok();
         }
+        if !render_control.camera_updated {
+            render_control.scene = None;
+            render_control.orbit_camera = None;
+        }
     }
 
     if render_control.abort_sender.is_none()
@@ -149,12 +154,30 @@ pub fn render_output(
         && viewport_size.y > 0.0
     {
         if let Some(resources) = rendered_image.render_resources.as_ref() {
-            let res = render(scene_yaml, viewport_size, &ui.ctx(), resources.clone());
+            if render_control.scene.is_none() {
+                render_control.scene = parse_scene_yaml(scene_yaml, 0).ok();
+            }
+
+            if let (Some(scene), Some(orbit_camera)) =
+                (&mut render_control.scene, &render_control.orbit_camera)
+            {
+                scene.camera.look_from = orbit_camera.look_from().into();
+                scene.camera.look_at = Some(orbit_camera.look_at().into());
+            }
+
+            let res = render(
+                scene_yaml,
+                render_control.scene.clone(),
+                viewport_size,
+                &ui.ctx(),
+                resources.clone(),
+            );
             rendered_image.width = viewport_size.x as u32;
             rendered_image.height = viewport_size.y as u32;
             render_control.render_receiver = Some(res.0);
             render_control.abort_sender = Some(res.1);
             render_control.render_requested = false;
+            render_control.camera_updated = false;
             render_control.loading_scene = true;
         }
     }
@@ -226,6 +249,7 @@ pub fn render_output(
 
             if orbit_camera.update() || input_changed {
                 render_control.render_requested = true;
+                render_control.camera_updated = true;
                 ui.ctx().request_repaint();
             }
         }
@@ -253,6 +277,7 @@ pub fn render_output(
 
 fn render(
     scene_yaml: &str,
+    scene: Option<Scene>,
     viewport_size: Vec2,
     ctx: &Context,
     resources: Arc<RenderResources>,
@@ -272,7 +297,11 @@ fn render(
 
     thread::spawn(move || {
         let res = (|| {
-            let scene = parse_scene_yaml(&scene_yaml_str, 0)?.create(&CreatorContext {
+            let scene = match scene {
+                Some(s) => s,
+                None => parse_scene_yaml(&scene_yaml_str, 0)?,
+            }
+            .create(&CreatorContext {
                 screen_width: viewport_size.x as usize,
                 screen_height: viewport_size.y as usize,
                 device: &resources.device,
