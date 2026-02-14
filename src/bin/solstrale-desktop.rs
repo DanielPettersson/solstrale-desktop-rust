@@ -257,7 +257,7 @@ impl App for SolstraleApp {
                 .inner_margin(Margin::same(0))
                 .show(ui, |ui| {
                     ScrollArea::both().min_scrolled_width(300.).show(ui, |ui| {
-                        let res = ui.add(yaml_editor(
+                        ui.add(yaml_editor(
                             &mut self.scene_yaml,
                             &mut create_layouter(),
                             Vec2 {
@@ -265,10 +265,6 @@ impl App for SolstraleApp {
                                 y: ui.available_height(),
                             },
                         ));
-
-                        if res.changed() {
-                            self.render_control.render_requested = true;
-                        }
 
                         if is_ctrl_space(ui) {
                             if let Some(doc) = &documentation_structure {
