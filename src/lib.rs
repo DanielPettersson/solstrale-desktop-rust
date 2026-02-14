@@ -51,6 +51,7 @@ impl ErrorInfo {
 pub struct RenderControl {
     pub abort_sender: Option<Sender<bool>>,
     pub render_receiver: Option<Receiver<RenderMessage>>,
+    pub camera_config_sender: Option<Sender<solstrale::camera::CameraConfig>>,
     pub render_requested: bool,
     pub loading_scene: bool,
     pub initial_render_started: bool,
