@@ -14,4 +14,4 @@ A desktop UI for the Solstråle path tracer
 - A responsive UI that remains fluid during heavy rendering tasks.
 - Visual feedback for rendering progress and estimated time remaining.
 - Integrated help or documentation to guide users in scene creation.
-- Interactive camera controls (orbit, pan, zoom) with smooth damping for intuitive scene exploration.
+- Real-time interactive camera controls (orbit, pan, zoom) with smooth damping and persistent rendering for instantaneous visual feedback.
