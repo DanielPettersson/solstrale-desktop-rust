@@ -52,16 +52,14 @@ fn main() -> Result<(), Box<dyn Error>> {
             .expect("Failed to find an appropriate adapter");
 
         adapter
-            .request_device(
-                &eframe::wgpu::DeviceDescriptor {
-                    label: None,
-                    required_features: eframe::wgpu::Features::empty(),
-                    required_limits: eframe::wgpu::Limits::default(),
-                    memory_hints: Default::default(),
-                    experimental_features: Default::default(),
-                    trace: eframe::wgpu::Trace::Off,
-                }
-            )
+            .request_device(&eframe::wgpu::DeviceDescriptor {
+                label: None,
+                required_features: eframe::wgpu::Features::empty(),
+                required_limits: eframe::wgpu::Limits::default(),
+                memory_hints: Default::default(),
+                experimental_features: Default::default(),
+                trace: eframe::wgpu::Trace::Off,
+            })
             .await
             .expect("Failed to create device")
     });
@@ -98,6 +96,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             .add(ProgressBar::new(samples_per_pixel).with_style(frame_progress_style.clone()));
 
         let (output_sender, output_receiver) = channel();
+        let (_, camera_config_receiver) = channel();
         let (_, abort_receiver) = channel();
 
         let device_clone = device.clone();
@@ -107,8 +106,10 @@ fn main() -> Result<(), Box<dyn Error>> {
                 scene,
                 &output_sender,
                 &abort_receiver,
+                &camera_config_receiver,
                 &device_clone,
                 &queue_clone,
+                false,
             )
             .unwrap();
         });

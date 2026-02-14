@@ -315,6 +315,7 @@ fn render(
 ) -> (Receiver<RenderMessage>, Sender<bool>) {
     let (output_sender, output_receiver) = channel();
     let (abort_sender, abort_receiver) = channel();
+    let (camera_config_sender, camera_config_receiver) = channel();
     let (render_sender, render_receiver) = channel();
 
     if viewport_size.x <= 0.0 || viewport_size.y <= 0.0 {
@@ -342,9 +343,11 @@ fn render(
             ray_trace(
                 scene,
                 &output_sender,
+                &camera_config_receiver,
                 &abort_receiver,
                 &resources.device,
                 &resources.queue,
+                true,
             )
         })();
 
