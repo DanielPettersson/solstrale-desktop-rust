@@ -297,6 +297,7 @@ pub fn render_output(
             rendered_image.height = viewport_size.y as u32;
             render_control.render_receiver = Some(res.0);
             render_control.abort_sender = Some(res.1);
+            render_control.camera_config_sender = Some(res.2);
             render_control.render_requested = false;
             if !render_control.camera_updated {
                 render_control.loading_scene = true;
@@ -312,14 +313,18 @@ fn render(
     viewport_size: Vec2,
     ctx: &Context,
     resources: Arc<RenderResources>,
-) -> (Receiver<RenderMessage>, Sender<bool>) {
+) -> (
+    Receiver<RenderMessage>,
+    Sender<bool>,
+    Sender<solstrale::camera::CameraConfig>,
+) {
     let (output_sender, output_receiver) = channel();
     let (abort_sender, abort_receiver) = channel();
     let (camera_config_sender, camera_config_receiver) = channel();
     let (render_sender, render_receiver) = channel();
 
     if viewport_size.x <= 0.0 || viewport_size.y <= 0.0 {
-        return (render_receiver, abort_sender);
+        return (render_receiver, abort_sender, camera_config_sender);
     }
 
     let render_sender_clone = render_sender.clone();
@@ -373,7 +378,7 @@ fn render(
         }
     });
 
-    (render_receiver, abort_sender)
+    (render_receiver, abort_sender, camera_config_sender)
 }
 
 #[cfg(test)]
@@ -391,5 +396,30 @@ mod tests {
     fn test_render_resources_presence() {
         // This test just ensures the type exists and can be referenced
         let _: Option<RenderResources> = None;
+    }
+
+    #[test]
+    fn test_render_returns_three_channels() {
+        // This is a dummy test to check the signature during compilation
+        // We can't easily call render() here without a full wgpu setup,
+        // but we can check the return type if we had a way to call it.
+        // For now, we'll just let the compilation failure in render_output be our "failing test"
+        // or we can use a small helper function to check the return type.
+        fn check_signature<F>(_f: F)
+        where
+            F: Fn(
+                &str,
+                Option<Scene>,
+                Vec2,
+                &Context,
+                Arc<RenderResources>,
+            ) -> (
+                Receiver<RenderMessage>,
+                Sender<bool>,
+                Sender<solstrale::camera::CameraConfig>,
+            ),
+        {
+        }
+        check_signature(render);
     }
 }
