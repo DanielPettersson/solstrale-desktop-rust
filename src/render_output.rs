@@ -235,25 +235,23 @@ pub fn render_output(
 
     // Handle render restarts
 
-    if render_control.render_requested {
-        if render_control.camera_updated {
-            if let (Some(sender), Some(orbit_camera)) = (
-                &render_control.camera_config_sender,
-                &render_control.orbit_camera,
-            ) {
-                if sender
-                    .send(solstrale::camera::CameraConfig {
-                        vertical_fov_degrees: 60., // Defaulting for now as we don't have it in OrbitCamera
-                        aperture_size: 0.,
-                        look_from: orbit_camera.look_from(),
-                        look_at: orbit_camera.look_at(),
-                        up: Vec3::new(0., 1., 0.),
-                    })
-                    .is_ok()
-                {
-                    render_control.render_requested = false;
-                    render_control.camera_updated = false;
-                }
+    if render_control.render_requested && render_control.camera_updated {
+        if let (Some(sender), Some(orbit_camera)) = (
+            &render_control.camera_config_sender,
+            &render_control.orbit_camera,
+        ) {
+            if sender
+                .send(solstrale::camera::CameraConfig {
+                    vertical_fov_degrees: 60., // Defaulting for now as we don't have it in OrbitCamera
+                    aperture_size: 0.,
+                    look_from: orbit_camera.look_from(),
+                    look_at: orbit_camera.look_at(),
+                    up: Vec3::new(0., 1., 0.),
+                })
+                .is_ok()
+            {
+                render_control.render_requested = false;
+                render_control.camera_updated = false;
             }
         }
     }
@@ -312,7 +310,7 @@ pub fn render_output(
                 scene_yaml,
                 render_control.scene.clone(),
                 viewport_size,
-                &ui.ctx(),
+                ui.ctx(),
                 resources.clone(),
             );
             rendered_image.width = viewport_size.x as u32;
