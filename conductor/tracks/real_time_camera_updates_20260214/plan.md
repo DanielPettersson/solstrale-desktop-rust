@@ -27,7 +27,7 @@ Refactor the UI loop to use the persistent channel for camera updates.
 ## Phase 4: Final Verification & Cleanup
 Ensure stability across all interaction types (YAML change, resize, camera move).
 
-- [ ] Task: Verify that resizing the window still triggers a full restart (correctly setting `render_control.render_requested = true`).
+- [x] Task: Verify that resizing the window still triggers a full restart (correctly setting `render_control.render_requested = true`). f9280f0
 - [ ] Task: Verify that YAML changes still trigger a full restart.
 - [ ] Task: Run full project tests and linting.
 - [ ] Task: Conductor - User Manual Verification 'Final Verification & Cleanup' (Protocol in workflow.md)
