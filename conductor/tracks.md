@@ -5,5 +5,5 @@
 
 ---
 
-- [~] **Track: Interactive Camera Controls (OrbitControls style)**
+- [x] **Track: Interactive Camera Controls (OrbitControls style)**
 *Link: [./tracks/interactive_camera_20260214/](./tracks/interactive_camera_20260214/)*
