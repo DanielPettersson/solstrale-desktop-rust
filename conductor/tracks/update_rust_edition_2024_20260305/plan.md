@@ -19,7 +19,7 @@
 - [x] Task: Conductor - User Manual Verification 'Manual Resolution and Refactoring' (Protocol in workflow.md) 8e71956
 
 ## Phase 4: Final Validation
-- [ ] Task: Execute the full project test suite and confirm all tests pass under the 2024 edition.
-- [ ] Task: Verify that the desktop UI (eframe/egui) remains functional and stable.
+- [x] Task: Execute the full project test suite and confirm all tests pass under the 2024 edition. d75270f
+- [~] Task: Verify that the desktop UI (eframe/egui) remains functional and stable.
 - [ ] Task: Ensure the `solstrale` rendering engine and image processing tasks continue to operate as expected.
 - [ ] Task: Conductor - User Manual Verification 'Final Validation' (Protocol in workflow.md)
