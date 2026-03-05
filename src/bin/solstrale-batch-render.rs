@@ -114,7 +114,6 @@ fn main() -> Result<(), Box<dyn Error>> {
             .unwrap();
         });
 
-
         let mut image_buffer: Option<wgpu::Buffer> = None;
         for render_output in &output_receiver {
             image_buffer = Some(render_output.output_buffer);
