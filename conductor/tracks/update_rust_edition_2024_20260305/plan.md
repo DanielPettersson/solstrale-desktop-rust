@@ -13,8 +13,8 @@
 - [x] Task: Conductor - User Manual Verification 'Automated Migration' (Protocol in workflow.md) f3c8823
 
 ## Phase 3: Manual Resolution and Refactoring
-- [ ] Task: Fix any remaining compilation errors that `cargo fix` could not automatically resolve.
-- [ ] Task: Proactive Refactoring: Refactor the codebase to leverage new Rust 2024 idioms and language features (e.g., `gen` keyword, improved `impl Trait`, and other 2024-specific enhancements).
+- [x] Task: Fix any remaining compilation errors that `cargo fix` could not automatically resolve. 3ae1c53
+- [~] Task: Proactive Refactoring: Refactor the codebase to leverage new Rust 2024 idioms and language features (e.g., `gen` keyword, improved `impl Trait`, and other 2024-specific enhancements).
 - [ ] Task: Resolve any new compiler warnings or Clippy lints introduced by the 2024 edition.
 - [ ] Task: Conductor - User Manual Verification 'Manual Resolution and Refactoring' (Protocol in workflow.md)
 
