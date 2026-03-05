@@ -1,8 +1,0 @@
-{
-  "track_id": "adapt_render_output_20260211",
-  "type": "feature",
-  "status": "new",
-  "created_at": "2026-02-11T12:00:00Z",
-  "updated_at": "2026-02-11T12:00:00Z",
-  "description": "The solstrale RenderProgress has change it's render_image field to an output_buffer field of type wgpu::Buffer. We want to adapt render_output.rs to this change, so that the rendered output is now displayed efficiently using this. For example it could use a fragment shader that displays the output_buffer."
-}
