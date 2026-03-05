@@ -4,11 +4,11 @@ use std::sync::mpsc::channel;
 use std::{fs, thread};
 
 use clap::Parser;
-use image::RgbImage;
+use eframe::wgpu;
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use solstrale::ray_trace;
 use solstrale::renderer::RenderImageStrategy::OnlyFinal;
-
+use solstrale::util::wgpu_util::buffer_to_image;
 use solstrale_desktop_rust::model::{parse_scene_yaml, Creator, CreatorContext};
 
 #[derive(Parser)]
@@ -114,18 +114,26 @@ fn main() -> Result<(), Box<dyn Error>> {
             .unwrap();
         });
 
-        /*
-        let mut image = RgbImage::new(screen_width as u32, screen_height as u32);
-        for render_output in output_receiver {
-            if let Some(render_image) = render_output.render_image {
-                image = render_image;
-            }
+
+        let mut image_buffer: Option<wgpu::Buffer> = None;
+        for render_output in &output_receiver {
+            image_buffer = Some(render_output.output_buffer);
             total_progress_bar.inc(1);
             frame_progress_bar.inc(1);
         }
 
-        image.save(format!("frame_{:0>8}.png", frame_index))?;
-        */
+        if let Some(buffer) = image_buffer {
+            let image = buffer_to_image(
+                &device,
+                &queue,
+                &buffer,
+                screen_width as u32,
+                screen_height as u32,
+            );
+
+            image.save(format!("frame_{:0>8}.png", frame_index))?;
+        }
+
         for _ in output_receiver {
             total_progress_bar.inc(1);
             frame_progress_bar.inc(1);
