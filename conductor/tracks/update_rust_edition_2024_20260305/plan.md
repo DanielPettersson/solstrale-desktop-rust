@@ -7,8 +7,8 @@
 - [x] Task: Conductor - User Manual Verification 'Preparation' (Protocol in workflow.md) 9dbff35
 
 ## Phase 2: Automated Migration
-- [ ] Task: Execute `cargo fix --edition` to automatically update imports and address other migration requirements.
-- [ ] Task: Update the `edition` field in `Cargo.toml` to `"2024"`.
+- [x] Task: Execute `cargo fix --edition` to automatically update imports and address other migration requirements. a0b5869
+- [~] Task: Update the `edition` field in `Cargo.toml` to `"2024"`.
 - [ ] Task: Re-run `cargo fix --edition` to perform any additional 2024-specific migrations and ensure consistency.
 - [ ] Task: Conductor - User Manual Verification 'Automated Migration' (Protocol in workflow.md)
 
