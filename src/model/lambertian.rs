@@ -9,7 +9,7 @@ use crate::model::texture::Texture;
 use crate::model::FieldType::Optional;
 use crate::model::{Creator, CreatorContext, DocumentationStructure, FieldInfo, HelpDocumentation};
 
-#[derive(Serialize, Deserialize, PartialEq, Debug, Default)]
+#[derive(Serialize, Deserialize, PartialEq, Debug, Default, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct Lambertian {
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -29,7 +29,8 @@ impl Creator<Materials> for Lambertian {
                 None => None,
                 Some(n) => Some(n.create(ctx)?),
             },
-        ))
+        )
+        .into())
     }
 }
 

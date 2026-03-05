@@ -5,7 +5,7 @@ use solstrale::material::texture::{ImageMap, Textures};
 use std::collections::HashMap;
 use std::error::Error;
 
-#[derive(Serialize, Deserialize, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct Image {
     pub file: String,
@@ -13,7 +13,7 @@ pub struct Image {
 
 impl Creator<Textures> for Image {
     fn create(&self, _: &CreatorContext) -> Result<Textures, Box<dyn Error>> {
-        ImageMap::load(self.file.as_ref())
+        ImageMap::load(self.file.as_ref()).map(|t| t.into())
     }
 }
 

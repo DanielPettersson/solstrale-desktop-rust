@@ -7,20 +7,17 @@ use solstrale::post::PostProcessors;
 use solstrale::renderer::RenderImageStrategy;
 
 use crate::model::post_processor::PostProcessor;
-use crate::model::shader::Shader;
 use crate::model::width_height::WidthHeight;
 use crate::model::FieldType::{Optional, OptionalList};
 use crate::model::{Creator, CreatorContext, DocumentationStructure, FieldInfo, HelpDocumentation};
 
-#[derive(Serialize, Deserialize, PartialEq, Debug, Default)]
+#[derive(Serialize, Deserialize, PartialEq, Debug, Default, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct RenderConfig {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub width_height: Option<WidthHeight>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub samples_per_pixel: Option<u32>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub shader: Option<Shader>,
     #[serde(skip_serializing_if = "Vec::is_empty", default)]
     pub post_processors: Vec<PostProcessor>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -50,11 +47,6 @@ impl Creator<solstrale::renderer::RenderConfig> for RenderConfig {
             width,
             height,
             samples_per_pixel: self.samples_per_pixel.unwrap_or(200),
-            shader: self
-                .shader
-                .as_ref()
-                .unwrap_or(&Shader::default())
-                .create(ctx)?,
             post_processors,
             render_image_strategy: if preview_interval == 0 {
                 RenderImageStrategy::EverySample
@@ -81,11 +73,6 @@ impl HelpDocumentation for RenderConfig {
                     "Number of rays shot for each pixel. More rays gives less noisy image but takes longer time. Defaults to 200",
                     Optional,
                     "Count of rays shot per pixel",
-                )),
-                ("shader".to_string(), FieldInfo::new(
-                    "A shader is responsible for coloring the pixels where a ray has hit an object. Defaults to a path tracing shader",
-                    Optional,
-                    Shader::get_documentation_structure(depth + 1),
                 )),
                 ("post_processors".to_string(), FieldInfo::new(
                     "A post processor is applied to the image after rendering for various effects",

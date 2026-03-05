@@ -9,7 +9,7 @@ use crate::model::texture::Texture;
 use crate::model::FieldType::Optional;
 use crate::model::{Creator, CreatorContext, DocumentationStructure, FieldInfo, HelpDocumentation};
 
-#[derive(Serialize, Deserialize, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct Glass {
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -32,7 +32,8 @@ impl Creator<Materials> for Glass {
                 Some(n) => Some(n.create(ctx)?),
             },
             self.index_of_refraction.unwrap_or(1.5),
-        ))
+        )
+        .into())
     }
 }
 

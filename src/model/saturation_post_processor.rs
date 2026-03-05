@@ -7,7 +7,7 @@ use solstrale::post::PostProcessors;
 use crate::model::FieldType::Optional;
 use crate::model::{Creator, CreatorContext, DocumentationStructure, FieldInfo, HelpDocumentation};
 
-#[derive(Serialize, Deserialize, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct SaturationPostProcessor {
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -15,10 +15,12 @@ pub struct SaturationPostProcessor {
 }
 
 impl Creator<PostProcessors> for SaturationPostProcessor {
-    fn create(&self, _: &CreatorContext) -> Result<PostProcessors, Box<dyn Error>> {
+    fn create(&self, ctx: &CreatorContext) -> Result<PostProcessors, Box<dyn Error>> {
         Ok(solstrale::post::SaturationPostProcessor::new(
             self.saturation_factor.unwrap_or(0.5),
-        )?)
+            ctx.device,
+        )?
+        .into())
     }
 }
 

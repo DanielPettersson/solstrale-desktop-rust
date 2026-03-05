@@ -2,7 +2,6 @@ render_configuration:
   post_processors:
     - bloom:
         max_intensity: 2
-    - denoise: {}
 camera:
   vertical_fov_degrees: 35.0
   look_from: 278, 278, -800
@@ -29,7 +28,7 @@ world:
       u: -260, 0, 0
       v: 0, 0, -210
       material:
-        light: {}
+        light: { }
   - quad:
       q: 0, 0, 0
       u: 555, 0, 0
@@ -41,7 +40,7 @@ world:
   - quad:
       q: 0, 0, 555
       u: 555, 0, 0
-      v: 0, 555, 0
+      v: 0, 555, 1
   - box:
       a: 0, 0, 0
       b: 165, 330, 165

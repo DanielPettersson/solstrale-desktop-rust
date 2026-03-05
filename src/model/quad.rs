@@ -10,7 +10,7 @@ use crate::model::transformation::{create_transformation, Transformation};
 use crate::model::FieldType::{Normal, Optional, OptionalList};
 use crate::model::{Creator, CreatorContext, DocumentationStructure, FieldInfo, HelpDocumentation};
 
-#[derive(Serialize, Deserialize, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct Quad {
     pub q: Pos,
@@ -33,7 +33,8 @@ impl Creator<Hittables> for Quad {
                 .unwrap_or(&Material::default())
                 .create(ctx)?,
             &create_transformation(&self.transformations, ctx)?,
-        ))
+        )
+        .into())
     }
 }
 

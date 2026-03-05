@@ -4,11 +4,11 @@ use std::sync::mpsc::channel;
 use std::{fs, thread};
 
 use clap::Parser;
-use image::RgbImage;
+use eframe::wgpu;
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use solstrale::ray_trace;
 use solstrale::renderer::RenderImageStrategy::OnlyFinal;
-
+use solstrale::util::wgpu_util::buffer_to_image;
 use solstrale_desktop_rust::model::{parse_scene_yaml, Creator, CreatorContext};
 
 #[derive(Parser)]
@@ -40,6 +40,30 @@ fn main() -> Result<(), Box<dyn Error>> {
     let screen_height = cli.height as usize;
     let scene_path = cli.scene_path;
 
+    let (device, queue) = pollster::block_on(async {
+        let instance = eframe::wgpu::Instance::default();
+        let adapter = instance
+            .request_adapter(&eframe::wgpu::RequestAdapterOptions {
+                power_preference: eframe::wgpu::PowerPreference::HighPerformance,
+                compatible_surface: None,
+                force_fallback_adapter: false,
+            })
+            .await
+            .expect("Failed to find an appropriate adapter");
+
+        adapter
+            .request_device(&eframe::wgpu::DeviceDescriptor {
+                label: None,
+                required_features: eframe::wgpu::Features::empty(),
+                required_limits: eframe::wgpu::Limits::default(),
+                memory_hints: Default::default(),
+                experimental_features: Default::default(),
+                trace: eframe::wgpu::Trace::Off,
+            })
+            .await
+            .expect("Failed to create device")
+    });
+
     let multi_progress = MultiProgress::new();
     let total_progress_style = ProgressStyle::with_template(
         "[elapsed: {elapsed}, eta: {eta}] {wide_bar:.green/blue} {percent:>3}% Total progress",
@@ -61,6 +85,8 @@ fn main() -> Result<(), Box<dyn Error>> {
         let mut scene = parse_scene_yaml(&scene_yaml, frame_index)?.create(&CreatorContext {
             screen_width,
             screen_height,
+            device: &device,
+            queue: &queue,
         })?;
         scene.render_config.render_image_strategy = OnlyFinal;
 
@@ -70,22 +96,48 @@ fn main() -> Result<(), Box<dyn Error>> {
             .add(ProgressBar::new(samples_per_pixel).with_style(frame_progress_style.clone()));
 
         let (output_sender, output_receiver) = channel();
+        let (_, camera_config_receiver) = channel();
         let (_, abort_receiver) = channel();
 
+        let device_clone = device.clone();
+        let queue_clone = queue.clone();
         thread::spawn(move || {
-            ray_trace(scene, &output_sender, &abort_receiver).unwrap();
+            ray_trace(
+                scene,
+                &output_sender,
+                &abort_receiver,
+                &camera_config_receiver,
+                &device_clone,
+                &queue_clone,
+                false,
+            )
+            .unwrap();
         });
 
-        let mut image = RgbImage::new(screen_width as u32, screen_height as u32);
-        for render_output in output_receiver {
-            if let Some(render_image) = render_output.render_image {
-                image = render_image;
-            }
+
+        let mut image_buffer: Option<wgpu::Buffer> = None;
+        for render_output in &output_receiver {
+            image_buffer = Some(render_output.output_buffer);
             total_progress_bar.inc(1);
             frame_progress_bar.inc(1);
         }
 
-        image.save(format!("frame_{:0>8}.png", frame_index))?;
+        if let Some(buffer) = image_buffer {
+            let image = buffer_to_image(
+                &device,
+                &queue,
+                &buffer,
+                screen_width as u32,
+                screen_height as u32,
+            );
+
+            image.save(format!("frame_{:0>8}.png", frame_index))?;
+        }
+
+        for _ in output_receiver {
+            total_progress_bar.inc(1);
+            frame_progress_bar.inc(1);
+        }
         multi_progress.remove(&frame_progress_bar);
     }
 

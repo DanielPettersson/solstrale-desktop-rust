@@ -2,19 +2,17 @@ use std::collections::HashMap;
 use std::error::Error;
 
 use derive_more::Display;
+use eframe::wgpu;
 
 use crate::model::pos::Pos;
 use crate::model::scene::Scene;
 use crate::model::template::apply_template;
 
-mod albedo_shader;
 mod blend;
 mod bloom_post_processor;
 mod r#box;
 mod camera_config;
-mod constant_medium;
 mod custom_width_height;
-mod denoise_post_processor;
 mod glass;
 mod half_screen_width_height;
 mod hittable;
@@ -23,10 +21,9 @@ mod lambertian;
 mod light;
 mod material;
 mod metal;
-mod normal_shader;
+pub mod orbit_camera;
 mod normal_texture;
 mod obj_model;
-mod path_tracing_shader;
 mod plastic;
 mod pos;
 mod post_processor;
@@ -37,8 +34,6 @@ mod rgb;
 mod saturation_post_processor;
 pub mod scene;
 mod screen_width_height;
-mod shader;
-mod simple_shader;
 mod sphere;
 mod template;
 mod texture;
@@ -66,9 +61,11 @@ impl ModelError {
 
 impl Error for ModelError {}
 
-pub struct CreatorContext {
+pub struct CreatorContext<'a> {
     pub screen_width: usize,
     pub screen_height: usize,
+    pub device: &'a wgpu::Device,
+    pub queue: &'a wgpu::Queue,
 }
 
 pub trait Creator<T> {
@@ -176,16 +173,13 @@ mod test {
     use crate::model::bloom_post_processor::BloomPostProcessor;
     use crate::model::camera_config::CameraConfig;
     use crate::model::custom_width_height::CustomWidthHeight;
-    use crate::model::denoise_post_processor::DenoisePostProcessor;
     use crate::model::hittable::Hittable;
     use crate::model::lambertian::Lambertian;
     use crate::model::material::Material;
     use crate::model::metal::Metal;
-    use crate::model::path_tracing_shader::PathTracingShader;
     use crate::model::post_processor::PostProcessor;
     use crate::model::render_config::RenderConfig;
     use crate::model::rgb::Rgb;
-    use crate::model::shader::Shader;
     use crate::model::texture::Texture;
     use crate::model::transformation::Transformation;
     use crate::model::width_height::WidthHeight;
@@ -283,30 +277,14 @@ mod test {
                     }),
                 }),
                 samples_per_pixel: Some(50),
-                shader: Some(Shader {
-                    path_tracing: Some(PathTracingShader {
-                        max_depth: Some(50),
+                post_processors: vec![PostProcessor {
+                    bloom: Some(BloomPostProcessor {
+                        kernel_size_fraction: Some(0.1),
+                        threshold: Some(1.5),
+                        max_intensity: None,
                     }),
-                    simple: None,
-                    albedo: None,
-                    normal: None,
-                }),
-                post_processors: vec![
-                    PostProcessor {
-                        bloom: Some(BloomPostProcessor {
-                            kernel_size_fraction: Some(0.1),
-                            threshold: Some(1.5),
-                            max_intensity: None,
-                        }),
-                        denoise: None,
-                        saturation: None,
-                    },
-                    PostProcessor {
-                        bloom: None,
-                        denoise: Some(DenoisePostProcessor {}),
-                        saturation: None,
-                    },
-                ],
+                    saturation: None,
+                }],
                 preview_interval_ms: Some(1000),
             }),
         };
@@ -319,14 +297,10 @@ mod test {
       width: 200
       height: 100
   samples_per_pixel: 50
-  shader:
-    path_tracing:
-      max_depth: 50
   post_processors:
   - bloom:
       kernel_size_fraction: 0.1
       threshold: 1.5
-  - denoise: {}
   preview_interval_ms: 1000
 background_color: 0, 0, 0
 camera:

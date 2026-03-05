@@ -1,4 +1,3 @@
-use crate::model::constant_medium::ConstantMedium;
 use crate::model::obj_model::ObjModel;
 use crate::model::quad::Quad;
 use crate::model::r#box::Box;
@@ -12,7 +11,7 @@ use solstrale::hittable::Hittables;
 use std::collections::HashMap;
 use std::error::Error;
 
-#[derive(Serialize, Deserialize, PartialEq, Debug, Default)]
+#[derive(Serialize, Deserialize, PartialEq, Debug, Default, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct Hittable {
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -23,8 +22,6 @@ pub struct Hittable {
     pub quad: Option<Quad>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub r#box: Option<Box>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub constant_medium: Option<ConstantMedium>,
 }
 
 impl Creator<Vec<Hittables>> for Hittable {
@@ -35,36 +32,25 @@ impl Creator<Vec<Hittables>> for Hittable {
                 model: None,
                 quad: None,
                 r#box: None,
-                constant_medium: None,
             } => s.create(ctx).map(|h| vec![h]),
             Hittable {
                 sphere: None,
                 model: Some(m),
                 quad: None,
                 r#box: None,
-                constant_medium: None,
             } => m.create(ctx).map(|h| vec![h]),
             Hittable {
                 sphere: None,
                 model: None,
                 quad: Some(q),
                 r#box: None,
-                constant_medium: None,
             } => q.create(ctx).map(|h| vec![h]),
             Hittable {
                 sphere: None,
                 model: None,
                 quad: None,
                 r#box: Some(b),
-                constant_medium: None,
             } => b.create(ctx),
-            Hittable {
-                sphere: None,
-                model: None,
-                quad: None,
-                r#box: None,
-                constant_medium: Some(cm),
-            } => cm.create(ctx).map(|h| vec![h]),
             _ => Err(From::from(ModelError::new(
                 "Hittable should have single field defined",
             ))),
@@ -96,11 +82,6 @@ impl HelpDocumentation for Hittable {
                     "A cuboid object consisting of 6 quads",
                     Optional,
                     Box::get_documentation_structure(depth + 1)
-                )),
-                ("constant_medium".to_string(), FieldInfo::new(
-                    "A box shaped hittable object with a fog-type material",
-                    Optional,
-                    ConstantMedium::get_documentation_structure(depth + 1)
                 )),
             ]),
         }

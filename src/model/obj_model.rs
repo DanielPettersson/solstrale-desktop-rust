@@ -17,7 +17,7 @@ use std::error::Error;
 static MODEL_CACHE: Lazy<Cache<String, Result<Hittables, ModelError>>> =
     Lazy::new(|| Cache::new(4));
 
-#[derive(Serialize, Deserialize, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct ObjModel {
     pub path: String,
@@ -31,10 +31,10 @@ pub struct ObjModel {
 impl Creator<Hittables> for ObjModel {
     fn create(&self, ctx: &CreatorContext) -> Result<Hittables, Box<dyn Error>> {
         let material = self.material.as_ref().map_or(
-            Ok(solstrale::material::Lambertian::new(
-                SolidColor::new(1., 1., 1.),
-                None,
-            )),
+            Ok(
+                solstrale::material::Lambertian::new(SolidColor::new(1., 1., 1.).into(), None)
+                    .into(),
+            ),
             |m| m.create(ctx),
         )?;
         let transformation = create_transformation(&self.transformations, ctx)?;
@@ -44,6 +44,7 @@ impl Creator<Hittables> for ObjModel {
             Obj::new(&self.path, &self.name)
                 .load(&transformation, Some(material))
                 .map_err(ModelError::new_from_err)
+                .map(|m| m.into())
         });
 
         match model_result {

@@ -9,7 +9,7 @@ use crate::model::texture::Texture;
 use crate::model::FieldType::Optional;
 use crate::model::{Creator, CreatorContext, DocumentationStructure, FieldInfo, HelpDocumentation};
 
-#[derive(Serialize, Deserialize, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct Metal {
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -31,7 +31,8 @@ impl Creator<Materials> for Metal {
                 Some(n) => Some(n.create(ctx)?),
             },
             self.fuzz.unwrap_or(0.05),
-        ))
+        )
+        .into())
     }
 }
 

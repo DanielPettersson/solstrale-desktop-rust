@@ -7,7 +7,7 @@ use solstrale::hittable::Hittables;
 use std::collections::HashMap;
 use std::error::Error;
 
-#[derive(Serialize, Deserialize, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct Sphere {
     pub center: Pos,
@@ -25,7 +25,8 @@ impl Creator<Hittables> for Sphere {
                 .as_ref()
                 .unwrap_or(&Material::default())
                 .create(ctx)?,
-        ))
+        )
+        .into())
     }
 }
 

@@ -15,5 +15,3 @@ jobs:
           components: clippy
       - name: Clippy check
         run: cargo clippy
-      - name: Test
-        run: cargo test

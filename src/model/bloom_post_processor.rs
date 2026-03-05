@@ -7,7 +7,7 @@ use solstrale::post::PostProcessors;
 use crate::model::FieldType::Optional;
 use crate::model::{Creator, CreatorContext, DocumentationStructure, FieldInfo, HelpDocumentation};
 
-#[derive(Serialize, Deserialize, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct BloomPostProcessor {
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -19,12 +19,14 @@ pub struct BloomPostProcessor {
 }
 
 impl Creator<PostProcessors> for BloomPostProcessor {
-    fn create(&self, _: &CreatorContext) -> Result<PostProcessors, Box<dyn Error>> {
+    fn create(&self, ctx: &CreatorContext) -> Result<PostProcessors, Box<dyn Error>> {
         Ok(solstrale::post::BloomPostProcessor::new(
             self.kernel_size_fraction.unwrap_or(0.1),
             self.threshold,
             self.max_intensity,
-        )?)
+            ctx.device,
+        )?
+        .into())
     }
 }
 
