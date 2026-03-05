@@ -5,5 +5,5 @@
 
 ---
 
-- [~] **Track: Update the rust edition to 2024**
+- [x] **Track: Update the rust edition to 2024**
 *Link: [./tracks/update_rust_edition_2024_20260305/](./tracks/update_rust_edition_2024_20260305/)*
