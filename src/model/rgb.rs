@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use solstrale::geo::vec3::Vec3;
 
 use crate::model::{
-    parse_option, Creator, CreatorContext, DocumentationStructure, HelpDocumentation,
+    Creator, CreatorContext, DocumentationStructure, HelpDocumentation, parse_option,
 };
 
 #[derive(PartialEq, Debug, Copy, Clone)]
@@ -62,6 +62,8 @@ impl Creator<Vec3> for Rgb {
 
 impl HelpDocumentation for Rgb {
     fn get_documentation_structure(_: u8) -> DocumentationStructure {
-        DocumentationStructure::new_simple("Value describing an R, G, B color. For example: 1, 1, 0 for yellow or 0.5, 0.5, 0.5 for gray")
+        DocumentationStructure::new_simple(
+            "Value describing an R, G, B color. For example: 1, 1, 0 for yellow or 0.5, 0.5, 0.5 for gray",
+        )
     }
 }

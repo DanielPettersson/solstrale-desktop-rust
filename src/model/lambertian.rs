@@ -4,9 +4,9 @@ use std::error::Error;
 use serde::{Deserialize, Serialize};
 use solstrale::material::Materials;
 
+use crate::model::FieldType::Optional;
 use crate::model::normal_texture::NormalTexture;
 use crate::model::texture::Texture;
-use crate::model::FieldType::Optional;
 use crate::model::{Creator, CreatorContext, DocumentationStructure, FieldInfo, HelpDocumentation};
 
 #[derive(Serialize, Deserialize, PartialEq, Debug, Default, Clone)]
@@ -39,16 +39,22 @@ impl HelpDocumentation for Lambertian {
         DocumentationStructure {
             description: "A material with the appearance of a matte surface".to_string(),
             fields: HashMap::from([
-                ("albedo".to_string(), FieldInfo::new(
-                    "Texture for the material's albedo color",
-                    Optional,
-                    Texture::get_documentation_structure(depth + 1)
-                )),
-                ("normal".to_string(), FieldInfo::new(
-                    "Texture for the material's normals. Used to give the illusion of fine structure of the hittable",
-                    Optional,
-                    NormalTexture::get_documentation_structure(depth + 1)
-                )),
+                (
+                    "albedo".to_string(),
+                    FieldInfo::new(
+                        "Texture for the material's albedo color",
+                        Optional,
+                        Texture::get_documentation_structure(depth + 1),
+                    ),
+                ),
+                (
+                    "normal".to_string(),
+                    FieldInfo::new(
+                        "Texture for the material's normals. Used to give the illusion of fine structure of the hittable",
+                        Optional,
+                        NormalTexture::get_documentation_structure(depth + 1),
+                    ),
+                ),
             ]),
         }
     }

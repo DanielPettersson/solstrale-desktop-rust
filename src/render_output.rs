@@ -1,4 +1,4 @@
-use std::sync::mpsc::{channel, Receiver, Sender, TryRecvError};
+use std::sync::mpsc::{Receiver, Sender, TryRecvError, channel};
 use std::sync::{Arc, Mutex};
 use std::thread;
 
@@ -10,7 +10,7 @@ use solstrale::ray_trace;
 
 use crate::model::orbit_camera::OrbitCamera;
 use crate::model::scene::Scene;
-use crate::model::{parse_scene_yaml, Creator, CreatorContext};
+use crate::model::{Creator, CreatorContext, parse_scene_yaml};
 use crate::{
     ErrorInfo, RenderCallback, RenderControl, RenderMessage, RenderResources, RenderedImage,
 };
@@ -180,20 +180,19 @@ pub fn render_output(
         if let (Some(resources), Some(output_buffer)) = (
             &rendered_image.render_resources,
             &rendered_image.output_buffer,
-        ) {
-            if output_buffer.size() > 0 {
-                ui.painter()
-                    .add(eframe::egui_wgpu::Callback::new_paint_callback(
-                        rect,
-                        RenderCallback {
-                            resources: resources.clone(),
-                            output_buffer: output_buffer.clone(),
-                            width: rendered_image.width,
-                            height: rendered_image.height,
-                            bind_group: Arc::new(Mutex::new(None)),
-                        },
-                    ));
-            }
+        ) && output_buffer.size() > 0
+        {
+            ui.painter()
+                .add(eframe::egui_wgpu::Callback::new_paint_callback(
+                    rect,
+                    RenderCallback {
+                        resources: resources.clone(),
+                        output_buffer: output_buffer.clone(),
+                        width: rendered_image.width,
+                        height: rendered_image.height,
+                        bind_group: Arc::new(Mutex::new(None)),
+                    },
+                ));
         }
 
         // Handle camera interactions
@@ -234,15 +233,14 @@ pub fn render_output(
 
     // Handle render restarts
 
-    if render_control.camera_updated {
-        if let (Some(sender), Some(orbit_camera)) = (
+    if render_control.camera_updated
+        && let (Some(sender), Some(orbit_camera)) = (
             &render_control.camera_config_sender,
             &render_control.orbit_camera,
-        ) {
-            if sender.send(orbit_camera.into()).is_ok() {
-                render_control.camera_updated = false;
-            }
-        }
+        )
+        && sender.send(orbit_camera.into()).is_ok()
+    {
+        render_control.camera_updated = false;
     }
 
     if render_control.render_requested {
@@ -260,47 +258,49 @@ pub fn render_output(
         }
     }
 
-    if render_control.render_requested && viewport_size.x > 0.0 && viewport_size.y > 0.0 {
-        if let Some(resources) = rendered_image.render_resources.as_ref() {
-            if render_control.scene.is_none() {
-                if let Ok(s) = parse_scene_yaml(scene_yaml, 0) {
-                    let ctx = CreatorContext {
-                        screen_width: viewport_size.x as usize,
-                        screen_height: viewport_size.y as usize,
-                        device: &resources.device,
-                        queue: &resources.queue,
-                    };
+    if render_control.render_requested
+        && viewport_size.x > 0.0
+        && viewport_size.y > 0.0
+        && let Some(resources) = rendered_image.render_resources.as_ref()
+    {
+        if render_control.scene.is_none()
+            && let Ok(s) = parse_scene_yaml(scene_yaml, 0)
+        {
+            let ctx = CreatorContext {
+                screen_width: viewport_size.x as usize,
+                screen_height: viewport_size.y as usize,
+                device: &resources.device,
+                queue: &resources.queue,
+            };
 
-                    render_control.orbit_camera = Some(OrbitCamera::new(&s.camera, &ctx, 1.));
-                    render_control.scene = Some(s);
-                }
-            }
-
-            if let (Some(scene), Some(orbit_camera)) =
-                (&mut render_control.scene, &render_control.orbit_camera)
-            {
-                scene.camera.look_from = orbit_camera.look_from().into();
-                scene.camera.look_at = Some(orbit_camera.look_at().into());
-            }
-
-            let res = render(
-                scene_yaml,
-                render_control.scene.clone(),
-                viewport_size,
-                ui.ctx(),
-                resources.clone(),
-            );
-            rendered_image.width = viewport_size.x as u32;
-            rendered_image.height = viewport_size.y as u32;
-            render_control.render_receiver = Some(res.0);
-            render_control.abort_sender = Some(res.1);
-            render_control.camera_config_sender = Some(res.2);
-            render_control.render_requested = false;
-            if !render_control.camera_updated {
-                render_control.loading_scene = true;
-            }
-            render_control.camera_updated = false;
+            render_control.orbit_camera = Some(OrbitCamera::new(&s.camera, &ctx, 1.));
+            render_control.scene = Some(s);
         }
+
+        if let (Some(scene), Some(orbit_camera)) =
+            (&mut render_control.scene, &render_control.orbit_camera)
+        {
+            scene.camera.look_from = orbit_camera.look_from().into();
+            scene.camera.look_at = Some(orbit_camera.look_at().into());
+        }
+
+        let res = render(
+            scene_yaml,
+            render_control.scene.clone(),
+            viewport_size,
+            ui.ctx(),
+            resources.clone(),
+        );
+        rendered_image.width = viewport_size.x as u32;
+        rendered_image.height = viewport_size.y as u32;
+        render_control.render_receiver = Some(res.0);
+        render_control.abort_sender = Some(res.1);
+        render_control.camera_config_sender = Some(res.2);
+        render_control.render_requested = false;
+        if !render_control.camera_updated {
+            render_control.loading_scene = true;
+        }
+        render_control.camera_updated = false;
     }
 }
 

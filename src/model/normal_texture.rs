@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::error::Error;
 
 use serde::{Deserialize, Serialize};
-use solstrale::material::texture::{load_normal_texture, Textures};
+use solstrale::material::texture::{Textures, load_normal_texture};
 
 use crate::model::FieldType::Normal;
 use crate::model::{Creator, CreatorContext, DocumentationStructure, FieldInfo, HelpDocumentation};

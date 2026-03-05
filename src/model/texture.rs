@@ -1,6 +1,6 @@
+use crate::model::FieldType::Optional;
 use crate::model::image::Image;
 use crate::model::rgb::Rgb;
-use crate::model::FieldType::Optional;
 use crate::model::{
     Creator, CreatorContext, DocumentationStructure, FieldInfo, HelpDocumentation, ModelError,
 };

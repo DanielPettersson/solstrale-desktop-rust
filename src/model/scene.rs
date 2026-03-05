@@ -4,11 +4,11 @@ use std::error::Error;
 use serde::{Deserialize, Serialize};
 use solstrale::hittable::Bvh;
 
+use crate::model::FieldType::{List, Normal, Optional};
 use crate::model::camera_config::CameraConfig;
 use crate::model::hittable::Hittable;
 use crate::model::render_config::RenderConfig;
 use crate::model::rgb::Rgb;
-use crate::model::FieldType::{List, Normal, Optional};
 use crate::model::{Creator, CreatorContext, DocumentationStructure, FieldInfo, HelpDocumentation};
 
 #[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]

@@ -134,11 +134,7 @@ impl From<&OrbitCamera> for CameraConfig {
 
 fn normalize(v: Vec3) -> Vec3 {
     let len = v.length();
-    if len > 0. {
-        v / len
-    } else {
-        v
-    }
+    if len > 0. { v / len } else { v }
 }
 
 fn cross(a: Vec3, b: Vec3) -> Vec3 {

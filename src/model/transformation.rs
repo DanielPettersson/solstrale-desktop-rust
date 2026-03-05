@@ -1,5 +1,5 @@
-use crate::model::pos::Pos;
 use crate::model::FieldType::Optional;
+use crate::model::pos::Pos;
 use crate::model::{
     Creator, CreatorContext, DocumentationStructure, FieldInfo, HelpDocumentation, ModelError,
 };

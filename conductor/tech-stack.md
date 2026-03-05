@@ -1,7 +1,7 @@
 # Technology Stack
 
 ## Core Technologies
-- **Programming Language:** Rust (2021 Edition)
+- **Programming Language:** Rust (2024 Edition)
 - **UI Framework:** [eframe](https://github.com/emilk/egui/tree/master/crates/eframe) / [egui](https://github.com/emilk/egui) (v0.33.0) - A fast, easy-to-use GUI library.
 - **Rendering Engine:** [solstrale](https://github.com/DanielPettersson/solstrale-rust.git) - The underlying path tracing engine.
 

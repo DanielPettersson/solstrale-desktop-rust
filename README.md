@@ -18,7 +18,7 @@ A desktop UI for the [Solstråle path tracer](https://github.com/DanielPettersso
 
 ## Technology Stack
 
-*   **Language:** Rust (2021 Edition)
+*   **Language:** Rust (2024 Edition)
 *   **UI Framework:** [egui](https://github.com/emilk/egui) / [eframe](https://github.com/emilk/egui/tree/master/crates/eframe)
 *   **Rendering Engine:** [Solstråle](https://github.com/DanielPettersson/solstrale-rust)
 *   **Syntax Highlighting:** [syntect](https://github.com/trishume/syntect)

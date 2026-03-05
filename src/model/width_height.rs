@@ -3,11 +3,11 @@ use std::error::Error;
 
 use serde::{Deserialize, Serialize};
 
+use crate::model::FieldType::{Normal, OptionalList};
 use crate::model::custom_width_height::CustomWidthHeight;
 use crate::model::half_screen_width_height::HalfScreenWidthHeight;
 use crate::model::quarter_screen_width_height::QuarterScreenWidthHeight;
 use crate::model::screen_width_height::ScreenWidthHeight;
-use crate::model::FieldType::{Normal, OptionalList};
 use crate::model::{
     Creator, CreatorContext, DocumentationStructure, FieldInfo, HelpDocumentation, ModelError,
 };

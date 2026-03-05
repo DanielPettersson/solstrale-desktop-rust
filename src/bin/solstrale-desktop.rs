@@ -5,7 +5,7 @@ use eframe::egui::{
     Align, Button, Context, Layout, Margin, ProgressBar, SidePanel, TopBottomPanel, Vec2,
     ViewportBuilder, Visuals,
 };
-use eframe::{egui, icon_data, run_native, App, Frame, NativeOptions, Storage};
+use eframe::{App, Frame, NativeOptions, Storage, egui, icon_data, run_native};
 use egui::UiKind::Menu;
 use egui::{CentralPanel, ScrollArea, Window};
 use egui_file_dialog::FileDialog;
@@ -16,13 +16,13 @@ use std::sync::Arc;
 use solstrale_desktop_rust::keyboard::{is_ctrl_space, is_enter};
 use solstrale_desktop_rust::model::scene::Scene;
 use solstrale_desktop_rust::model::{
-    get_documentation_structure_by_yaml_path, DocumentationStructure, HelpDocumentation,
+    DocumentationStructure, HelpDocumentation, get_documentation_structure_by_yaml_path,
 };
 use solstrale_desktop_rust::render_output::render_output;
 use solstrale_desktop_rust::yaml_editor::{create_layouter, yaml_editor};
 use solstrale_desktop_rust::{
-    help, load_scene, loading_output, render_button, reset_confirm, save_image, save_scene,
-    yaml_editor, ErrorInfo, RenderControl, RenderedImage, DEFAULT_SCENE,
+    DEFAULT_SCENE, ErrorInfo, RenderControl, RenderedImage, help, load_scene, loading_output,
+    render_button, reset_confirm, save_image, save_scene, yaml_editor,
 };
 
 static ROOT_DOCUMENTATION_STRUCTURE: Lazy<DocumentationStructure> =
@@ -266,10 +266,10 @@ impl App for SolstraleApp {
                             },
                         ));
 
-                        if is_ctrl_space(ui) {
-                            if let Some(doc) = &documentation_structure {
-                                yaml_editor::autocomplete(&mut self.scene_yaml, doc, ctx);
-                            }
+                        if is_ctrl_space(ui)
+                            && let Some(doc) = &documentation_structure
+                        {
+                            yaml_editor::autocomplete(&mut self.scene_yaml, doc, ctx);
                         }
 
                         if is_enter(ui) {
@@ -300,7 +300,10 @@ impl App for SolstraleApp {
                 // first few frames. So here we wait until the layout stabilizes until kicking off
                 // the initial rendering, as to get 1:1 match to display pixel size
                 if !self.render_control.initial_render_started {
-                    if self.render_control.previous_frame_render_size == available_size && available_size.x > 0. && available_size.y > 0. {
+                    if self.render_control.previous_frame_render_size == available_size
+                        && available_size.x > 0.
+                        && available_size.y > 0.
+                    {
                         self.render_control.render_requested = true;
                         self.render_control.initial_render_started = true;
                     }

@@ -4,10 +4,10 @@ use std::error::Error;
 use serde::{Deserialize, Serialize};
 use solstrale::hittable::Hittables;
 
+use crate::model::FieldType::{Normal, Optional, OptionalList};
 use crate::model::material::Material;
 use crate::model::pos::Pos;
-use crate::model::transformation::{create_transformation, Transformation};
-use crate::model::FieldType::{Normal, Optional, OptionalList};
+use crate::model::transformation::{Transformation, create_transformation};
 use crate::model::{Creator, CreatorContext, DocumentationStructure, FieldInfo, HelpDocumentation};
 
 #[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]

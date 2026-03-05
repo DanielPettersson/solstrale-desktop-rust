@@ -28,13 +28,14 @@ impl HelpDocumentation for SaturationPostProcessor {
     fn get_documentation_structure(_: u8) -> DocumentationStructure {
         DocumentationStructure {
             description: "A post processor that applies saturation to the image".to_string(),
-            fields: HashMap::from([
-                ("saturation_factor".to_string(), FieldInfo::new_simple(
+            fields: HashMap::from([(
+                "saturation_factor".to_string(),
+                FieldInfo::new_simple(
                     "The amount of saturation applied to the image",
                     Optional,
-                    "Controls how much the image is saturated. From -1 (grayscale image) to 1 (fully saturated colors). Defaults to 0.5"
-                )),
-            ]),
+                    "Controls how much the image is saturated. From -1 (grayscale image) to 1 (fully saturated colors). Defaults to 0.5",
+                ),
+            )]),
         }
     }
 }
