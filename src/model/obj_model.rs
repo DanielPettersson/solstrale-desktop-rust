@@ -1,6 +1,6 @@
-use crate::model::material::Material;
-use crate::model::transformation::{create_transformation, Transformation};
 use crate::model::FieldType::{List, Normal, Optional};
+use crate::model::material::Material;
+use crate::model::transformation::{Transformation, create_transformation};
 use crate::model::{
     Creator, CreatorContext, DocumentationStructure, FieldInfo, HelpDocumentation, ModelError,
 };
@@ -8,8 +8,8 @@ use moka::sync::Cache;
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use solstrale::hittable::Hittables;
-use solstrale::loader::obj::Obj;
 use solstrale::loader::Loader;
+use solstrale::loader::obj::Obj;
 use solstrale::material::texture::SolidColor;
 use std::collections::HashMap;
 use std::error::Error;

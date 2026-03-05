@@ -1,6 +1,6 @@
+use crate::model::FieldType::{Normal, Optional};
 use crate::model::material::Material;
 use crate::model::pos::Pos;
-use crate::model::FieldType::{Normal, Optional};
 use crate::model::{Creator, CreatorContext, DocumentationStructure, FieldInfo, HelpDocumentation};
 use serde::{Deserialize, Serialize};
 use solstrale::hittable::Hittables;

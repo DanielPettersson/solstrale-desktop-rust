@@ -1,4 +1,4 @@
-use crate::{save_scene, ErrorInfo, RenderControl};
+use crate::{ErrorInfo, RenderControl, save_scene};
 use eframe::egui;
 use eframe::egui::TextBuffer;
 use egui::Context;

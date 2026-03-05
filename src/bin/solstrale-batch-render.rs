@@ -9,7 +9,7 @@ use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use solstrale::ray_trace;
 use solstrale::renderer::RenderImageStrategy::OnlyFinal;
 use solstrale::util::wgpu_util::buffer_to_image;
-use solstrale_desktop_rust::model::{parse_scene_yaml, Creator, CreatorContext};
+use solstrale_desktop_rust::model::{Creator, CreatorContext, parse_scene_yaml};
 
 #[derive(Parser)]
 #[command(version, about, long_about = None, disable_help_flag = true)]

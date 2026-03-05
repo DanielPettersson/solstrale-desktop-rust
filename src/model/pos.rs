@@ -1,5 +1,5 @@
 use crate::model::{
-    parse_option, Creator, CreatorContext, DocumentationStructure, HelpDocumentation,
+    Creator, CreatorContext, DocumentationStructure, HelpDocumentation, parse_option,
 };
 use serde::{Deserialize, Serialize};
 use solstrale::geo::vec3::Vec3;

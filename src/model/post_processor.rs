@@ -1,6 +1,6 @@
+use crate::model::FieldType::Optional;
 use crate::model::bloom_post_processor::BloomPostProcessor;
 use crate::model::saturation_post_processor::SaturationPostProcessor;
-use crate::model::FieldType::Optional;
 use crate::model::{
     Creator, CreatorContext, DocumentationStructure, FieldInfo, HelpDocumentation, ModelError,
 };

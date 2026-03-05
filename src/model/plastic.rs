@@ -4,9 +4,9 @@ use std::error::Error;
 use serde::{Deserialize, Serialize};
 use solstrale::material::{Lambertian, Materials, Metal};
 
+use crate::model::FieldType::Optional;
 use crate::model::normal_texture::NormalTexture;
 use crate::model::texture::Texture;
-use crate::model::FieldType::Optional;
 use crate::model::{Creator, CreatorContext, DocumentationStructure, FieldInfo, HelpDocumentation};
 
 #[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
@@ -46,21 +46,30 @@ impl HelpDocumentation for Plastic {
         DocumentationStructure {
             description: "A material with plastic-like appearance".to_string(),
             fields: HashMap::from([
-                ("albedo".to_string(), FieldInfo::new(
-                    "Texture for the material's albedo color",
-                    Optional,
-                    Texture::get_documentation_structure(depth + 1)
-                )),
-                ("normal".to_string(), FieldInfo::new(
-                    "Texture for the material's normals. Used to give the illusion of fine structure of the hittable",
-                    Optional,
-                    NormalTexture::get_documentation_structure(depth + 1)
-                )),
-                ("glossiness".to_string(), FieldInfo::new_simple(
-                    "The glossiness of the plastic. 0 is matte and 1 is metal. Defaults to 0.1",
-                    Optional,
-                    "The glossiness of the plastic. 0 is matte and 1 is metal. Defaults to 0.1"
-                )),
+                (
+                    "albedo".to_string(),
+                    FieldInfo::new(
+                        "Texture for the material's albedo color",
+                        Optional,
+                        Texture::get_documentation_structure(depth + 1),
+                    ),
+                ),
+                (
+                    "normal".to_string(),
+                    FieldInfo::new(
+                        "Texture for the material's normals. Used to give the illusion of fine structure of the hittable",
+                        Optional,
+                        NormalTexture::get_documentation_structure(depth + 1),
+                    ),
+                ),
+                (
+                    "glossiness".to_string(),
+                    FieldInfo::new_simple(
+                        "The glossiness of the plastic. 0 is matte and 1 is metal. Defaults to 0.1",
+                        Optional,
+                        "The glossiness of the plastic. 0 is matte and 1 is metal. Defaults to 0.1",
+                    ),
+                ),
             ]),
         }
     }

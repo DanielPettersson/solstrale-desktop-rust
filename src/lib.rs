@@ -4,8 +4,8 @@ use eframe::wgpu;
 use once_cell::sync::Lazy;
 use solstrale::renderer::RenderProgress;
 use std::error::Error;
-use std::sync::mpsc::{Receiver, Sender};
 use std::sync::Arc;
+use std::sync::mpsc::{Receiver, Sender};
 use std::time::Duration;
 
 use model::scene::Scene;

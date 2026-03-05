@@ -4,9 +4,9 @@ use std::error::Error;
 use serde::{Deserialize, Serialize};
 use solstrale::material::{Dielectric, Materials};
 
+use crate::model::FieldType::Optional;
 use crate::model::normal_texture::NormalTexture;
 use crate::model::texture::Texture;
-use crate::model::FieldType::Optional;
 use crate::model::{Creator, CreatorContext, DocumentationStructure, FieldInfo, HelpDocumentation};
 
 #[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
@@ -42,21 +42,30 @@ impl HelpDocumentation for Glass {
         DocumentationStructure {
             description: "A dielectric material which has a glass-like appearance".to_string(),
             fields: HashMap::from([
-                ("albedo".to_string(), FieldInfo::new(
-                    "Texture for the material's albedo color",
-                    Optional,
-                    Texture::get_documentation_structure(depth + 1)
-                )),
-                ("normal".to_string(), FieldInfo::new(
-                    "Texture for the material's normals. Used to give the illusion of fine structure of the hittable",
-                    Optional,
-                    NormalTexture::get_documentation_structure(depth + 1)
-                )),
-                ("index_of_refraction".to_string(), FieldInfo::new_simple(
-                    "The refractive index determines how much the path of light is bent, or refracted, when entering a material",
-                    Optional,
-                    "For example, glass normally has 1.5 and water 1.33. Defaults to 1.5"
-                )),
+                (
+                    "albedo".to_string(),
+                    FieldInfo::new(
+                        "Texture for the material's albedo color",
+                        Optional,
+                        Texture::get_documentation_structure(depth + 1),
+                    ),
+                ),
+                (
+                    "normal".to_string(),
+                    FieldInfo::new(
+                        "Texture for the material's normals. Used to give the illusion of fine structure of the hittable",
+                        Optional,
+                        NormalTexture::get_documentation_structure(depth + 1),
+                    ),
+                ),
+                (
+                    "index_of_refraction".to_string(),
+                    FieldInfo::new_simple(
+                        "The refractive index determines how much the path of light is bent, or refracted, when entering a material",
+                        Optional,
+                        "For example, glass normally has 1.5 and water 1.33. Defaults to 1.5",
+                    ),
+                ),
             ]),
         }
     }

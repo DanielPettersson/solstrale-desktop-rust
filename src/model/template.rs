@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::error::Error;
 
-use serde_json::{from_value, to_value, Value};
+use serde_json::{Value, from_value, to_value};
 use solstrale::geo::vec3::Vec3;
 use tera::Tera;
 

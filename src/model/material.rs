@@ -1,10 +1,10 @@
+use crate::model::FieldType::Optional;
 use crate::model::blend::Blend;
 use crate::model::glass::Glass;
 use crate::model::lambertian::Lambertian;
 use crate::model::light::Light;
 use crate::model::metal::Metal;
 use crate::model::plastic::Plastic;
-use crate::model::FieldType::Optional;
 use crate::model::{
     Creator, CreatorContext, DocumentationStructure, FieldInfo, HelpDocumentation, ModelError,
 };

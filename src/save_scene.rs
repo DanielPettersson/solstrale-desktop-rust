@@ -35,9 +35,9 @@ pub fn handle_dialog(
 ) {
     dialog.update(ctx);
 
-    if let Some(file_path) = dialog.take_picked() {
-        if let Err(err) = fs::write(file_path, scene_yaml.as_str()) {
-            error_info.handle(Box::new(err))
-        }
+    if let Some(file_path) = dialog.take_picked()
+        && let Err(err) = fs::write(file_path, scene_yaml.as_str())
+    {
+        error_info.handle(Box::new(err))
     }
 }
