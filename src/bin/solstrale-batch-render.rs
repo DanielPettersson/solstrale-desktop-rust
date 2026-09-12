@@ -9,6 +9,7 @@ use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use solstrale::ray_trace;
 use solstrale::renderer::RenderImageStrategy::OnlyFinal;
 use solstrale::util::wgpu_util::buffer_to_image;
+use solstrale_desktop_rust::device_descriptor;
 use solstrale_desktop_rust::model::{Creator, CreatorContext, parse_scene_yaml};
 
 #[derive(Parser)]
@@ -52,14 +53,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             .expect("Failed to find an appropriate adapter");
 
         adapter
-            .request_device(&eframe::wgpu::DeviceDescriptor {
-                label: None,
-                required_features: eframe::wgpu::Features::empty(),
-                required_limits: eframe::wgpu::Limits::default(),
-                memory_hints: Default::default(),
-                experimental_features: Default::default(),
-                trace: eframe::wgpu::Trace::Off,
-            })
+            .request_device(&device_descriptor(&adapter))
             .await
             .expect("Failed to create device")
     });

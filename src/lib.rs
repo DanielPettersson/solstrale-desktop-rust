@@ -26,6 +26,44 @@ pub mod yaml_editor;
 pub static DEFAULT_SCENE: Lazy<String> =
     Lazy::new(|| include_str!("../resources/scene.yaml").to_owned());
 
+/// The ray tracer binds ten storage buffers in a single compute stage, while
+/// wgpu's default limit is eight. Ask for some headroom so that a new binding
+/// in the library does not immediately break rendering here again.
+pub const MIN_STORAGE_BUFFERS_PER_SHADER_STAGE: u32 = 12;
+
+/// Describes the device that both egui and the ray tracer render on.
+///
+/// The limits have to satisfy both: egui needs a texture large enough for a 4k+
+/// surface, the ray tracer needs the raised storage buffer count. Anything the
+/// adapter cannot provide fails device creation with a message naming the limit,
+/// rather than panicking later when a bind group layout is created.
+pub fn device_descriptor(adapter: &wgpu::Adapter) -> wgpu::DeviceDescriptor<'static> {
+    let base_limits = if adapter.get_info().backend == wgpu::Backend::Gl {
+        wgpu::Limits::downlevel_webgl2_defaults()
+    } else {
+        wgpu::Limits::default()
+    };
+    let adapter_limits = adapter.limits();
+
+    wgpu::DeviceDescriptor {
+        label: Some("solstrale device"),
+        required_limits: wgpu::Limits {
+            max_texture_dimension_2d: 8192,
+            max_storage_buffers_per_shader_stage: adapter_limits
+                .max_storage_buffers_per_shader_stage
+                .min(16)
+                .max(MIN_STORAGE_BUFFERS_PER_SHADER_STAGE),
+            // Scene geometry and the output buffer both outgrow the defaults
+            // (128 MiB per binding, 256 MiB per buffer) on large meshes and
+            // high resolutions, so take whatever the adapter offers.
+            max_storage_buffer_binding_size: adapter_limits.max_storage_buffer_binding_size,
+            max_buffer_size: adapter_limits.max_buffer_size,
+            ..base_limits
+        },
+        ..Default::default()
+    }
+}
+
 #[derive(Default)]
 pub struct ErrorInfo {
     pub show_error: bool,
