@@ -9,7 +9,6 @@ use std::sync::mpsc::{Receiver, Sender};
 use std::time::Duration;
 
 use model::scene::Scene;
-use std::sync::Mutex;
 
 pub mod help;
 pub mod keyboard;
@@ -116,16 +115,15 @@ pub struct RenderResources {
 
 pub struct RenderCallback {
     pub resources: Arc<RenderResources>,
-    pub output_buffer: Arc<wgpu::Buffer>,
+    pub bind_group: Arc<wgpu::BindGroup>,
     pub width: u32,
     pub height: u32,
-    pub bind_group: Arc<Mutex<Option<Arc<wgpu::BindGroup>>>>,
 }
 
 impl eframe::egui_wgpu::CallbackTrait for RenderCallback {
     fn prepare(
         &self,
-        device: &wgpu::Device,
+        _device: &wgpu::Device,
         queue: &wgpu::Queue,
         _screen_descriptor: &eframe::egui_wgpu::ScreenDescriptor,
         _egui_encoder: &mut wgpu::CommandEncoder,
@@ -136,22 +134,6 @@ impl eframe::egui_wgpu::CallbackTrait for RenderCallback {
             0,
             bytemuck::cast_slice(&[self.width as f32, self.height as f32]),
         );
-
-        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: None,
-            layout: &self.resources.bind_group_layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: self.resources.viewport_size_buffer.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: self.output_buffer.as_entire_binding(),
-                },
-            ],
-        });
-        *self.bind_group.lock().unwrap() = Some(Arc::new(bind_group));
         Vec::new()
     }
 
@@ -161,22 +143,77 @@ impl eframe::egui_wgpu::CallbackTrait for RenderCallback {
         render_pass: &mut wgpu::RenderPass<'static>,
         _callback_resources: &eframe::egui_wgpu::CallbackResources,
     ) {
-        if let Some(bind_group) = self.bind_group.lock().unwrap().as_ref() {
-            render_pass.set_pipeline(&self.resources.pipeline);
-            render_pass.set_bind_group(0, Some(bind_group.as_ref()), &[]);
-            render_pass.draw(0..3, 0..1);
-        }
+        render_pass.set_pipeline(&self.resources.pipeline);
+        render_pass.set_bind_group(0, Some(self.bind_group.as_ref()), &[]);
+        render_pass.draw(0..3, 0..1);
     }
 }
 
+/// The bind group the blit was last painted with, and what it was built for.
+struct CachedBlitBindGroup {
+    bind_group: Arc<wgpu::BindGroup>,
+    output_buffer: wgpu::Buffer,
+    width: u32,
+    height: u32,
+}
+
 pub struct RenderedImage {
-    pub output_buffer: Option<Arc<wgpu::Buffer>>,
+    pub output_buffer: Option<wgpu::Buffer>,
     pub render_resources: Option<Arc<RenderResources>>,
     pub progress: f64,
     pub fps: f64,
     pub estimated_time_left: Duration,
     pub width: u32,
     pub height: u32,
+    blit: Option<CachedBlitBindGroup>,
+}
+
+impl RenderedImage {
+    /// Bind group for painting the current output buffer.
+    ///
+    /// The bindings only change when the renderer hands over a different buffer
+    /// or the image is resized, so the bind group is built once and then
+    /// reused. Building one per frame is pure churn on the UI thread, and a
+    /// drag repaints continuously.
+    pub fn blit_bind_group(&mut self) -> Option<Arc<wgpu::BindGroup>> {
+        let resources = self.render_resources.clone()?;
+        let output_buffer = self.output_buffer.clone()?;
+        let (width, height) = (self.width, self.height);
+
+        let up_to_date = self.blit.as_ref().is_some_and(|cached| {
+            cached.output_buffer == output_buffer
+                && cached.width == width
+                && cached.height == height
+        });
+
+        if !up_to_date {
+            let bind_group = resources
+                .device
+                .create_bind_group(&wgpu::BindGroupDescriptor {
+                    label: Some("Blit Bind Group"),
+                    layout: &resources.bind_group_layout,
+                    entries: &[
+                        wgpu::BindGroupEntry {
+                            binding: 0,
+                            resource: resources.viewport_size_buffer.as_entire_binding(),
+                        },
+                        wgpu::BindGroupEntry {
+                            binding: 1,
+                            resource: output_buffer.as_entire_binding(),
+                        },
+                    ],
+                });
+
+            self.blit = Some(CachedBlitBindGroup {
+                bind_group: Arc::new(bind_group),
+                output_buffer,
+                width,
+                height,
+            });
+        }
+
+        self.blit.as_ref().map(|cached| cached.bind_group.clone())
+    }
 }
 
 impl Default for RenderedImage {
@@ -189,6 +226,7 @@ impl Default for RenderedImage {
             estimated_time_left: Duration::default(),
             width: 0,
             height: 0,
+            blit: None,
         }
     }
 }

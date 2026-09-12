@@ -23,8 +23,7 @@ pub fn handle_dialog(
         let image_buffer = rendered_image
             .output_buffer
             .as_ref()
-            .expect("Dialog is only displayed when there is an image")
-            .as_ref();
+            .expect("Dialog is only displayed when there is an image");
 
         let image = buffer_to_image(
             &render_resources.device,

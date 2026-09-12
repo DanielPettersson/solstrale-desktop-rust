@@ -7,7 +7,6 @@ use clap::Parser;
 use eframe::wgpu;
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use solstrale::ray_trace;
-use solstrale::renderer::RenderImageStrategy::OnlyFinal;
 use solstrale::util::wgpu_util::buffer_to_image;
 use solstrale_desktop_rust::device_descriptor;
 use solstrale_desktop_rust::model::{Creator, CreatorContext, parse_scene_yaml};
@@ -76,13 +75,12 @@ fn main() -> Result<(), Box<dyn Error>> {
     for frame_index in 0..num_frames {
         let scene_yaml = fs::read_to_string(scene_path.clone())?;
 
-        let mut scene = parse_scene_yaml(&scene_yaml, frame_index)?.create(&CreatorContext {
+        let scene = parse_scene_yaml(&scene_yaml, frame_index)?.create(&CreatorContext {
             screen_width,
             screen_height,
             device: &device,
             queue: &queue,
         })?;
-        scene.render_config.render_image_strategy = OnlyFinal;
 
         let samples_per_pixel = scene.render_config.samples_per_pixel as u64;
         total_progress_bar.set_length(num_frames as u64 * samples_per_pixel);
@@ -99,8 +97,8 @@ fn main() -> Result<(), Box<dyn Error>> {
             ray_trace(
                 scene,
                 &output_sender,
-                &abort_receiver,
                 &camera_config_receiver,
+                &abort_receiver,
                 &device_clone,
                 &queue_clone,
                 false,

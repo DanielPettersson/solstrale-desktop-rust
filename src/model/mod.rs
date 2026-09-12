@@ -285,7 +285,6 @@ mod test {
                     }),
                     saturation: None,
                 }],
-                preview_interval_ms: Some(1000),
             }),
         };
 
@@ -301,7 +300,6 @@ mod test {
   - bloom:
       kernel_size_fraction: 0.1
       threshold: 1.5
-  preview_interval_ms: 1000
 background_color: 0, 0, 0
 camera:
   vertical_fov_degrees: 0.0

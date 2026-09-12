@@ -1,6 +1,7 @@
+use std::sync::Arc;
 use std::sync::mpsc::{Receiver, Sender, TryRecvError, channel};
-use std::sync::{Arc, Mutex};
 use std::thread;
+use std::time::{Duration, Instant};
 
 use eframe::egui::{Context, PointerButton, Sense, Ui, Vec2};
 use eframe::wgpu;
@@ -14,6 +15,10 @@ use crate::model::{Creator, CreatorContext, parse_scene_yaml};
 use crate::{
     ErrorInfo, RenderCallback, RenderControl, RenderMessage, RenderResources, RenderedImage,
 };
+
+/// Repaints are asked for at most this often. Progress messages can arrive
+/// faster than the screen can show them.
+const FRAME_INTERVAL: Duration = Duration::from_millis(16);
 
 const SHADER: &str = r#"
 struct VertexOutput {
@@ -145,8 +150,14 @@ pub fn render_output(
             match render_receiver.try_recv() {
                 Ok(render_message) => match render_message {
                     RenderMessage::SampleRendered(render_progress) => {
-                        rendered_image.output_buffer =
-                            Some(Arc::new(render_progress.output_buffer));
+                        // The renderer reports the same buffer for the whole
+                        // run. Only swapping the handle when it really changed
+                        // keeps the cached blit bind group valid.
+                        if rendered_image.output_buffer.as_ref()
+                            != Some(&render_progress.output_buffer)
+                        {
+                            rendered_image.output_buffer = Some(render_progress.output_buffer);
+                        }
                         rendered_image.progress = render_progress.progress;
                         if let Some(fps) = render_progress.fps {
                             rendered_image.fps = fps;
@@ -177,20 +188,23 @@ pub fn render_output(
         let (rect, response) = ui.allocate_exact_size(viewport_size, Sense::drag());
 
         // Paint the last rendered image
-        if let (Some(resources), Some(output_buffer)) = (
-            &rendered_image.render_resources,
-            &rendered_image.output_buffer,
-        ) && output_buffer.size() > 0
+        let has_image = rendered_image
+            .output_buffer
+            .as_ref()
+            .is_some_and(|output_buffer| output_buffer.size() > 0);
+
+        if has_image
+            && let Some(resources) = rendered_image.render_resources.clone()
+            && let Some(bind_group) = rendered_image.blit_bind_group()
         {
             ui.painter()
                 .add(eframe::egui_wgpu::Callback::new_paint_callback(
                     rect,
                     RenderCallback {
-                        resources: resources.clone(),
-                        output_buffer: output_buffer.clone(),
+                        resources,
+                        bind_group,
                         width: rendered_image.width,
                         height: rendered_image.height,
-                        bind_group: Arc::new(Mutex::new(None)),
                     },
                 ));
         }
@@ -367,11 +381,25 @@ fn render(
     });
 
     thread::spawn(move || {
+        let mut last_repaint: Option<Instant> = None;
+
         for render_output in output_receiver {
             render_sender
                 .send(RenderMessage::SampleRendered(render_output))
                 .unwrap_or(());
-            ctx2.request_repaint();
+
+            let now = Instant::now();
+            match last_repaint {
+                Some(last) if now.duration_since(last) < FRAME_INTERVAL => {
+                    // Too soon to be worth a frame, but make sure the progress
+                    // we just sent is not left sitting unpainted.
+                    ctx2.request_repaint_after(FRAME_INTERVAL - now.duration_since(last));
+                }
+                _ => {
+                    last_repaint = Some(now);
+                    ctx2.request_repaint();
+                }
+            }
         }
     });
 
