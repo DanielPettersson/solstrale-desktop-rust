@@ -5,6 +5,7 @@ use eframe::egui::{
     Align, Button, Context, Layout, Margin, ProgressBar, SidePanel, TopBottomPanel, Vec2,
     ViewportBuilder, Visuals,
 };
+use eframe::egui_wgpu::{WgpuConfiguration, WgpuSetup, WgpuSetupCreateNew};
 use eframe::{App, Frame, NativeOptions, Storage, egui, icon_data, run_native};
 use egui::UiKind::Menu;
 use egui::{CentralPanel, ScrollArea, Window};
@@ -21,8 +22,8 @@ use solstrale_desktop_rust::model::{
 use solstrale_desktop_rust::render_output::render_output;
 use solstrale_desktop_rust::yaml_editor::{create_layouter, yaml_editor};
 use solstrale_desktop_rust::{
-    DEFAULT_SCENE, ErrorInfo, RenderControl, RenderedImage, help, load_scene, loading_output,
-    render_button, reset_confirm, save_image, save_scene, yaml_editor,
+    DEFAULT_SCENE, ErrorInfo, RenderControl, RenderedImage, device_descriptor, help, load_scene,
+    loading_output, render_button, reset_confirm, save_image, save_scene, yaml_editor,
 };
 
 static ROOT_DOCUMENTATION_STRUCTURE: Lazy<DocumentationStructure> =
@@ -42,6 +43,15 @@ fn main() -> eframe::Result<()> {
             .with_min_inner_size(Vec2 { x: 700., y: 300. })
             .with_icon(icon)
             .with_app_id("solstrale".to_string()),
+        // The ray tracer renders on egui's device, so it has to be created with
+        // limits that fit the ray tracer's bindings as well.
+        wgpu_options: WgpuConfiguration {
+            wgpu_setup: WgpuSetup::CreateNew(WgpuSetupCreateNew {
+                device_descriptor: Arc::new(device_descriptor),
+                ..Default::default()
+            }),
+            ..Default::default()
+        },
         ..Default::default()
     };
 

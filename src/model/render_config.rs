@@ -55,6 +55,9 @@ impl Creator<solstrale::renderer::RenderConfig> for RenderConfig {
             } else {
                 RenderImageStrategy::Interval(Duration::from_millis(preview_interval as u64))
             },
+            // Take library defaults for the rest (max_depth, samples_per_batch).
+            // Spreading rather than listing them keeps this immune to new fields.
+            ..Default::default()
         })
     }
 }
