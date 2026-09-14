@@ -4112,9 +4112,8 @@ dependencies = [
 
 [[package]]
 name = "solstrale"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dbac0c4b45dcc170fa17d9d0ffa620dca9f19e4620ca2bbc9a6e6a1d102f3b48"
+version = "0.3.0"
+source = "git+https://github.com/DanielPettersson/solstrale-rust#364be2e0e221da39302e5b49c10b675e973f0590"
 dependencies = [
  "bytemuck",
  "derive_more",
