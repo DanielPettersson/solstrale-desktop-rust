@@ -25,10 +25,16 @@ pub mod yaml_editor;
 pub static DEFAULT_SCENE: Lazy<String> =
     Lazy::new(|| include_str!("../resources/scene.yaml").to_owned());
 
-/// The ray tracer binds ten storage buffers in a single compute stage, while
-/// wgpu's default limit is eight. Ask for some headroom so that a new binding
-/// in the library does not immediately break rendering here again.
+/// The ray tracer binds twelve storage buffers in a single compute stage, while
+/// wgpu's default limit is eight. This is the floor the library itself refuses
+/// to start below, so it cannot be raised for headroom without turning adapters
+/// the library supports into a startup failure here. The headroom is in the
+/// ceiling instead: up to sixteen are requested wherever the adapter has them.
 pub const MIN_STORAGE_BUFFERS_PER_SHADER_STAGE: u32 = 12;
+
+/// Ceiling on the request. Above this the count buys nothing, and asking for
+/// more than an adapter has is what fails device creation.
+const MAX_STORAGE_BUFFERS_PER_SHADER_STAGE: u32 = 16;
 
 /// Describes the device that both egui and the ray tracer render on.
 ///
@@ -50,8 +56,10 @@ pub fn device_descriptor(adapter: &wgpu::Adapter) -> wgpu::DeviceDescriptor<'sta
             max_texture_dimension_2d: 8192,
             max_storage_buffers_per_shader_stage: adapter_limits
                 .max_storage_buffers_per_shader_stage
-                .min(16)
-                .max(MIN_STORAGE_BUFFERS_PER_SHADER_STAGE),
+                .clamp(
+                    MIN_STORAGE_BUFFERS_PER_SHADER_STAGE,
+                    MAX_STORAGE_BUFFERS_PER_SHADER_STAGE,
+                ),
             // Scene geometry and the output buffer both outgrow the defaults
             // (128 MiB per binding, 256 MiB per buffer) on large meshes and
             // high resolutions, so take whatever the adapter offers.
