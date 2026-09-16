@@ -1,5 +1,6 @@
 use crate::model::FieldType::Optional;
 use crate::model::bloom_post_processor::BloomPostProcessor;
+use crate::model::denoise_post_processor::DenoisePostProcessor;
 use crate::model::saturation_post_processor::SaturationPostProcessor;
 use crate::model::{
     Creator, CreatorContext, DocumentationStructure, FieldInfo, HelpDocumentation, ModelError,
@@ -13,6 +14,8 @@ use std::error::Error;
 #[serde(deny_unknown_fields)]
 pub struct PostProcessor {
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub denoise: Option<DenoisePostProcessor>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub bloom: Option<BloomPostProcessor>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub saturation: Option<SaturationPostProcessor>,
@@ -22,13 +25,20 @@ impl Creator<PostProcessors> for PostProcessor {
     fn create(&self, ctx: &CreatorContext) -> Result<PostProcessors, Box<dyn Error>> {
         match self {
             PostProcessor {
+                denoise: Some(d),
+                bloom: None,
+                saturation: None,
+            } => d.create(ctx),
+            PostProcessor {
+                denoise: None,
                 bloom: Some(b),
                 saturation: None,
             } => b.create(ctx),
             PostProcessor {
+                denoise: None,
                 bloom: None,
-                saturation: Some(d),
-            } => d.create(ctx),
+                saturation: Some(s),
+            } => s.create(ctx),
             _ => Err(From::from(ModelError::new(
                 "PostProcessor should have single field defined",
             ))),
@@ -43,6 +53,14 @@ impl HelpDocumentation for PostProcessor {
                 "A post processor is applied to the image after rendering for various effects"
                     .to_string(),
             fields: HashMap::from([
+                (
+                    "denoise".to_string(),
+                    FieldInfo::new(
+                        "A post processor that removes noise from the image. Put it before any other post processor: denoising a bloomed image blurs the bloom",
+                        Optional,
+                        DenoisePostProcessor::get_documentation_structure(depth + 1),
+                    ),
+                ),
                 (
                     "bloom".to_string(),
                     FieldInfo::new(
