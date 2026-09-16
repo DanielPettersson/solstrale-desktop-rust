@@ -196,7 +196,7 @@ impl Highlighter {
                 let fg = style.foreground;
                 let text_color = egui::Color32::from_rgb(fg.r, fg.g, fg.b);
                 let italics = style.font_style.contains(FontStyle::ITALIC);
-                let underline = style.font_style.contains(FontStyle::ITALIC);
+                let underline = style.font_style.contains(FontStyle::UNDERLINE);
                 let underline = if underline {
                     egui::Stroke::new(1.0_f32, text_color)
                 } else {
