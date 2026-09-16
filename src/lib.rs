@@ -3,6 +3,7 @@ use eframe::egui::Vec2;
 use eframe::wgpu;
 use once_cell::sync::Lazy;
 use solstrale::renderer::RenderProgress;
+use solstrale::util::tone_map::ToneMapper;
 use std::error::Error;
 use std::sync::Arc;
 use std::sync::mpsc::{Receiver, Sender};
@@ -21,6 +22,16 @@ pub mod reset_confirm;
 pub mod save_image;
 pub mod save_scene;
 pub mod yaml_editor;
+
+/// The tone mapping curve every display path in the app uses.
+///
+/// There are three of them -- the live viewport's blit shader, Save Image, and
+/// the batch render binary -- and they have to agree, or the preview shows
+/// something the saved file does not. Declared once here so changing the curve
+/// changes all three; the viewport gets it as WGSL from
+/// [`ToneMapper::wgsl`](solstrale::util::tone_map::ToneMapper::wgsl), the other
+/// two hand it to `buffer_to_image`.
+pub const DISPLAY_TONE_MAPPER: ToneMapper = ToneMapper::Aces;
 
 pub static DEFAULT_SCENE: Lazy<String> =
     Lazy::new(|| include_str!("../resources/scene.yaml").to_owned());

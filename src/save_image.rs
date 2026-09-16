@@ -1,4 +1,4 @@
-use crate::{ErrorInfo, RenderedImage};
+use crate::{DISPLAY_TONE_MAPPER, ErrorInfo, RenderedImage};
 use eframe::egui;
 use egui::Context;
 use egui_file_dialog::FileDialog;
@@ -31,6 +31,7 @@ pub fn handle_dialog(
             image_buffer,
             rendered_image.width,
             rendered_image.height,
+            DISPLAY_TONE_MAPPER,
         );
 
         if let Err(err) = image::save_buffer(

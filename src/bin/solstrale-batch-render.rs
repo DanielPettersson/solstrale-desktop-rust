@@ -8,6 +8,7 @@ use eframe::wgpu;
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use solstrale::ray_trace;
 use solstrale::util::wgpu_util::buffer_to_image;
+use solstrale_desktop_rust::DISPLAY_TONE_MAPPER;
 use solstrale_desktop_rust::device_descriptor;
 use solstrale_desktop_rust::model::{Creator, CreatorContext, parse_scene_yaml};
 
@@ -120,6 +121,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 &buffer,
                 screen_width as u32,
                 screen_height as u32,
+                DISPLAY_TONE_MAPPER,
             );
 
             image.save(format!("frame_{:0>8}.png", frame_index))?;
