@@ -14,8 +14,8 @@ use crate::model::orbit_camera::OrbitCamera;
 use crate::model::scene::Scene;
 use crate::model::{Creator, CreatorContext, parse_scene_yaml};
 use crate::{
-    DISPLAY_TONE_MAPPER, ErrorInfo, RenderCallback, RenderControl, RenderMessage,
-    RenderResources, RenderedImage,
+    DISPLAY_TONE_MAPPER, ErrorInfo, RenderCallback, RenderControl, RenderMessage, RenderResources,
+    RenderedImage,
 };
 
 /// Repaints are asked for at most this often. Progress messages can arrive
