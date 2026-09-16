@@ -2,8 +2,7 @@ use std::str::FromStr;
 
 use dark_light::Mode;
 use eframe::egui::{
-    Align, Button, Context, Layout, Margin, ProgressBar, SidePanel, TopBottomPanel, Vec2,
-    ViewportBuilder, Visuals,
+    Align, Button, Layout, Margin, Panel, ProgressBar, Ui, Vec2, ViewportBuilder, Visuals,
 };
 use eframe::egui_wgpu::{WgpuConfiguration, WgpuSetup, WgpuSetupCreateNew};
 use eframe::{App, Frame, NativeOptions, Storage, egui, icon_data, run_native};
@@ -48,7 +47,7 @@ fn main() -> eframe::Result<()> {
         wgpu_options: WgpuConfiguration {
             wgpu_setup: WgpuSetup::CreateNew(WgpuSetupCreateNew {
                 device_descriptor: Arc::new(device_descriptor),
-                ..Default::default()
+                ..WgpuSetupCreateNew::without_display_handle()
             }),
             ..Default::default()
         },
@@ -139,8 +138,11 @@ impl SolstraleApp {
 }
 
 impl App for SolstraleApp {
-    fn update(&mut self, ctx: &Context, _frame: &mut Frame) {
-        TopBottomPanel::top("top-panel").show(ctx, |ui| {
+    fn ui(&mut self, ui: &mut Ui, _frame: &mut Frame) {
+        let ctx = ui.ctx().clone();
+        let ctx = &ctx;
+
+        Panel::top("top-panel").show(ui, |ui| {
             ui.horizontal(|ui| {
                 ui.menu_button("File", |ui| {
                     ui.menu_button("Scene", |ui| {
@@ -235,7 +237,7 @@ impl App for SolstraleApp {
             ctx,
         );
 
-        TopBottomPanel::bottom("bottom-panel").show(ctx, |ui| {
+        Panel::bottom("bottom-panel").show(ui, |ui| {
             egui::Frame::side_top_panel(ui.style())
                 .inner_margin(Margin {
                     top: 3,
@@ -262,7 +264,7 @@ impl App for SolstraleApp {
             &yaml_editor::get_yaml_path(&self.scene_yaml, ctx),
         );
 
-        SidePanel::left("code-panel").show(ctx, |ui| {
+        Panel::left("code-panel").show(ui, |ui| {
             egui::Frame::side_top_panel(ui.style())
                 .inner_margin(Margin::same(0))
                 .show(ui, |ui| {
@@ -289,21 +291,23 @@ impl App for SolstraleApp {
                 });
         });
 
-        SidePanel::right("help-panel")
-            .min_width(300.0)
-            .show_animated(ctx, self.display_help, |ui| {
+        Panel::right("help-panel").min_size(300.0).show_collapsible(
+            ui,
+            &mut self.display_help,
+            |ui| {
                 ScrollArea::vertical().show(ui, |ui| {
                     egui::Frame::side_top_panel(ui.style())
                         .show(ui, |ui| help::show(ui, &documentation_structure));
                 })
-            });
+            },
+        );
 
         CentralPanel::default()
             .frame(egui::Frame {
                 inner_margin: Margin::same(0),
                 ..Default::default()
             })
-            .show(ctx, |ui| {
+            .show(ui, |ui| {
                 let available_size = ui.available_size();
 
                 // When window is first displayed, the available size can change in the

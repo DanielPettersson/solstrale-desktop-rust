@@ -48,6 +48,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 power_preference: eframe::wgpu::PowerPreference::HighPerformance,
                 compatible_surface: None,
                 force_fallback_adapter: false,
+                ..Default::default()
             })
             .await
             .expect("Failed to find an appropriate adapter");

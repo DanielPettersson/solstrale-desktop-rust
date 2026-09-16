@@ -4,7 +4,8 @@ use crate::model::DocumentationStructure;
 use eframe::egui;
 use eframe::egui::text::{LayoutJob, LayoutSection};
 use eframe::egui::{Context, Galley, Id, TextBuffer, TextEdit, TextFormat, Ui, Vec2};
-use egui::util::cache::{ComputerMut, FrameCache};
+use eframe::epaint::text::{ByteIndex, ByteRange, CharIndex};
+use egui::cache::{ComputerMut, FrameCache};
 use once_cell::sync::Lazy;
 use regex::Regex;
 
@@ -29,7 +30,7 @@ where
         .layouter(layouter)
 }
 
-fn cursor_char_offset(ctx: &Context) -> Option<usize> {
+fn cursor_char_offset(ctx: &Context) -> Option<CharIndex> {
     TextEdit::load_state(ctx, *YAML_EDITOR_ID)
         .and_then(|state| state.cursor.char_range().map(|range| range.primary.index))
 }
@@ -41,7 +42,7 @@ pub fn get_yaml_path(yaml: &dyn TextBuffer, ctx: &Context) -> Vec<String> {
             let mut max_indentation: usize = usize::MAX;
             let mut ret = Vec::new();
 
-            let char_range = yaml.char_range(0..idx);
+            let char_range = yaml.char_range(CharIndex::from(0)..idx);
             if char_range.ends_with('\n') {
                 return vec![];
             }
@@ -81,7 +82,7 @@ pub fn autocomplete(text: &mut dyn TextBuffer, doc: &DocumentationStructure, ctx
     {
         let idx = range.primary.index;
 
-        if let Some(last_line) = text.char_range(0..idx).lines().last()
+        if let Some(last_line) = text.char_range(CharIndex::from(0)..idx).lines().last()
             && let Some(cap) = AUTOCOMPLETE_REGEX.captures(last_line)
         {
             let autocomplete_key = cap.get(1).unwrap().as_str().to_owned();
@@ -111,7 +112,7 @@ pub fn indent_new_line(text: &mut dyn TextBuffer, ctx: &Context) {
     {
         let idx = range.primary.index;
 
-        if let Some(last_line) = text.char_range(0..idx).lines().last() {
+        if let Some(last_line) = text.char_range(CharIndex::from(0)..idx).lines().last() {
             let num_spaces_at_start = INDENTATION_REGEX
                 .find(last_line)
                 .map(|m| m.len())
@@ -139,7 +140,7 @@ pub fn create_layouter() -> fn(&Ui, &dyn TextBuffer, f32) -> Arc<Galley> {
 
 fn highlight(ctx: &Context, code: &str) -> LayoutJob {
     type HighlightCache = FrameCache<LayoutJob, Highlighter>;
-    ctx.memory_mut(|mem| mem.caches.cache::<HighlightCache>().get(code))
+    ctx.memory_mut(|mem| mem.caches.cache::<HighlightCache>().get(code).clone())
 }
 
 impl ComputerMut<&str, LayoutJob> for Highlighter {
@@ -220,11 +221,11 @@ impl Highlighter {
     }
 }
 
-fn as_byte_range(whole: &str, range: &str) -> std::ops::Range<usize> {
+fn as_byte_range(whole: &str, range: &str) -> ByteRange {
     let whole_start = whole.as_ptr() as usize;
     let range_start = range.as_ptr() as usize;
     assert!(whole_start <= range_start);
     assert!(range_start + range.len() <= whole_start + whole.len());
     let offset = range_start - whole_start;
-    offset..(offset + range.len())
+    ByteIndex(offset)..ByteIndex(offset + range.len())
 }

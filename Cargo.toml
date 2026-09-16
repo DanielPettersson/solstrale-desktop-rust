@@ -10,14 +10,14 @@ codegen-units = 1
 
 [dependencies]
 solstrale = { git = "https://github.com/DanielPettersson/solstrale-rust" }
-eframe = { version = "0.33.0", features = ["persistence", "wayland", "wgpu"] }
-egui = "0.33.0"
-egui-file-dialog = "0.12.0"
+eframe = { version = "0.36.2", features = ["persistence", "wayland", "wgpu"] }
+egui = "0.36.2"
+egui-file-dialog = "0.15.0"
 image = "0.25.8"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.145"
 serde_yaml = "0.9.34"
-enum-map = { version = "2.7.3", features = ["serde"] }
+enum-map = { version = "3.1.0", features = ["serde"] }
 syntect = { version = "5.3.0", default-features = false, features = [
     "default-fancy",
 ] }
@@ -27,8 +27,8 @@ bytemuck = { version = "1.21.0", features = ["derive"] }
 derive_more = { version = "2.0.1", features = ["constructor", "display"] }
 hhmmss = "0.1.0"
 regex = "1.12.1"
-dark-light = "2.0.0"
-tera = { version = "1.20.0", default-features = false }
+dark-light = "3.0.0"
+tera = { version = "2.4.0", default-features = false }
 clap = { version = "4.5.48", features = ["derive"] }
 indicatif = "0.18.0"
-pollster = "0.4.0"
+pollster = "1.0.1"
