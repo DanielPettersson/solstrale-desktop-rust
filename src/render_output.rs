@@ -8,18 +8,29 @@ use eframe::wgpu;
 use eframe::wgpu::util::DeviceExt;
 use solstrale::geo::vec3::Vec3;
 use solstrale::ray_trace;
+use solstrale::util::tone_map::ToneMapper;
 
 use crate::model::orbit_camera::OrbitCamera;
 use crate::model::scene::Scene;
 use crate::model::{Creator, CreatorContext, parse_scene_yaml};
 use crate::{
-    ErrorInfo, RenderCallback, RenderControl, RenderMessage, RenderResources, RenderedImage,
+    DISPLAY_TONE_MAPPER, ErrorInfo, RenderCallback, RenderControl, RenderMessage,
+    RenderResources, RenderedImage,
 };
 
 /// Repaints are asked for at most this often. Progress messages can arrive
 /// faster than the screen can show them.
 const FRAME_INTERVAL: Duration = Duration::from_millis(16);
 
+/// The blit shader, less the tone mapping function that gets spliced in by
+/// [`shader_source`].
+///
+/// `fs_main` returns the tone-mapped value without applying gamma, because the
+/// surface it draws to is an sRGB format and the hardware encodes on write.
+/// Note that this is *not* quite the transform `buffer_to_image` applies when
+/// an image is saved: that one encodes with gamma 2.0 rather than sRGB's ~2.2.
+/// The tone curve is shared exactly; the transfer function is still two
+/// slightly different things, tracked in the library's TODO.md.
 const SHADER: &str = r#"
 struct VertexOutput {
     @builtin(position) position: vec4<f32>,
@@ -48,9 +59,18 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     let g = buffer[index + 1u];
     let b = buffer[index + 2u];
 
-    return vec4<f32>(r, g, b, 1.0);
+    return vec4<f32>(solstrale_tone_map(vec3<f32>(r, g, b)), 1.0);
 }
 "#;
+
+/// The blit shader with the tone mapping curve prepended.
+///
+/// The curve comes from the library rather than being written again here, so
+/// the viewport and a saved image cannot disagree about what the render looks
+/// like. WGSL has no include directive, so this is string concatenation.
+fn shader_source(tone_mapper: ToneMapper) -> String {
+    format!("{}\n{}", tone_mapper.wgsl(), SHADER)
+}
 
 pub fn create_render_resources(
     device: &wgpu::Device,
@@ -59,7 +79,7 @@ pub fn create_render_resources(
 ) -> RenderResources {
     let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
         label: Some("Render Shader"),
-        source: wgpu::ShaderSource::Wgsl(SHADER.into()),
+        source: wgpu::ShaderSource::Wgsl(shader_source(DISPLAY_TONE_MAPPER).into()),
     });
 
     let bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
@@ -404,4 +424,41 @@ fn render(
     });
 
     (render_receiver, abort_sender, camera_config_sender)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use solstrale::util::wgpu_util::get_wgpu_device_and_queue;
+
+    /// The blit shader is assembled from two strings at runtime, so nothing in
+    /// the Rust build checks it: a mistake in the splice, or a curve whose
+    /// emitted WGSL does not compile, would first show up as a blank window.
+    /// Compiling every curve here turns that into a test failure.
+    #[test]
+    fn every_tone_mapper_produces_a_shader_that_compiles() {
+        let (device, _) = get_wgpu_device_and_queue();
+
+        for mapper in [
+            ToneMapper::Aces,
+            ToneMapper::PbrNeutral,
+            ToneMapper::Reinhard { white_point: 4. },
+            ToneMapper::Clamp,
+        ] {
+            let source = shader_source(mapper);
+            assert!(
+                source.contains("solstrale_tone_map"),
+                "{:?} emitted no tone map function",
+                mapper
+            );
+
+            device.push_error_scope(wgpu::ErrorFilter::Validation);
+            let _ = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+                label: Some("Tone Map Shader Test"),
+                source: wgpu::ShaderSource::Wgsl(source.as_str().into()),
+            });
+            let err = pollster::block_on(device.pop_error_scope());
+            assert!(err.is_none(), "{:?} failed to compile: {:?}", mapper, err);
+        }
+    }
 }
