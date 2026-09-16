@@ -1,5 +1,6 @@
 render_configuration:
   post_processors:
+    - denoise: { }
     - bloom:
         max_intensity: 2
 camera:

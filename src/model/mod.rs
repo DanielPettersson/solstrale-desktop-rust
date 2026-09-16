@@ -13,6 +13,7 @@ mod bloom_post_processor;
 mod r#box;
 mod camera_config;
 mod custom_width_height;
+mod denoise_post_processor;
 mod glass;
 mod half_screen_width_height;
 mod hittable;
@@ -173,6 +174,7 @@ mod test {
     use crate::model::bloom_post_processor::BloomPostProcessor;
     use crate::model::camera_config::CameraConfig;
     use crate::model::custom_width_height::CustomWidthHeight;
+    use crate::model::denoise_post_processor::{DenoiseGuide, DenoisePostProcessor};
     use crate::model::hittable::Hittable;
     use crate::model::lambertian::Lambertian;
     use crate::model::material::Material;
@@ -277,14 +279,26 @@ mod test {
                     }),
                 }),
                 samples_per_pixel: Some(50),
-                post_processors: vec![PostProcessor {
-                    bloom: Some(BloomPostProcessor {
-                        kernel_size_fraction: Some(0.1),
-                        threshold: Some(1.5),
-                        max_intensity: None,
-                    }),
-                    saturation: None,
-                }],
+                post_processors: vec![
+                    PostProcessor {
+                        denoise: Some(DenoisePostProcessor {
+                            strength: Some(1.0),
+                            iterations: Some(5),
+                            guide: Some(DenoiseGuide::ColorOnly),
+                        }),
+                        bloom: None,
+                        saturation: None,
+                    },
+                    PostProcessor {
+                        denoise: None,
+                        bloom: Some(BloomPostProcessor {
+                            kernel_size_fraction: Some(0.1),
+                            threshold: Some(1.5),
+                            max_intensity: None,
+                        }),
+                        saturation: None,
+                    },
+                ],
             }),
         };
 
@@ -297,6 +311,10 @@ mod test {
       height: 100
   samples_per_pixel: 50
   post_processors:
+  - denoise:
+      strength: 1.0
+      iterations: 5
+      guide: color_only
   - bloom:
       kernel_size_fraction: 0.1
       threshold: 1.5
@@ -331,5 +349,12 @@ world:
 
         let de_scene: Scene = serde_yaml::from_str(&yaml).unwrap();
         assert_eq!(scene, de_scene);
+    }
+
+    /// The scene the app opens with, and resets to. Nothing else loads it
+    /// until it is in front of a user.
+    #[test]
+    fn default_scene_parses() {
+        parse_scene_yaml(include_str!("../../resources/scene.yaml"), 0).unwrap();
     }
 }
