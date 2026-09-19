@@ -25,12 +25,14 @@ const FRAME_INTERVAL: Duration = Duration::from_millis(16);
 /// The blit shader, less the tone mapping function that gets spliced in by
 /// [`shader_source`].
 ///
-/// `fs_main` returns the tone-mapped value without applying gamma, because the
-/// surface it draws to is an sRGB format and the hardware encodes on write.
-/// Note that this is *not* quite the transform `buffer_to_image` applies when
-/// an image is saved: that one encodes with gamma 2.0 rather than sRGB's ~2.2.
-/// The tone curve is shared exactly; the transfer function is still two
-/// slightly different things, tracked in the library's TODO.md.
+/// `fs_main` returns the tone-mapped value without applying a transfer
+/// function, because the surface it draws to is an sRGB format and the
+/// hardware encodes on write. That is the same encode `buffer_to_image` applies
+/// when an image is saved -- it used to be gamma 2.0 there against sRGB's ~2.2
+/// here -- so the two display paths now share the tone curve and the transfer
+/// function exactly. What is left between them is quantisation: the hardware
+/// rounds to nearest over 255, the readback truncates over 256, which is worth
+/// at most a code value.
 const SHADER: &str = r#"
 struct VertexOutput {
     @builtin(position) position: vec4<f32>,
