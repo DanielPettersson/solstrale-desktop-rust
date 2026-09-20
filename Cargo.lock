@@ -4054,7 +4054,7 @@ dependencies = [
 [[package]]
 name = "solstrale"
 version = "0.4.0"
-source = "git+https://github.com/DanielPettersson/solstrale-rust#e37cf8c666027816f7a4cad27646106e259b6b07"
+source = "git+https://github.com/DanielPettersson/solstrale-rust#f6149546793c0ab7ad5fc8cb25cafc316da03baa"
 dependencies = [
  "bytemuck",
  "derive_more",
