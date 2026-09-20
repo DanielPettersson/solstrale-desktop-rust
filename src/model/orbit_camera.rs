@@ -104,8 +104,10 @@ impl OrbitCamera {
         self.target_polar = (self.target_polar + delta_polar).clamp(0.01, PI - 0.01);
     }
 
-    pub fn zoom(&mut self, delta_distance: f64) {
-        self.target_distance = (self.target_distance + delta_distance).max(0.01);
+    /// Relative zoom, positive amount moves closer. Scales with the current
+    /// view distance, so the perceived speed is the same in any scene.
+    pub fn zoom(&mut self, amount: f64) {
+        self.target_distance = (self.target_distance * (-amount).exp()).max(0.01);
     }
 
     pub fn pan(&mut self, delta_x: f64, delta_y: f64, up: Vec3) {

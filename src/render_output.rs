@@ -22,6 +22,9 @@ use crate::{
 /// faster than the screen can show them.
 const FRAME_INTERVAL: Duration = Duration::from_millis(16);
 
+/// Scroll delta to relative zoom amount. One wheel notch is ~50 units.
+const ZOOM_SENSITIVITY: f64 = 0.005;
+
 /// The blit shader, less the tone mapping function that gets spliced in by
 /// [`shader_source`].
 ///
@@ -256,7 +259,7 @@ pub fn render_output(
             }
             let scroll = ui.input(|i| i.smooth_scroll_delta.y);
             if scroll != 0.0 {
-                orbit_camera.zoom(-scroll as f64);
+                orbit_camera.zoom(scroll as f64 * ZOOM_SENSITIVITY);
                 input_changed = true;
             }
 
