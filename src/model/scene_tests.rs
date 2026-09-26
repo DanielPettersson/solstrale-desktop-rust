@@ -105,6 +105,25 @@ fn frame_index_changes_values() {
 }
 
 #[test]
+fn frame_index_use_is_found_anywhere() {
+    let uses = |yaml: &str| {
+        parse_scene(&format!("{}{}", CAMERA, yaml))
+            .unwrap()
+            .uses_frame_index()
+    };
+    assert!(!uses(
+        "world:\n  - sphere:\n      center: 0, 0, 0\n      radius: 1\n"
+    ));
+    assert!(uses("variables:\n  t: frameIndex / 10\nworld: []\n"));
+    assert!(uses(
+        "world:\n  - repeat:\n      variable: i\n      to: frameIndex\n"
+    ));
+    assert!(uses(
+        "world:\n  - sphere:\n      center: 0, 0, 0\n      radius: 1\n      material:\n        light:\n          color: frameIndex, 1, 1\n"
+    ));
+}
+
+#[test]
 fn transformations_and_materials_take_expressions() {
     let w = world(
         "variables:

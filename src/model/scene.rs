@@ -5,7 +5,7 @@ use solstrale::hittable::{Bvh, Hittables};
 
 use crate::model::camera_config::CameraConfig;
 use crate::model::hittable::Hittable;
-use crate::model::num::visit_nums;
+use crate::model::num::{VisitNums, visit_nums};
 use crate::model::render_config::RenderConfig;
 use crate::model::rgb::Rgb;
 use crate::model::scope::Scope;
@@ -39,6 +39,11 @@ impl Scene {
     /// scene variables
     pub fn scope(&self, base: &Scope) -> Result<Scope, Box<dyn Error>> {
         self.variables.scope(base)
+    }
+
+    /// Whether anything in the scene changes between frames
+    pub fn uses_frame_index(&self) -> bool {
+        self.free_vars().contains("frameIndex")
     }
 
     /// The camera as it is at the given frame

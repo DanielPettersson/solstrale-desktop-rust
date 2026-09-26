@@ -86,6 +86,9 @@ struct SolstraleApp {
     show_help: bool,
     dark_mode: bool,
     title: String,
+    /// The value of frameIndex shown
+    frame_index: usize,
+    frame_count: usize,
 }
 
 pub struct Dialogs {
@@ -110,6 +113,8 @@ impl SolstraleApp {
         let mut error_info = ErrorInfo::default();
         let mut doc = Document::default();
         let mut unparsed_scene = None;
+        let mut frame_index = 0;
+        let mut frame_count = 100;
 
         if let Some(storage) = ctx.storage {
             if let Some(value) = storage.get_string("dark_mode") {
@@ -131,6 +136,13 @@ impl SolstraleApp {
                 unparsed_scene = Some(yaml);
             }
             unparsed_scene = unparsed_scene.or(storage.get_string("scene_yaml_unparsed"));
+            let number = |key: &str| {
+                storage
+                    .get_string(key)
+                    .and_then(|v| v.parse::<usize>().ok())
+            };
+            frame_count = number("frame_count").unwrap_or(frame_count).max(1);
+            frame_index = number("frame_index").unwrap_or(0).min(frame_count - 1);
         }
 
         if let Some(d) = dark_mode {
@@ -169,6 +181,8 @@ impl SolstraleApp {
             show_help: false,
             dark_mode: dark_mode.unwrap_or(false),
             title: String::new(),
+            frame_index,
+            frame_count,
         }
     }
 
@@ -490,6 +504,7 @@ impl SolstraleApp {
                         }
                     }
                     ui.horizontal(|ui| {
+                        self.frame_controls(ui);
                         if self.render_control.loading_scene && !self.render_control.overlay {
                             ui.spinner().on_hover_text("Building the scene");
                         }
@@ -508,6 +523,41 @@ impl SolstraleApp {
                     });
                 });
         });
+    }
+
+    /// Which frame of an animation, i.e. which value of frameIndex, is shown
+    fn frame_controls(&mut self, ui: &mut Ui) {
+        let animated = self.doc.scene.uses_frame_index();
+        let hint = if animated {
+            "The frame shown, which expressions read as frameIndex. The batch renderer renders frames from 0 up to the frame count"
+        } else {
+            "Nothing in the scene uses frameIndex, so every frame is the same"
+        };
+        ui.add_enabled_ui(animated, |ui| {
+            ui.label("Frame")
+                .on_hover_text(hint)
+                .on_disabled_hover_text(hint);
+            let changed = ui
+                .add(egui::Slider::new(
+                    &mut self.frame_index,
+                    0..=self.frame_count.saturating_sub(1),
+                ))
+                .on_hover_text(hint)
+                .on_disabled_hover_text(hint)
+                .changed();
+            ui.label("of");
+            let count_changed = ui
+                .add(egui::DragValue::new(&mut self.frame_count).range(1..=100_000))
+                .on_hover_text("Number of frames in the animation")
+                .changed();
+            if count_changed {
+                self.frame_index = self.frame_index.min(self.frame_count - 1);
+            }
+            if changed || count_changed {
+                self.render_control.edited(Instant::now());
+            }
+        });
+        ui.separator();
     }
 
     fn outline_panel(&mut self, ui: &mut Ui) {
@@ -559,7 +609,7 @@ impl SolstraleApp {
                         ui,
                         &mut self.doc.scene,
                         &self.selection,
-                        0,
+                        self.frame_index,
                         &mut self.assets,
                     ) {
                         self.edited();
@@ -616,9 +666,9 @@ impl App for SolstraleApp {
                     loading_output::show(ui);
                 }
 
-                if let Some(wait) = self
-                    .render_control
-                    .schedule(&self.doc.scene, 0, Instant::now())
+                if let Some(wait) =
+                    self.render_control
+                        .schedule(&self.doc.scene, self.frame_index, Instant::now())
                 {
                     ui.ctx().request_repaint_after(wait);
                 }
@@ -628,7 +678,7 @@ impl App for SolstraleApp {
                     &mut self.render_control,
                     &mut self.rendered_image,
                     Some(&self.doc.scene),
-                    0,
+                    self.frame_index,
                     available_size,
                 );
             });
@@ -671,6 +721,8 @@ impl App for SolstraleApp {
                 .map_or(String::new(), |p| p.display().to_string()),
         );
         storage.set_string("scene_dirty", self.doc.dirty.to_string());
+        storage.set_string("frame_index", self.frame_index.to_string());
+        storage.set_string("frame_count", self.frame_count.to_string());
         if let Some(yaml) = &self.unparsed_scene {
             storage.set_string("scene_yaml_unparsed", yaml.clone());
         }
