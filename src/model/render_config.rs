@@ -18,6 +18,8 @@ pub struct RenderConfig {
     pub samples_per_pixel: Option<u32>,
     #[serde(skip_serializing_if = "Vec::is_empty", default)]
     pub post_processors: Vec<PostProcessor>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub preview: Option<bool>,
 }
 
 impl Creator<solstrale::renderer::RenderConfig> for RenderConfig {
@@ -42,6 +44,7 @@ impl Creator<solstrale::renderer::RenderConfig> for RenderConfig {
             height,
             samples_per_pixel: self.samples_per_pixel.unwrap_or(200),
             post_processors,
+            preview: self.preview.unwrap_or(false),
             // Take library defaults for the rest (max_depth, samples_per_batch).
             // Spreading rather than listing them keeps this immune to new fields.
             ..Default::default()
@@ -76,6 +79,14 @@ impl HelpDocumentation for RenderConfig {
                         "A post processor is applied to the image after rendering for various effects",
                         OptionalList,
                         PostProcessor::get_documentation_structure(depth + 1),
+                    ),
+                ),
+                (
+                    "preview".to_string(),
+                    FieldInfo::new_simple(
+                        "Run the denoise and saturation post processors on every batch rather than only the last, so the image is filtered while it renders and while the camera moves. Costs render time. Defaults to false",
+                        Optional,
+                        "true or false",
                     ),
                 ),
             ]),

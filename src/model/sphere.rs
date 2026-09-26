@@ -1,6 +1,7 @@
-use crate::model::FieldType::{Normal, Optional};
+use crate::model::FieldType::{Normal, Optional, OptionalList};
 use crate::model::material::Material;
 use crate::model::pos::Pos;
+use crate::model::transformation::{Transformation, create_transformation};
 use crate::model::{Creator, CreatorContext, DocumentationStructure, FieldInfo, HelpDocumentation};
 use serde::{Deserialize, Serialize};
 use solstrale::hittable::Hittables;
@@ -14,6 +15,8 @@ pub struct Sphere {
     pub radius: f64,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub material: Option<Material>,
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
+    pub transformations: Vec<Transformation>,
 }
 
 impl Creator<Hittables> for Sphere {
@@ -25,6 +28,7 @@ impl Creator<Hittables> for Sphere {
                 .as_ref()
                 .unwrap_or(&Material::default())
                 .create(ctx)?,
+            &create_transformation(&self.transformations, ctx)?,
         )
         .into())
     }
@@ -53,6 +57,14 @@ impl HelpDocumentation for Sphere {
                         "Material of the sphere",
                         Optional,
                         Material::get_documentation_structure(depth + 1),
+                    ),
+                ),
+                (
+                    "transformations".to_string(),
+                    FieldInfo::new(
+                        "Transformations to be applied to the position and size of the sphere. Rotation moves the center but does not rotate the sphere's texture",
+                        OptionalList,
+                        Transformation::get_documentation_structure(depth + 1),
                     ),
                 ),
             ]),

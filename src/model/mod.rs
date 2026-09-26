@@ -299,6 +299,7 @@ mod test {
                         saturation: None,
                     },
                 ],
+                preview: None,
             }),
         };
 
