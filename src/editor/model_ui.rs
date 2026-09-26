@@ -4,7 +4,9 @@ use eframe::egui::{self, DragValue, Ui};
 
 use crate::editor::asset_picker::AssetKind;
 use crate::editor::widgets::{num_edit, path_edit, pos_edit, rgb_edit};
-use crate::editor::{EditCx, default_row, form, list_edit, opt_row, row, variant_combo};
+use crate::editor::{
+    EditCx, block_row, default_block_row, default_row, form, list_edit, opt_row, row, variant_combo,
+};
 use crate::model::blend::Blend;
 use crate::model::bloom_post_processor::BloomPostProcessor;
 use crate::model::r#box::Box;
@@ -92,7 +94,7 @@ fn default_texture_row(
     default: Texture,
     cx: &mut EditCx,
 ) -> bool {
-    default_row(ui, label, help, t, default, |ui, t| t.edit(ui, cx))
+    default_block_row(ui, label, help, t, default, |ui, t| t.edit(ui, cx))
 }
 
 /// A normal map file, where no file means no normal map
@@ -115,12 +117,12 @@ fn default_material_row(
     default: Material,
     cx: &mut EditCx,
 ) -> bool {
-    default_row(ui, "Material", help, m, default, |ui, m| m.edit(ui, cx))
+    default_block_row(ui, "Material", help, m, default, |ui, m| m.edit(ui, cx))
 }
 
 fn transformations_row(ui: &mut Ui, t: &mut Vec<Transformation>, cx: &mut EditCx) -> bool {
-    row(ui, "Transformations", TRANSFORMATIONS_HELP, |ui| {
-        ui.vertical(|ui| list_edit(ui, t, cx)).inner
+    block_row(ui, "Transformations", TRANSFORMATIONS_HELP, |ui| {
+        list_edit(ui, t, cx)
     })
 }
 
@@ -321,15 +323,16 @@ impl Edit for Repeat {
                 1.,
                 cx,
             );
-            ui.label("");
-            ui.label(
-                egui::RichText::new(format!(
-                    "{} hittables repeated, edit them in the outline",
-                    self.world.len()
-                ))
-                .weak(),
+            ui.add(
+                egui::Label::new(
+                    egui::RichText::new(format!(
+                        "{} hittables repeated, edit them in the outline",
+                        self.world.len()
+                    ))
+                    .weak(),
+                )
+                .wrap(),
             );
-            ui.end_row();
             changed
         })
     }
@@ -468,10 +471,10 @@ impl Edit for Light {
 impl Edit for Blend {
     fn edit(&mut self, ui: &mut Ui, cx: &mut EditCx) -> bool {
         form(ui, "blend", |ui| {
-            row(ui, "First", "The first material that is blended", |ui| {
-                ui.vertical(|ui| self.first.edit(ui, cx)).inner
-            }) | row(ui, "Second", "The second material that is blended", |ui| {
-                ui.vertical(|ui| self.second.edit(ui, cx)).inner
+            block_row(ui, "First", "The first material that is blended", |ui| {
+                self.first.edit(ui, cx)
+            }) | block_row(ui, "Second", "The second material that is blended", |ui| {
+                self.second.edit(ui, cx)
             }) | default_num_row(
                 ui,
                 "Blend factor",
@@ -588,14 +591,11 @@ impl Edit for RenderConfig {
                 false,
                 |ui, b| ui.checkbox(b, "").changed(),
             );
-            changed |= row(
+            changed |= block_row(
                 ui,
                 "Post processors",
                 "Applied to the image after rendering, in order from the top",
-                |ui| {
-                    ui.vertical(|ui| list_edit(ui, &mut self.post_processors, cx))
-                        .inner
-                },
+                |ui| list_edit(ui, &mut self.post_processors, cx),
             );
             changed
         })

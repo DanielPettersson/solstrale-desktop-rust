@@ -4,7 +4,7 @@
 use std::collections::BTreeSet;
 use std::hash::Hash;
 
-use eframe::egui::{self, Grid, RichText, Ui};
+use eframe::egui::{self, RichText, Ui};
 
 use crate::model::one_of::OneOf;
 use crate::model::scope::Scope;
@@ -35,28 +35,74 @@ pub trait Edit {
     fn edit(&mut self, ui: &mut Ui, cx: &mut EditCx) -> bool;
 }
 
-/// A two column grid of labelled rows.
+/// Widest the label column of a [`form`] gets
+const LABEL_WIDTH: f32 = 110.;
+
+/// Labelled rows, with the labels in a column to the left.
 pub fn form(
     ui: &mut Ui,
     id_salt: impl Hash + std::fmt::Debug,
     add: impl FnOnce(&mut Ui) -> bool,
 ) -> bool {
     ui.push_id(id_salt, |ui| {
-        Grid::new("form")
-            .num_columns(2)
-            .spacing([12., 6.])
-            .show(ui, add)
-            .inner
+        ui.vertical(|ui| {
+            ui.spacing_mut().item_spacing.y = 6.;
+            add(ui)
+        })
+        .inner
     })
     .inner
 }
 
-/// A row in a [`form`], with `help` shown when hovering the label.
+/// A row in a [`form`], with `help` shown when hovering the label. The value
+/// gets the width left of the panel after the label, and has to fit in it:
+/// a grid would give it whatever its content asks for, pushing the rest of
+/// the panel out of view.
 pub fn row(ui: &mut Ui, label: &str, help: &str, add: impl FnOnce(&mut Ui) -> bool) -> bool {
-    ui.label(label).on_hover_text(help);
-    let changed = ui.push_id(label, add).inner;
-    ui.end_row();
-    changed
+    row_impl(ui, label, help, false, add)
+}
+
+/// A [`row`] for a value with rows of its own, like a material, which goes
+/// under its label rather than beside it, to not be squeezed into what is
+/// left beside it when nested.
+pub fn block_row(ui: &mut Ui, label: &str, help: &str, add: impl FnOnce(&mut Ui) -> bool) -> bool {
+    row_impl(ui, label, help, true, add)
+}
+
+fn row_impl(
+    ui: &mut Ui,
+    label: &str,
+    help: &str,
+    block: bool,
+    add: impl FnOnce(&mut Ui) -> bool,
+) -> bool {
+    if block {
+        ui.label(label).on_hover_text(help);
+        return ui.push_id(label, |ui| ui.indent("block", add).inner).inner;
+    }
+    ui.horizontal_top(|ui| {
+        let label_width = LABEL_WIDTH.min(ui.available_width() * 0.35);
+        ui.allocate_ui_with_layout(
+            egui::vec2(label_width, 0.),
+            egui::Layout::top_down(egui::Align::Min),
+            |ui| {
+                ui.set_width(label_width);
+                // Level with the text of the widget next to it
+                ui.add_space(2.);
+                ui.add(egui::Label::new(label).wrap()).on_hover_text(help);
+            },
+        );
+        let width = ui.available_width();
+        ui.push_id(label, |ui| {
+            ui.vertical(|ui| {
+                ui.set_max_width(width);
+                add(ui)
+            })
+            .inner
+        })
+        .inner
+    })
+    .inner
 }
 
 /// A [`row`] for a value the renderer has a default for. Shows the default
@@ -70,7 +116,31 @@ pub fn default_row<T: Clone + PartialEq>(
     default: T,
     edit: impl FnOnce(&mut Ui, &mut T) -> bool,
 ) -> bool {
-    row(ui, label, help, |ui| {
+    default_row_impl(ui, label, help, false, value, default, edit)
+}
+
+/// A [`default_row`] laid out as a [`block_row`]
+pub fn default_block_row<T: Clone + PartialEq>(
+    ui: &mut Ui,
+    label: &str,
+    help: &str,
+    value: &mut Option<T>,
+    default: T,
+    edit: impl FnOnce(&mut Ui, &mut T) -> bool,
+) -> bool {
+    default_row_impl(ui, label, help, true, value, default, edit)
+}
+
+fn default_row_impl<T: Clone + PartialEq>(
+    ui: &mut Ui,
+    label: &str,
+    help: &str,
+    block: bool,
+    value: &mut Option<T>,
+    default: T,
+    edit: impl FnOnce(&mut Ui, &mut T) -> bool,
+) -> bool {
+    row_impl(ui, label, help, block, |ui| {
         let mut v = value.clone().unwrap_or_else(|| default.clone());
         let changed = ui.vertical(|ui| edit(ui, &mut v)).inner;
         if changed {

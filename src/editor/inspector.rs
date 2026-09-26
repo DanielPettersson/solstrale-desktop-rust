@@ -155,46 +155,41 @@ fn variables_edit(
     let mut scope = Some(Scope::builtin(frame));
     let names: Vec<String> = vars.0.iter().map(|(n, _)| n.clone()).collect();
 
-    egui::Grid::new("variables")
-        .num_columns(3)
-        .spacing([8., 6.])
-        .show(ui, |ui| {
-            for (i, (name, value)) in vars.0.iter_mut().enumerate() {
-                ui.push_id(i, |ui| {
-                    let others: Vec<&String> = names
-                        .iter()
-                        .enumerate()
-                        .filter(|(j, _)| *j != i)
-                        .map(|(_, n)| n)
-                        .collect();
-                    changed |= name_edit(ui, name, |n| {
-                        check_name(n)?;
-                        if others.iter().any(|o| *o == n) {
-                            return Err(format!("`{}` is already a variable", n));
-                        }
-                        Ok(())
-                    });
-                });
-                ui.push_id(("value", i), |ui| {
-                    let cx = EditCx {
-                        visible: &visible,
-                        preview: scope.as_ref(),
-                        assets,
-                    };
-                    changed |= num_edit(ui, value, &cx);
-                });
+    for (i, (name, value)) in vars.0.iter_mut().enumerate() {
+        ui.push_id(i, |ui| {
+            ui.horizontal(|ui| {
+                // First, as the value's width varies
                 if ui.small_button("✖").on_hover_text("Remove").clicked() {
                     remove = Some(i);
                 }
-                ui.end_row();
-
-                visible.insert(name.clone());
-                scope = scope.and_then(|s| {
-                    let v = value.eval_scope(&s).ok()?;
-                    Some(s.with(name, v))
+                let others: Vec<&String> = names
+                    .iter()
+                    .enumerate()
+                    .filter(|(j, _)| *j != i)
+                    .map(|(_, n)| n)
+                    .collect();
+                changed |= name_edit(ui, name, |n| {
+                    check_name(n)?;
+                    if others.iter().any(|o| *o == n) {
+                        return Err(format!("`{}` is already a variable", n));
+                    }
+                    Ok(())
                 });
-            }
+                let cx = EditCx {
+                    visible: &visible,
+                    preview: scope.as_ref(),
+                    assets,
+                };
+                changed |= num_edit(ui, value, &cx);
+            });
         });
+
+        visible.insert(name.clone());
+        scope = scope.and_then(|s| {
+            let v = value.eval_scope(&s).ok()?;
+            Some(s.with(name, v))
+        });
+    }
 
     if let Some(i) = remove {
         vars.0.remove(i);

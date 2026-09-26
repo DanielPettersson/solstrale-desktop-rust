@@ -526,7 +526,8 @@ impl SolstraleApp {
             .default_size(400.)
             .show(ui, |ui| {
                 ui.add_space(4.);
-                ScrollArea::both().auto_shrink(false).show(ui, |ui| {
+                // Vertical only: the inspector fits its content to the width
+                ScrollArea::vertical().auto_shrink(false).show(ui, |ui| {
                     let mut view_request = None;
                     if inspector(
                         ui,

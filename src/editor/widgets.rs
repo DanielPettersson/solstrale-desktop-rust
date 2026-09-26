@@ -90,8 +90,12 @@ pub fn num_edit_min(ui: &mut Ui, num: &mut Num, cx: &EditCx, min: f64) -> bool {
             }
             Num::Expr(e) => {
                 let src = e.src().to_string();
-                // Grows with the expression, up to a point
-                let width = (src.chars().count() as f32 * 7.5 + 16.).clamp(EXPR_WIDTH, 320.);
+                // Grows with the expression, but leaves room for ƒx and the
+                // value next to it
+                let room = (ui.available_width() - 70.).max(40.);
+                let width = (src.chars().count() as f32 * 7.5 + 16.)
+                    .max(EXPR_WIDTH)
+                    .min(room);
                 if let Some(text) =
                     buffered_text(ui, id, &src, width, |t| expr_error(t, cx).map(|_| ()))
                     && let Ok(expr) = expr_error(&text, cx)
@@ -146,10 +150,14 @@ fn round_for_display(v: f64) -> f64 {
     (v * 1e4).round() / 1e4
 }
 
-/// Three numbers side by side, or one per line when any is an expression,
-/// which is too wide to fit three of
+/// Width three plain numbers side by side need
+const TRIPLE_WIDTH: f32 = 270.;
+
+/// Three numbers side by side, or one per line when they do not fit, which an
+/// expression never does
 fn triple_edit(ui: &mut Ui, nums: [&mut Num; 3], labels: [&str; 3], cx: &EditCx, min: f64) -> bool {
-    let vertical = nums.iter().any(|n| matches!(n, Num::Expr(_)));
+    let vertical =
+        ui.available_width() < TRIPLE_WIDTH || nums.iter().any(|n| matches!(n, Num::Expr(_)));
     let mut changed = false;
     let components = |ui: &mut Ui| {
         for (n, l) in nums.into_iter().zip(labels) {
@@ -207,7 +215,10 @@ pub fn path_edit(ui: &mut Ui, path: &mut String, kind: AssetKind, cx: &mut EditC
     let mut changed = false;
     ui.horizontal(|ui| {
         changed |= ui
-            .add(TextEdit::singleline(path).desired_width(160.))
+            .add(
+                TextEdit::singleline(path)
+                    .desired_width((ui.available_width() - 30.).clamp(40., 220.)),
+            )
             .changed();
         if ui.button("…").on_hover_text("Choose a file").clicked() {
             cx.assets.request(id, kind, path);

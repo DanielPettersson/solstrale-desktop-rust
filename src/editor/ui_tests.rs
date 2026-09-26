@@ -3,7 +3,7 @@
 
 use eframe::egui::{self, Vec2};
 use egui_kittest::Harness;
-use egui_kittest::kittest::Queryable;
+use egui_kittest::kittest::{NodeT, Queryable};
 
 use crate::document::Document;
 use crate::editor::asset_picker::AssetPicker;
@@ -20,7 +20,12 @@ struct State {
     changed: bool,
     view_moved: bool,
     view_request: Option<ViewRequest>,
+    /// Where the inspector was drawn, which its content has to stay inside
+    inspector_rect: egui::Rect,
 }
+
+/// The inspector panel's minimum width in the app
+const INSPECTOR_WIDTH: f32 = 340.;
 
 fn editor_ui(ui: &mut egui::Ui, s: &mut State) {
     ui.horizontal_top(|ui| {
@@ -43,23 +48,34 @@ fn editor_ui(ui: &mut egui::Ui, s: &mut State) {
             });
         });
         ui.separator();
-        ui.vertical(|ui| {
-            s.changed |= inspector(
-                ui,
-                &mut s.scene,
-                &s.selection,
-                0,
-                &mut s.assets,
-                s.view_moved,
-                &mut s.view_request,
-            );
-        });
+        // As in the app's inspector panel
+        ui.allocate_ui_with_layout(
+            Vec2::new(INSPECTOR_WIDTH, ui.available_height()),
+            egui::Layout::top_down(egui::Align::Min),
+            |ui| {
+                ui.set_width(INSPECTOR_WIDTH);
+                s.inspector_rect = ui.max_rect();
+                egui::ScrollArea::vertical()
+                    .auto_shrink(false)
+                    .show(ui, |ui| {
+                        s.changed |= inspector(
+                            ui,
+                            &mut s.scene,
+                            &s.selection,
+                            0,
+                            &mut s.assets,
+                            s.view_moved,
+                            &mut s.view_request,
+                        );
+                    });
+            },
+        );
     });
 }
 
 fn harness(scene: Scene, selection: Selection) -> Harness<'static, State> {
     Harness::builder()
-        .with_size(Vec2::new(760., 640.))
+        .with_size(Vec2::new(640., 900.))
         .wgpu()
         .build_ui_state(
             editor_ui,
@@ -70,6 +86,7 @@ fn harness(scene: Scene, selection: Selection) -> Harness<'static, State> {
                 changed: false,
                 view_moved: false,
                 view_request: None,
+                inspector_rect: egui::Rect::NOTHING,
             },
         )
 }
@@ -145,6 +162,101 @@ fn defaults_are_left_out_of_the_scene() {
     assert_eq!(Some(2.), value);
     store_unless_default(&mut value, 1., &1.);
     assert_eq!(None, value);
+}
+
+/// Materials nested in blends, image textures and long expressions, which
+/// are what gets wide
+const NESTED_SCENE: &str = "variables:
+  a_rather_long_variable_name: 2
+camera:
+  look_from: 0, 1, -10
+world:
+  - sphere:
+      center: a_rather_long_variable_name * sin(frameIndex * 0.1), 1, 0
+      radius: 1
+      material:
+        blend:
+          first:
+            blend:
+              first:
+                lambertian:
+                  albedo:
+                    color: 0.5, 0.5, 0.5
+              second:
+                glass:
+                  albedo:
+                    image:
+                      file: /a/rather/long/path/to/some/texture/image.png
+          second:
+            plastic:
+              albedo:
+                color: 0.9, a_rather_long_variable_name / 10, 0.1
+      transformations:
+        - translation: 1, 2, 3
+        - rotation_y: a_rather_long_variable_name * 45
+";
+
+#[test]
+fn inspector_content_fits_the_panel() {
+    let default = Document::default().scene;
+    let expressions = parse_scene(EXPRESSIONS_SCENE).unwrap();
+    let nested = parse_scene(NESTED_SCENE).unwrap();
+    let mut cases = vec![
+        ("scene", nested.clone(), Selection::Scene),
+        ("camera", default.clone(), Selection::Camera),
+        ("render_config", default.clone(), Selection::RenderConfig),
+        ("repeat", expressions.clone(), Selection::Hittable(vec![0])),
+        ("nested", nested.clone(), Selection::Hittable(vec![0])),
+        (
+            "in_repeat",
+            expressions.clone(),
+            Selection::Hittable(vec![0, 0]),
+        ),
+    ];
+    for i in 0..default.world.len() {
+        cases.push(("default", default.clone(), Selection::Hittable(vec![i])));
+    }
+
+    for (name, scene, selection) in cases {
+        let mut h = harness(scene, selection.clone());
+        h.run();
+        let panel = h.state().inspector_rect;
+        let overflowing: Vec<String> = h
+            .query_all(egui_kittest::kittest::by())
+            .filter_map(|n| {
+                let node = n.accesskit_node();
+                // Text longer than its field scrolls inside it, and is clipped
+                if node.role() == egui::accesskit::Role::TextRun {
+                    return None;
+                }
+                // At the harness' 1 pixel per point
+                let r = node.bounding_box()?;
+                (r.x0 as f32 >= panel.min.x - 1. && r.x1 as f32 > panel.max.x + 1.).then(|| {
+                    format!(
+                        "{:?} {:?} {:?} at {:?}",
+                        node.role(),
+                        node.label(),
+                        node.value(),
+                        r
+                    )
+                })
+            })
+            .collect();
+        if !overflowing.is_empty() {
+            save_preview(&mut h, &format!("overflow_{}", name));
+        }
+        assert!(
+            overflowing.is_empty(),
+            "{} {:?} reaches past the panel's right edge {}:\n{}",
+            name,
+            selection,
+            panel.max.x,
+            overflowing.join("\n")
+        );
+    }
+    let mut h = harness(nested, Selection::Hittable(vec![0]));
+    h.run();
+    save_preview(&mut h, "nested_material");
 }
 
 #[test]
