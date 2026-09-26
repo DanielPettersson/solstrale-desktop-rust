@@ -19,8 +19,6 @@ use solstrale_desktop_rust::editor::asset_picker::AssetPicker;
 use solstrale_desktop_rust::editor::inspector::inspector;
 use solstrale_desktop_rust::editor::outline::{ERROR_COLOR, OutlineCx, Selection, apply, outline};
 use solstrale_desktop_rust::keyboard::is_ctrl_s;
-use solstrale_desktop_rust::model::num::Num;
-use solstrale_desktop_rust::model::pos::Pos;
 use solstrale_desktop_rust::render_output::render_output;
 use solstrale_desktop_rust::{
     ErrorInfo, RenderControl, RenderedImage, device_descriptor, help, load_scene, loading_output,
@@ -274,24 +272,17 @@ impl SolstraleApp {
     /// Writes the orbited view into the scene's camera. Asks first, unless
     /// `confirmed`, when that would replace expressions.
     fn use_current_view(&mut self, confirmed: bool) {
-        let Some(orbit) = &self.render_control.orbit_camera else {
-            return;
-        };
-        let camera = &mut self.doc.scene.camera;
-        let has_expr = |p: &Pos| [&p.x, &p.y, &p.z].iter().any(|n| matches!(n, Num::Expr(_)));
-        if !confirmed
-            && (has_expr(&camera.look_from) || camera.look_at.as_ref().is_some_and(has_expr))
-        {
+        if !confirmed && self.doc.scene.camera.position_uses_expressions() {
             self.confirm_use_view = true;
             return;
         }
-        let view = solstrale::camera::CameraConfig::from(orbit);
-        let round = |v: f64| (v * 1000.).round() / 1000.;
-        let pos = |v: solstrale::geo::vec3::Vec3| Pos::new(round(v.x), round(v.y), round(v.z));
-        camera.look_from = pos(view.look_from);
-        camera.look_at = Some(pos(view.look_at));
-        self.selection = Selection::Camera;
-        self.edited();
+        if self
+            .render_control
+            .write_view_to_camera(&mut self.doc.scene, self.frame_index, true)
+        {
+            self.selection = Selection::Camera;
+            self.doc.dirty = true;
+        }
     }
 
     fn use_view_modal(&mut self, ctx: &egui::Context) {
@@ -681,6 +672,16 @@ impl App for SolstraleApp {
                     self.frame_index,
                     available_size,
                 );
+
+                if std::mem::take(&mut self.render_control.view_dragged)
+                    && self.render_control.write_view_to_camera(
+                        &mut self.doc.scene,
+                        self.frame_index,
+                        false,
+                    )
+                {
+                    self.doc.dirty = true;
+                }
             });
 
         if self.show_help {

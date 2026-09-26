@@ -54,7 +54,7 @@ A desktop UI for the [Solstråle path tracer](https://github.com/DanielPettersso
 *   **Orbit:** Left-click and drag.
 *   **Pan:** Right-click and drag.
 *   **Zoom:** Scroll wheel.
-*   **Reset view / Use current view:** Go back to the scene's camera, or make the view the scene's camera.
+*   **Camera:** Moving the view moves the scene's camera. When the camera's position is an expression the view moves on its own instead, and Reset view / Use current view go back to the scene's camera or replace the expressions with the view.
 *   **Edit Scene:** Select a part of the scene in the outline on the left and change it in the inspector on the right. Add hittables with +, right click one to duplicate, move, wrap in a repeat or delete it, and drag to reorder. Help > How to use has the details.
 *   **Shortcuts:** Ctrl+S saves the scene, Ctrl+R restarts the render.
 

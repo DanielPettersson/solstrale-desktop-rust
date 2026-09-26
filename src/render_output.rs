@@ -274,6 +274,7 @@ pub fn render_output(
 
             if orbit_camera.update() || input_changed {
                 render_control.camera_updated = true;
+                render_control.view_dragged = true;
                 ui.ctx().request_repaint();
             }
         }

@@ -151,9 +151,10 @@ pub struct CameraSnapshot {
 }
 
 impl CameraSnapshot {
-    /// Equal but for the rounding that going through orbit angles adds
+    /// Equal but for the rounding that going through orbit angles, or
+    /// writing the view into the scene to 0.001, adds
     pub fn approx_eq(&self, other: &CameraSnapshot) -> bool {
-        let scale = 1e-6 * (1. + (self.look_from - self.look_at).length());
+        let scale = 1e-3 + 1e-6 * (self.look_from - self.look_at).length();
         (self.look_from - other.look_from).length() < scale
             && (self.look_at - other.look_at).length() < scale
             && self.up == other.up

@@ -40,6 +40,12 @@ impl Creator<solstrale::camera::CameraConfig> for CameraConfig {
 }
 
 impl CameraConfig {
+    /// Whether where the camera is or looks is computed by an expression
+    pub fn position_uses_expressions(&self) -> bool {
+        let has_expr = |p: &Pos| [&p.x, &p.y, &p.z].iter().any(|n| matches!(n, Num::Expr(_)));
+        has_expr(&self.look_from) || self.look_at.as_ref().is_some_and(has_expr)
+    }
+
     /// The camera with its expressions evaluated. Needs no GPU, unlike `create`.
     pub fn eval(&self, scope: &Scope) -> Result<solstrale::camera::CameraConfig, Box<dyn Error>> {
         let num =

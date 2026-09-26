@@ -1,5 +1,6 @@
 use crate::editor::outline::Selection;
 use crate::model::orbit_camera::{CameraSnapshot, OrbitCamera};
+use crate::model::pos::Pos;
 use crate::model::scene::Scene;
 use crate::render_scheduler::{Change, classify, debounce_remaining};
 use eframe::egui::Vec2;
@@ -133,6 +134,8 @@ pub struct RenderControl {
     /// Cover the viewport while the running render loads
     pub overlay: bool,
     pub render_error: Option<RenderError>,
+    /// The user moved the view in the viewport since this was last cleared
+    pub view_dragged: bool,
 }
 
 /// Why the scene could not be rendered
@@ -187,6 +190,36 @@ impl RenderControl {
             self.orbit_camera = Some(OrbitCamera::from_config(&applied.into(), 1.));
             self.camera_updated = true;
         }
+    }
+
+    /// Writes the view into the scene's camera, so the camera's settings
+    /// follow the view. A camera placed by expressions is left alone unless
+    /// `replace_expressions`. Returns whether it wrote.
+    pub fn write_view_to_camera(
+        &mut self,
+        scene: &mut Scene,
+        frame: usize,
+        replace_expressions: bool,
+    ) -> bool {
+        let Some(orbit) = &self.orbit_camera else {
+            return false;
+        };
+        if !replace_expressions && scene.camera.position_uses_expressions() {
+            return false;
+        }
+        let view = solstrale::camera::CameraConfig::from(orbit);
+        let round = |v: f64| (v * 1000.).round() / 1000.;
+        let pos = |v: solstrale::geo::vec3::Vec3| Pos::new(round(v.x), round(v.y), round(v.z));
+        scene.camera.look_from = pos(view.look_from);
+        scene.camera.look_at = Some(pos(view.look_at));
+
+        // The render already shows this view, so the edit is recorded as
+        // rendered rather than sent to it again
+        if let Some((last, _)) = &mut self.last_dispatched {
+            last.camera = scene.camera.clone();
+        }
+        self.applied_camera = scene.camera_at(frame).ok().map(|c| (&c).into());
+        true
     }
 
     /// Whether the view has been moved away from the scene's camera

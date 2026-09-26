@@ -42,7 +42,9 @@ pub fn show(ui: &mut Ui) {
         ui,
         "Viewport",
         "Drag to orbit the camera, drag with the right or middle button to pan, and scroll to zoom. \
-         Reset view goes back to the scene's camera. Ctrl+R restarts the render and Ctrl+S saves the scene.",
+         This moves the scene's camera, unless its position is an expression: then the view moves on its own, \
+         Reset view goes back to the scene's camera and Use current view replaces the expressions with the view. \
+         Ctrl+R restarts the render and Ctrl+S saves the scene.",
     );
     section(
         ui,

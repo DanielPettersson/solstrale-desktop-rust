@@ -166,6 +166,47 @@ mod tests {
         assert!(!rc.camera_updated);
     }
 
+    /// A view moved to `look_from`, with the rest from the scene's camera
+    fn control_with_view(scene: &Scene, look_from: (f64, f64, f64)) -> crate::RenderControl {
+        let mut view = scene.camera_at(0).unwrap();
+        view.look_from = solstrale::geo::vec3::Vec3::new(look_from.0, look_from.1, look_from.2);
+        view.look_at = solstrale::geo::vec3::Vec3::new(0., 0., 0.);
+        crate::RenderControl {
+            orbit_camera: Some(crate::model::orbit_camera::OrbitCamera::from_config(
+                &view, 1.,
+            )),
+            ..control_after_render(scene)
+        }
+    }
+
+    #[test]
+    fn dragged_view_is_written_to_the_camera_without_a_restart() {
+        let mut scene = Document::default().scene;
+        let mut rc = control_with_view(&scene, (1.23456, 2., -10.));
+
+        assert!(rc.write_view_to_camera(&mut scene, 0, false));
+        assert_eq!(Pos::new(1.235, 2., -10.), scene.camera.look_from);
+        assert_eq!(Some(Pos::new(0., 0., 0.)), scene.camera.look_at);
+        // Already on screen, so nothing to render and the view has not moved
+        assert_eq!(
+            Change::None,
+            classify(rc.last_dispatched.as_ref(), &scene, 0)
+        );
+        assert!(!rc.view_moved());
+    }
+
+    #[test]
+    fn dragging_leaves_camera_expressions_alone() {
+        let mut scene = Document::default().scene;
+        scene.camera.look_from.x = Num::parse("10 * 2").unwrap();
+        let mut rc = control_with_view(&scene, (1., 2., -10.));
+
+        assert!(!rc.write_view_to_camera(&mut scene, 0, false));
+        assert_eq!("10 * 2", scene.camera.look_from.x.to_string());
+        assert!(rc.write_view_to_camera(&mut scene, 0, true));
+        assert_eq!(Pos::new(1., 2., -10.), scene.camera.look_from);
+    }
+
     #[test]
     fn debounce_waits_for_a_pause() {
         let t = Instant::now();
