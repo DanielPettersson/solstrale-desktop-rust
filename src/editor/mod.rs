@@ -59,14 +59,40 @@ pub fn row(ui: &mut Ui, label: &str, help: &str, add: impl FnOnce(&mut Ui) -> bo
     changed
 }
 
-/// A [`row`] for an optional value. Unchecked, the value is left out of the
-/// scene and `default_text` says what the renderer uses instead.
+/// A [`row`] for a value the renderer has a default for. Shows the default
+/// until it is changed, and leaves the value out of the scene while it is the
+/// default.
+pub fn default_row<T: Clone + PartialEq>(
+    ui: &mut Ui,
+    label: &str,
+    help: &str,
+    value: &mut Option<T>,
+    default: T,
+    edit: impl FnOnce(&mut Ui, &mut T) -> bool,
+) -> bool {
+    row(ui, label, help, |ui| {
+        let mut v = value.clone().unwrap_or_else(|| default.clone());
+        let changed = ui.vertical(|ui| edit(ui, &mut v)).inner;
+        if changed {
+            store_unless_default(value, v, &default);
+        }
+        changed
+    })
+}
+
+/// `v`, or nothing when it is the default
+pub fn store_unless_default<T: PartialEq>(value: &mut Option<T>, v: T, default: &T) {
+    *value = (v != *default).then_some(v);
+}
+
+/// A [`row`] for an optional value that has no default, where leaving it out
+/// means something, like no attenuation. Unchecked, `none_text` says what.
 pub fn opt_row<T>(
     ui: &mut Ui,
     label: &str,
     help: &str,
     value: &mut Option<T>,
-    default_text: &str,
+    none_text: &str,
     new: impl FnOnce() -> T,
     edit: impl FnOnce(&mut Ui, &mut T) -> bool,
 ) -> bool {
@@ -89,7 +115,7 @@ pub fn opt_row<T>(
             match value {
                 Some(v) => changed |= ui.vertical(|ui| edit(ui, v)).inner,
                 None => {
-                    ui.label(RichText::new(default_text).weak());
+                    ui.label(RichText::new(none_text).weak());
                 }
             }
             changed

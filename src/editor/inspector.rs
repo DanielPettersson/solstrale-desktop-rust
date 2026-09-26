@@ -7,7 +7,7 @@ use eframe::egui::{self, RichText, Ui};
 use crate::editor::asset_picker::AssetPicker;
 use crate::editor::outline::{Selection, enclosing_loops, get_mut};
 use crate::editor::widgets::{name_edit, num_edit};
-use crate::editor::{Edit, EditCx, form, opt_row};
+use crate::editor::{Edit, EditCx, default_row, form};
 use crate::model::num::Num;
 use crate::model::render_config::RenderConfig;
 use crate::model::rgb::Rgb;
@@ -75,13 +75,12 @@ pub fn inspector(
             ui.heading("Scene");
             ui.add_space(4.);
             let mut changed = form(ui, "scene", |ui| {
-                opt_row(
+                default_row(
                     ui,
                     "Background",
                     "The color where a ray hits nothing",
                     &mut scene.background_color,
-                    "Black",
-                    || Rgb::new(0., 0., 0.),
+                    Rgb::new(0., 0., 0.),
                     |ui, c| crate::editor::widgets::rgb_edit(ui, c, &cx),
                 )
             });

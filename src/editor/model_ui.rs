@@ -4,7 +4,7 @@ use eframe::egui::{self, DragValue, Ui};
 
 use crate::editor::asset_picker::AssetKind;
 use crate::editor::widgets::{num_edit, path_edit, pos_edit, rgb_edit};
-use crate::editor::{EditCx, form, list_edit, opt_row, row, variant_combo};
+use crate::editor::{EditCx, default_row, form, list_edit, opt_row, row, variant_combo};
 use crate::model::blend::Blend;
 use crate::model::bloom_post_processor::BloomPostProcessor;
 use crate::model::r#box::Box;
@@ -45,7 +45,7 @@ fn num_row(ui: &mut Ui, label: &str, help: &str, n: &mut Num, cx: &EditCx) -> bo
     row(ui, label, help, |ui| num_edit(ui, n, cx))
 }
 
-fn opt_num_row(
+fn default_num_row(
     ui: &mut Ui,
     label: &str,
     help: &str,
@@ -53,22 +53,16 @@ fn opt_num_row(
     default: f64,
     cx: &EditCx,
 ) -> bool {
-    opt_row(
-        ui,
-        label,
-        help,
-        n,
-        &format!("Default {}", default),
-        || Num::Lit(default),
-        |ui, n| num_edit(ui, n, cx),
-    )
+    default_row(ui, label, help, n, Num::Lit(default), |ui, n| {
+        num_edit(ui, n, cx)
+    })
 }
 
 fn pos_row(ui: &mut Ui, label: &str, help: &str, p: &mut Pos, cx: &EditCx) -> bool {
     row(ui, label, help, |ui| pos_edit(ui, p, cx))
 }
 
-fn opt_pos_row(
+fn default_pos_row(
     ui: &mut Ui,
     label: &str,
     help: &str,
@@ -76,19 +70,10 @@ fn opt_pos_row(
     default: Pos,
     cx: &EditCx,
 ) -> bool {
-    let text = format!("Default {}, {}, {}", default.x, default.y, default.z);
-    opt_row(
-        ui,
-        label,
-        help,
-        p,
-        &text,
-        || default,
-        |ui, p| pos_edit(ui, p, cx),
-    )
+    default_row(ui, label, help, p, default, |ui, p| pos_edit(ui, p, cx))
 }
 
-fn opt_rgb_row(
+fn default_rgb_row(
     ui: &mut Ui,
     label: &str,
     help: &str,
@@ -96,59 +81,41 @@ fn opt_rgb_row(
     default: Rgb,
     cx: &EditCx,
 ) -> bool {
-    let text = format!("Default {}, {}, {}", default.r, default.g, default.b);
-    opt_row(
-        ui,
-        label,
-        help,
-        c,
-        &text,
-        || default,
-        |ui, c| rgb_edit(ui, c, cx),
-    )
+    default_row(ui, label, help, c, default, |ui, c| rgb_edit(ui, c, cx))
 }
 
-fn opt_texture_row(
+fn default_texture_row(
     ui: &mut Ui,
     label: &str,
     help: &str,
     t: &mut Option<Texture>,
-    default_text: &str,
+    default: Texture,
     cx: &mut EditCx,
 ) -> bool {
-    opt_row(
-        ui,
-        label,
-        help,
-        t,
-        default_text,
-        Texture::default,
-        |ui, t| t.edit(ui, cx),
-    )
+    default_row(ui, label, help, t, default, |ui, t| t.edit(ui, cx))
 }
 
-fn opt_normal_row(ui: &mut Ui, n: &mut Option<NormalTexture>, cx: &mut EditCx) -> bool {
-    opt_row(
-        ui,
-        "Normal",
-        NORMAL_HELP,
-        n,
-        "None",
-        NormalTexture::default,
-        |ui, n| n.edit(ui, cx),
-    )
+/// A normal map file, where no file means no normal map
+fn normal_row(ui: &mut Ui, n: &mut Option<NormalTexture>, cx: &mut EditCx) -> bool {
+    row(ui, "Normal", NORMAL_HELP, |ui| {
+        let mut file = n.as_ref().map_or(String::new(), |n| n.file.clone());
+        if path_edit(ui, &mut file, AssetKind::Image, cx) {
+            *n = (!file.is_empty()).then_some(NormalTexture { file });
+            true
+        } else {
+            false
+        }
+    })
 }
 
-fn opt_material_row(ui: &mut Ui, m: &mut Option<Material>, cx: &mut EditCx) -> bool {
-    opt_row(
-        ui,
-        "Material",
-        "What the surface looks like",
-        m,
-        "Default grey lambertian",
-        Material::default,
-        |ui, m| m.edit(ui, cx),
-    )
+fn default_material_row(
+    ui: &mut Ui,
+    help: &str,
+    m: &mut Option<Material>,
+    default: Material,
+    cx: &mut EditCx,
+) -> bool {
+    default_row(ui, "Material", help, m, default, |ui, m| m.edit(ui, cx))
 }
 
 fn transformations_row(ui: &mut Ui, t: &mut Vec<Transformation>, cx: &mut EditCx) -> bool {
@@ -213,7 +180,13 @@ impl Edit for Sphere {
                 &mut self.center,
                 cx,
             ) | num_row(ui, "Radius", "Radius of the sphere", &mut self.radius, cx)
-                | opt_material_row(ui, &mut self.material, cx)
+                | default_material_row(
+                    ui,
+                    "What the surface looks like",
+                    &mut self.material,
+                    Material::default(),
+                    cx,
+                )
                 | transformations_row(ui, &mut self.transformations, cx)
         })
     }
@@ -237,7 +210,13 @@ impl Edit for Quad {
                     &mut self.v,
                     cx,
                 )
-                | opt_material_row(ui, &mut self.material, cx)
+                | default_material_row(
+                    ui,
+                    "What the surface looks like",
+                    &mut self.material,
+                    Material::default(),
+                    cx,
+                )
                 | transformations_row(ui, &mut self.transformations, cx)
         })
     }
@@ -254,7 +233,13 @@ impl Edit for Box {
                     &mut self.b,
                     cx,
                 )
-                | opt_material_row(ui, &mut self.material, cx)
+                | default_material_row(
+                    ui,
+                    "What the surface looks like",
+                    &mut self.material,
+                    Material::default(),
+                    cx,
+                )
                 | transformations_row(ui, &mut self.transformations, cx)
         })
     }
@@ -274,14 +259,15 @@ impl Edit for ObjModel {
                     false
                 }
             });
-            changed |= opt_row(
+            changed |= default_material_row(
                 ui,
-                "Material",
                 "Used for the parts of the model that have no material in the file",
                 &mut self.material,
-                "Default white lambertian",
-                Material::default,
-                |ui, m| m.edit(ui, cx),
+                Material::Lambertian(Lambertian {
+                    albedo: Some(Texture::Color(Rgb::new(1., 1., 1.))),
+                    normal: None,
+                }),
+                cx,
             );
             changed | transformations_row(ui, &mut self.transformations, cx)
         })
@@ -312,7 +298,7 @@ impl Edit for Repeat {
                     )
                 },
             );
-            changed |= opt_num_row(
+            changed |= default_num_row(
                 ui,
                 "From",
                 "First value of the loop variable",
@@ -327,7 +313,7 @@ impl Edit for Repeat {
                 &mut self.to,
                 cx,
             );
-            changed |= opt_num_row(
+            changed |= default_num_row(
                 ui,
                 "Step",
                 "How much the loop variable changes each iteration. Negative counts down",
@@ -367,14 +353,14 @@ impl Edit for Material {
 impl Edit for Lambertian {
     fn edit(&mut self, ui: &mut Ui, cx: &mut EditCx) -> bool {
         form(ui, "lambertian", |ui| {
-            opt_texture_row(
+            default_texture_row(
                 ui,
                 "Albedo",
                 ALBEDO_HELP,
                 &mut self.albedo,
-                "Default grey",
+                Texture::default(),
                 cx,
-            ) | opt_normal_row(ui, &mut self.normal, cx)
+            ) | normal_row(ui, &mut self.normal, cx)
         })
     }
 }
@@ -382,15 +368,15 @@ impl Edit for Lambertian {
 impl Edit for Glass {
     fn edit(&mut self, ui: &mut Ui, cx: &mut EditCx) -> bool {
         form(ui, "glass", |ui| {
-            opt_texture_row(
+            default_texture_row(
                 ui,
                 "Albedo",
                 "Fraction of light transmitted per world unit travelled inside the glass",
                 &mut self.albedo,
-                "Default clear",
+                Texture::Color(Rgb::new(1., 1., 1.)),
                 cx,
-            ) | opt_normal_row(ui, &mut self.normal, cx)
-                | opt_num_row(
+            ) | normal_row(ui, &mut self.normal, cx)
+                | default_num_row(
                     ui,
                     "Index of refraction",
                     "How much the path of light is bent when entering the material",
@@ -398,7 +384,7 @@ impl Edit for Glass {
                     1.5,
                     cx,
                 )
-                | opt_num_row(
+                | default_num_row(
                     ui,
                     "Roughness",
                     "The roughness of the glass surfaces",
@@ -413,15 +399,15 @@ impl Edit for Glass {
 impl Edit for Metal {
     fn edit(&mut self, ui: &mut Ui, cx: &mut EditCx) -> bool {
         form(ui, "metal", |ui| {
-            opt_texture_row(
+            default_texture_row(
                 ui,
                 "Albedo",
                 ALBEDO_HELP,
                 &mut self.albedo,
-                "Default grey",
+                Texture::default(),
                 cx,
-            ) | opt_normal_row(ui, &mut self.normal, cx)
-                | opt_num_row(
+            ) | normal_row(ui, &mut self.normal, cx)
+                | default_num_row(
                     ui,
                     "Fuzz",
                     "How rough the reflection is",
@@ -436,15 +422,15 @@ impl Edit for Metal {
 impl Edit for Plastic {
     fn edit(&mut self, ui: &mut Ui, cx: &mut EditCx) -> bool {
         form(ui, "plastic", |ui| {
-            opt_texture_row(
+            default_texture_row(
                 ui,
                 "Albedo",
                 ALBEDO_HELP,
                 &mut self.albedo,
-                "Default grey",
+                Texture::default(),
                 cx,
-            ) | opt_normal_row(ui, &mut self.normal, cx)
-                | opt_num_row(
+            ) | normal_row(ui, &mut self.normal, cx)
+                | default_num_row(
                     ui,
                     "Glossiness",
                     "0 is matte and 1 is metal",
@@ -459,7 +445,7 @@ impl Edit for Plastic {
 impl Edit for Light {
     fn edit(&mut self, ui: &mut Ui, cx: &mut EditCx) -> bool {
         form(ui, "light", |ui| {
-            opt_rgb_row(
+            default_rgb_row(
                 ui,
                 "Color",
                 "The color of the light emitted. The intensity is normally way over 1",
@@ -486,7 +472,7 @@ impl Edit for Blend {
                 ui.vertical(|ui| self.first.edit(ui, cx)).inner
             }) | row(ui, "Second", "The second material that is blended", |ui| {
                 ui.vertical(|ui| self.second.edit(ui, cx)).inner
-            }) | opt_num_row(
+            }) | default_num_row(
                 ui,
                 "Blend factor",
                 "How much of the second material is used, from 0 to 1",
@@ -542,28 +528,28 @@ impl Edit for CameraConfig {
                 "Position where the camera is located",
                 &mut self.look_from,
                 cx,
-            ) | opt_pos_row(
+            ) | default_pos_row(
                 ui,
                 "Look at",
                 "Position the camera is pointed at",
                 &mut self.look_at,
                 Pos::default(),
                 cx,
-            ) | opt_pos_row(
+            ) | default_pos_row(
                 ui,
                 "Up",
                 "The direction that is up for the camera",
                 &mut self.up,
                 Pos::new(0., 1., 0.),
                 cx,
-            ) | opt_num_row(
+            ) | default_num_row(
                 ui,
                 "Field of view",
                 "Vertical field of view in degrees",
                 &mut self.vertical_fov_degrees,
                 60.,
                 cx,
-            ) | opt_num_row(
+            ) | default_num_row(
                 ui,
                 "Aperture size",
                 "Size of the opening light enters the camera through. Larger gives a shallower depth of field",
@@ -578,31 +564,28 @@ impl Edit for CameraConfig {
 impl Edit for RenderConfig {
     fn edit(&mut self, ui: &mut Ui, cx: &mut EditCx) -> bool {
         form(ui, "render_config", |ui| {
-            let mut changed = opt_row(
+            let mut changed = default_row(
                 ui,
                 "Size",
                 "Width and height in pixels of the rendered image",
                 &mut self.width_height,
-                "Same as the window",
-                WidthHeight::default,
+                WidthHeight::default(),
                 |ui, w| w.edit(ui, cx),
             );
-            changed |= opt_row(
+            changed |= default_row(
                 ui,
                 "Samples per pixel",
                 "Number of rays shot for each pixel. More rays gives a less noisy image but takes longer",
                 &mut self.samples_per_pixel,
-                "Default 200",
-                || 200,
+                200,
                 |ui, n| ui.add(DragValue::new(n).range(1..=1_000_000)).changed(),
             );
-            changed |= opt_row(
+            changed |= default_row(
                 ui,
                 "Preview",
                 "Run the denoise and saturation post processors on every batch rather than only the last, so the image is filtered while it renders and while the camera moves. Costs render time",
                 &mut self.preview,
-                "Off",
-                || true,
+                false,
                 |ui, b| ui.checkbox(b, "").changed(),
             );
             changed |= row(
@@ -666,28 +649,26 @@ impl Edit for PostProcessor {
 impl Edit for DenoisePostProcessor {
     fn edit(&mut self, ui: &mut Ui, cx: &mut EditCx) -> bool {
         form(ui, "denoise", |ui| {
-            opt_num_row(
+            default_num_row(
                 ui,
                 "Strength",
                 "How hard the filter is allowed to blur",
                 &mut self.strength,
                 1.,
                 cx,
-            ) | opt_row(
+            ) | default_row(
                 ui,
                 "Iterations",
                 "Number of filter passes, each one reaching twice as far as the last",
                 &mut self.iterations,
-                "Default",
-                || 5,
-                |ui, n| ui.add(DragValue::new(n).range(1..=10)).changed(),
-            ) | opt_row(
+                5,
+                |ui, n| ui.add(DragValue::new(n).range(1..=8)).changed(),
+            ) | default_row(
                 ui,
                 "Guide",
                 "What about the surface in each pixel is used to avoid blurring across edges",
                 &mut self.guide,
-                "Default full",
-                || DenoiseGuide::Full,
+                DenoiseGuide::Full,
                 |ui, g| {
                     let before = *g;
                     egui::ComboBox::from_id_salt("guide")
@@ -709,29 +690,27 @@ impl Edit for DenoisePostProcessor {
 impl Edit for BloomPostProcessor {
     fn edit(&mut self, ui: &mut Ui, cx: &mut EditCx) -> bool {
         form(ui, "bloom", |ui| {
-            opt_num_row(
+            default_num_row(
                 ui,
                 "Kernel size",
                 "Size of the filter creating the bloom, as a fraction of the image",
                 &mut self.kernel_size_fraction,
                 0.1,
                 cx,
-            ) | opt_row(
+            ) | default_num_row(
                 ui,
                 "Threshold",
                 "Brightness a pixel needs for the bloom to apply to it",
                 &mut self.threshold,
-                "Default",
-                || Num::Lit(1.),
-                |ui, n| num_edit(ui, n, cx),
-            ) | opt_row(
+                3f64.sqrt(),
+                cx,
+            ) | default_num_row(
                 ui,
                 "Max intensity",
                 "Limits the intensity of the bloom",
                 &mut self.max_intensity,
-                "No limit",
-                || Num::Lit(2.),
-                |ui, n| num_edit(ui, n, cx),
+                1000.,
+                cx,
             )
         })
     }
@@ -740,7 +719,7 @@ impl Edit for BloomPostProcessor {
 impl Edit for SaturationPostProcessor {
     fn edit(&mut self, ui: &mut Ui, cx: &mut EditCx) -> bool {
         form(ui, "saturation", |ui| {
-            opt_num_row(
+            default_num_row(
                 ui,
                 "Factor",
                 "The amount of saturation applied to the image",

@@ -124,6 +124,7 @@ fn every_selection_renders() {
         ),
         ("quad", default.clone(), Selection::Hittable(vec![0])),
         ("box", default.clone(), Selection::Hittable(vec![6])),
+        ("light", default.clone(), Selection::Hittable(vec![2])),
     ] {
         let mut h = harness(scene, selection);
         h.run();
@@ -134,6 +135,16 @@ fn every_selection_renders() {
             name
         );
     }
+}
+
+#[test]
+fn defaults_are_left_out_of_the_scene() {
+    use crate::editor::store_unless_default;
+    let mut value = None;
+    store_unless_default(&mut value, 2., &1.);
+    assert_eq!(Some(2.), value);
+    store_unless_default(&mut value, 1., &1.);
+    assert_eq!(None, value);
 }
 
 #[test]
