@@ -318,8 +318,8 @@ impl SolstraleApp {
             ui.horizontal(|ui| {
                 ui.menu_button("File", |ui| {
                     if ui
-                        .button("New from example scene")
-                        .on_hover_text("Start a new scene from the example scene")
+                        .button("New")
+                        .on_hover_text("Start from the example scene")
                         .clicked()
                     {
                         ui.close();
@@ -368,14 +368,6 @@ impl SolstraleApp {
                         self.show_help = true;
                     }
                 });
-
-                if ui
-                    .button("Reset")
-                    .on_hover_text("Replace the scene with the example scene")
-                    .clicked()
-                {
-                    self.request(PendingAction::New);
-                }
 
                 let render_button_enabled = render_button::is_enabled(&self.render_control);
                 let render_button = ui.add_enabled(render_button_enabled, Button::new("Render"));
