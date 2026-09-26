@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use solstrale::geo::vec3::Vec3;
 
 use crate::model::num::{Num, VisitNums, parse_triple};
-use crate::model::{Creator, CreatorContext};
+use crate::model::{Creator, CreatorContext, ModelError};
 
 #[derive(PartialEq, Debug, Clone)]
 pub struct Rgb {
@@ -46,10 +46,20 @@ impl<'de> Deserialize<'de> for Rgb {
 
 impl Creator<Vec3> for Rgb {
     fn create(&self, ctx: &CreatorContext) -> Result<Vec3, Box<dyn Error>> {
+        let component = |n: &Num, name: &str| -> Result<f64, Box<dyn Error>> {
+            let v = n.eval(ctx)?;
+            if v < 0. {
+                return Err(Box::new(ModelError::new(&format!(
+                    "a color can not be negative, but {} is {}",
+                    name, v
+                ))));
+            }
+            Ok(v)
+        };
         Ok(Vec3::new(
-            self.r.eval(ctx)?,
-            self.g.eval(ctx)?,
-            self.b.eval(ctx)?,
+            component(&self.r, "r")?,
+            component(&self.g, "g")?,
+            component(&self.b, "b")?,
         ))
     }
 }

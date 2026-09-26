@@ -200,6 +200,27 @@ fn errors_name_the_path_and_iteration() {
 }
 
 #[test]
+fn colors_can_not_be_negative() {
+    let err = full_scene_error(
+        "variables:
+  t: -2
+world:
+  - sphere:
+      center: 0, 0, 0
+      radius: 1
+      material:
+        lambertian:
+          albedo:
+            color: 1, t * 0.25, 1
+",
+    );
+    assert_eq!(
+        "world[0] › sphere: a color can not be negative, but g is -0.5",
+        err
+    );
+}
+
+#[test]
 fn obj_models_are_cached_per_evaluated_value() {
     let dir = std::env::temp_dir().join("solstrale_desktop_scene_tests");
     std::fs::create_dir_all(&dir).unwrap();

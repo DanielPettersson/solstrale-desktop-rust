@@ -63,6 +63,12 @@ fn buffered_text(
 
 /// A number, as a draggable value or, toggled with ƒx, as an expression.
 pub fn num_edit(ui: &mut Ui, num: &mut Num, cx: &EditCx) -> bool {
+    num_edit_min(ui, num, cx, f64::NEG_INFINITY)
+}
+
+/// A [`num_edit`] that can not be dragged or typed below `min`. An
+/// expression can still go below it, which its preview shows.
+pub fn num_edit_min(ui: &mut Ui, num: &mut Num, cx: &EditCx, min: f64) -> bool {
     let id = ui.auto_id_with("num");
     let mut changed = false;
     ui.horizontal(|ui| {
@@ -71,7 +77,15 @@ pub fn num_edit(ui: &mut Ui, num: &mut Num, cx: &EditCx) -> bool {
             Num::Lit(v) => {
                 let speed = (v.abs() * 0.01).max(0.01);
                 changed |= ui
-                    .add(DragValue::new(v).speed(speed).max_decimals(6))
+                    .add(
+                        DragValue::new(v)
+                            .speed(speed)
+                            .max_decimals(6)
+                            .range(min..=f64::INFINITY)
+                            // Only what is dragged or typed, so showing a
+                            // scene never changes it
+                            .clamp_existing_to_range(false),
+                    )
                     .changed();
             }
             Num::Expr(e) => {
@@ -102,7 +116,8 @@ pub fn num_edit(ui: &mut Ui, num: &mut Num, cx: &EditCx) -> bool {
                 Num::Lit(v) => Num::Expr(Expr::parse(&format!("{}", v)).expect("numbers parse")),
                 Num::Expr(_) => Num::Lit(
                     num.eval_scope(cx.preview.unwrap_or(&Scope::builtin(0)))
-                        .unwrap_or(0.),
+                        .unwrap_or(0.)
+                        .max(min),
                 ),
             };
             changed = true;
@@ -111,10 +126,17 @@ pub fn num_edit(ui: &mut Ui, num: &mut Num, cx: &EditCx) -> bool {
         if let (Num::Expr(_), Some(scope)) = (&*num, cx.preview)
             && let Ok(v) = num.eval_scope(scope)
         {
-            ui.label(RichText::new(format!("= {}", round_for_display(v))).weak())
-                .on_hover_text(
-                    "Value at the current frame, with loop variables at their first value",
-                );
+            let hint = "Value at the current frame, with loop variables at their first value";
+            if v < min {
+                ui.label(
+                    RichText::new(format!("= {}", round_for_display(v)))
+                        .color(Color32::from_rgb(220, 60, 60)),
+                )
+                .on_hover_text(format!("{}, which is below the minimum {}", hint, min));
+            } else {
+                ui.label(RichText::new(format!("= {}", round_for_display(v))).weak())
+                    .on_hover_text(hint);
+            }
         }
     });
     changed
@@ -126,14 +148,14 @@ fn round_for_display(v: f64) -> f64 {
 
 /// Three numbers side by side, or one per line when any is an expression,
 /// which is too wide to fit three of
-fn triple_edit(ui: &mut Ui, nums: [&mut Num; 3], labels: [&str; 3], cx: &EditCx) -> bool {
+fn triple_edit(ui: &mut Ui, nums: [&mut Num; 3], labels: [&str; 3], cx: &EditCx, min: f64) -> bool {
     let vertical = nums.iter().any(|n| matches!(n, Num::Expr(_)));
     let mut changed = false;
     let components = |ui: &mut Ui| {
         for (n, l) in nums.into_iter().zip(labels) {
             ui.horizontal(|ui| {
                 ui.label(RichText::new(l).weak().small());
-                changed |= num_edit(ui, n, cx);
+                changed |= num_edit_min(ui, n, cx, min);
             });
         }
     };
@@ -151,6 +173,7 @@ pub fn pos_edit(ui: &mut Ui, pos: &mut Pos, cx: &EditCx) -> bool {
         [&mut pos.x, &mut pos.y, &mut pos.z],
         ["x", "y", "z"],
         cx,
+        f64::NEG_INFINITY,
     )
 }
 
@@ -172,6 +195,7 @@ pub fn rgb_edit(ui: &mut Ui, rgb: &mut Rgb, cx: &EditCx) -> bool {
             [&mut rgb.r, &mut rgb.g, &mut rgb.b],
             ["r", "g", "b"],
             cx,
+            0.,
         );
     });
     changed
