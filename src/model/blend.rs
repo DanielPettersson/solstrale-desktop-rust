@@ -1,15 +1,13 @@
-use std::collections::HashMap;
 use std::error::Error;
 
 use serde::{Deserialize, Serialize};
 use solstrale::material::Materials;
 
-use crate::model::FieldType::{Normal, Optional};
 use crate::model::material::Material;
 use crate::model::num::{EvalOr, Num, visit_nums};
-use crate::model::{Creator, CreatorContext, DocumentationStructure, FieldInfo, HelpDocumentation};
+use crate::model::{Creator, CreatorContext};
 
-#[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
+#[derive(Serialize, Deserialize, PartialEq, Debug, Clone, Default)]
 #[serde(deny_unknown_fields)]
 pub struct Blend {
     pub first: Material,
@@ -28,46 +26,5 @@ impl Creator<Materials> for Blend {
             self.blend_factor.eval_or(ctx, 0.5)?,
         )
         .into())
-    }
-}
-
-impl HelpDocumentation for Blend {
-    fn get_documentation_structure(depth: u8) -> DocumentationStructure {
-        if depth < 5 {
-            DocumentationStructure {
-                description: "A blend of two underlying materials".to_string(),
-                fields: HashMap::from([
-                    (
-                        "first".to_string(),
-                        FieldInfo::new(
-                            "The first underlying material that will be blended",
-                            Normal,
-                            Material::get_documentation_structure(depth + 1),
-                        ),
-                    ),
-                    (
-                        "second".to_string(),
-                        FieldInfo::new(
-                            "The second underlying material that will be blended",
-                            Normal,
-                            Material::get_documentation_structure(depth + 1),
-                        ),
-                    ),
-                    (
-                        "blend_factor".to_string(),
-                        FieldInfo::new_simple(
-                            "A factor of how much each of 'first' and 'second' will be blended",
-                            Optional,
-                            "For example: 0 uses only 'first', 1 uses only 'second' and 0.5 uses equal amount of both materials. Defaults to 0.5",
-                        ),
-                    ),
-                ]),
-            }
-        } else {
-            DocumentationStructure {
-                description: "A blend of two underlying materials".to_string(),
-                fields: HashMap::new(),
-            }
-        }
     }
 }

@@ -1,12 +1,10 @@
-use crate::model::FieldType::{Normal, Optional, OptionalList};
 use crate::model::material::Material;
 use crate::model::num::{Num, visit_nums};
 use crate::model::pos::Pos;
 use crate::model::transformation::{Transformation, create_transformation};
-use crate::model::{Creator, CreatorContext, DocumentationStructure, FieldInfo, HelpDocumentation};
+use crate::model::{Creator, CreatorContext};
 use serde::{Deserialize, Serialize};
 use solstrale::hittable::Hittables;
-use std::collections::HashMap;
 use std::error::Error;
 
 #[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
@@ -22,6 +20,17 @@ pub struct Sphere {
 
 visit_nums!(Sphere, center, radius, material, transformations);
 
+impl Default for Sphere {
+    fn default() -> Self {
+        Sphere {
+            center: Pos::default(),
+            radius: Num::Lit(1.),
+            material: None,
+            transformations: Vec::new(),
+        }
+    }
+}
+
 impl Creator<Hittables> for Sphere {
     fn create(&self, ctx: &CreatorContext) -> Result<Hittables, Box<dyn Error>> {
         Ok(solstrale::hittable::Sphere::new(
@@ -34,43 +43,5 @@ impl Creator<Hittables> for Sphere {
             &create_transformation(&self.transformations, ctx)?,
         )
         .into())
-    }
-}
-
-impl HelpDocumentation for Sphere {
-    fn get_documentation_structure(depth: u8) -> DocumentationStructure {
-        DocumentationStructure {
-            description: "A sphere hittable object".to_string(),
-            fields: HashMap::from([
-                (
-                    "center".to_string(),
-                    FieldInfo::new(
-                        "Position of the sphere's center",
-                        Normal,
-                        Pos::get_documentation_structure(depth + 1),
-                    ),
-                ),
-                (
-                    "radius".to_string(),
-                    FieldInfo::new_simple("Radius of the sphere", Normal, "Radius of the sphere"),
-                ),
-                (
-                    "material".to_string(),
-                    FieldInfo::new(
-                        "Material of the sphere",
-                        Optional,
-                        Material::get_documentation_structure(depth + 1),
-                    ),
-                ),
-                (
-                    "transformations".to_string(),
-                    FieldInfo::new(
-                        "Transformations to be applied to the position and size of the sphere. Rotation moves the center but does not rotate the sphere's texture",
-                        OptionalList,
-                        Transformation::get_documentation_structure(depth + 1),
-                    ),
-                ),
-            ]),
-        }
     }
 }

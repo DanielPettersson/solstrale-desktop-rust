@@ -6,12 +6,8 @@ pub fn is_ctrl_r(ui: &Ui) -> bool {
     is_key_combo(ui, egui::Key::R, Modifiers::CTRL)
 }
 
-pub fn is_ctrl_space(ui: &Ui) -> bool {
-    is_key_combo(ui, egui::Key::Space, Modifiers::CTRL)
-}
-
-pub fn is_enter(ui: &Ui) -> bool {
-    is_key_combo(ui, egui::Key::Enter, Modifiers::NONE)
+pub fn is_ctrl_s(ui: &Ui) -> bool {
+    is_key_combo(ui, egui::Key::S, Modifiers::CTRL)
 }
 
 fn is_key_combo(ui: &Ui, pressed_key: egui::Key, modifier: Modifiers) -> bool {

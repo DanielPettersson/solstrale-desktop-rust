@@ -1,13 +1,9 @@
-use std::collections::HashMap;
 use std::error::Error;
 
 use serde::{Deserialize, Serialize};
 
-use crate::model::FieldType::Normal;
 use crate::model::num::visit_nums;
-use crate::model::{
-    Creator, CreatorContext, DocumentationStructure, FieldInfo, HelpDocumentation, ModelError,
-};
+use crate::model::{Creator, CreatorContext, ModelError};
 
 #[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
 #[serde(deny_unknown_fields)]
@@ -17,6 +13,15 @@ pub struct CustomWidthHeight {
 }
 
 visit_nums!(CustomWidthHeight);
+
+impl Default for CustomWidthHeight {
+    fn default() -> Self {
+        CustomWidthHeight {
+            width: 800,
+            height: 600,
+        }
+    }
+}
 
 impl Creator<(usize, usize)> for CustomWidthHeight {
     fn create(&self, _: &CreatorContext) -> Result<(usize, usize), Box<dyn Error>> {
@@ -33,23 +38,5 @@ impl Creator<(usize, usize)> for CustomWidthHeight {
         }
 
         Ok((self.width, self.height))
-    }
-}
-
-impl HelpDocumentation for CustomWidthHeight {
-    fn get_documentation_structure(_: u8) -> DocumentationStructure {
-        DocumentationStructure {
-            description: "Custom width and height".to_string(),
-            fields: HashMap::from([
-                (
-                    "width".to_string(),
-                    FieldInfo::new_simple("Width in pixels", Normal, "Width in pixels"),
-                ),
-                (
-                    "height".to_string(),
-                    FieldInfo::new_simple("Height in pixels", Normal, "Height in pixels"),
-                ),
-            ]),
-        }
     }
 }

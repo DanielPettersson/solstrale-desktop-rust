@@ -1,6 +1,6 @@
 use crate::model::num::{Num, VisitNums, parse_triple};
 use crate::model::scope::Scope;
-use crate::model::{Creator, CreatorContext, DocumentationStructure, HelpDocumentation};
+use crate::model::{Creator, CreatorContext};
 use serde::{Deserialize, Serialize};
 use solstrale::geo::vec3::Vec3;
 use std::error::Error;
@@ -80,13 +80,5 @@ impl VisitNums for Pos {
         f(&self.x);
         f(&self.y);
         f(&self.z);
-    }
-}
-
-impl HelpDocumentation for Pos {
-    fn get_documentation_structure(_: u8) -> DocumentationStructure {
-        DocumentationStructure::new_simple(
-            "Value describing an X, Y, Z position in space. For example: 1.0, 2.0, -3.0. Each value can be an expression, e.g. i * 2, 0, sin(frameIndex)",
-        )
     }
 }

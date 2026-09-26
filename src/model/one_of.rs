@@ -9,6 +9,30 @@ pub const fn strip_raw(s: &'static str) -> &'static str {
     }
 }
 
+/// What the editor needs to switch an enum between its variants.
+pub trait OneOf: Sized {
+    fn variants() -> &'static [&'static str];
+    fn variant_index(&self) -> usize;
+    /// A new value of the variant at `index`
+    fn default_variant(index: usize) -> Self;
+
+    fn variant_name(&self) -> &'static str {
+        Self::variants()[self.variant_index()]
+    }
+}
+
+/// The expression if given, else the type's default.
+macro_rules! or_default {
+    ($ty:ty;) => {
+        <$ty as Default>::default()
+    };
+    ($ty:ty; $e:expr) => {
+        $e
+    };
+}
+
+pub(crate) use or_default;
+
 /// Declares an enum that reads and writes as a map with exactly one key, e.g.
 /// `sphere: {...}`.
 ///
@@ -16,12 +40,13 @@ pub const fn strip_raw(s: &'static str) -> &'static str {
 /// YAML tags (`!sphere`) and refuses untagged maps. So the enum goes through a
 /// struct of `Option`s on both sides, which also keeps `deny_unknown_fields`
 /// errors for misspelled keys. `empty` is what a map with no key reads as, or
-/// `None` to reject it.
+/// `None` to reject it. A variant's `= expr` is what the editor creates when
+/// switching to it, instead of the type's default.
 macro_rules! one_of {
     (
         $(#[$attr:meta])*
         pub enum $name:ident {
-            $($key:ident => $variant:ident($ty:ty)),+ $(,)?
+            $($key:ident => $variant:ident($ty:ty) $(= $default:expr)?),+ $(,)?
         }
         repr: $repr:ident, $repr_ref:ident;
         empty: $empty:expr;
@@ -48,6 +73,36 @@ macro_rules! one_of {
         impl $name {
             pub const VARIANTS: &'static [&'static str] =
                 &[$($crate::model::one_of::strip_raw(stringify!($key))),+];
+        }
+
+        impl $crate::model::one_of::OneOf for $name {
+            fn variants() -> &'static [&'static str] {
+                $name::VARIANTS
+            }
+
+            #[allow(unused_assignments)]
+            fn variant_index(&self) -> usize {
+                let mut i = 0;
+                $(
+                    if let $name::$variant(_) = self {
+                        return i;
+                    }
+                    i += 1;
+                )+
+                unreachable!()
+            }
+
+            #[allow(unused_assignments)]
+            fn default_variant(index: usize) -> Self {
+                let mut i = 0;
+                $(
+                    if index == i {
+                        return $name::$variant($crate::model::one_of::or_default!($ty; $($default)?));
+                    }
+                    i += 1;
+                )+
+                panic!("no variant {} in {}", index, stringify!($name))
+            }
         }
 
         impl TryFrom<$repr> for $name {

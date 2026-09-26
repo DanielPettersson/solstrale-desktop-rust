@@ -1,14 +1,12 @@
-use std::collections::HashMap;
 use std::error::Error;
 
 use serde::{Deserialize, Serialize};
 use solstrale::post::PostProcessors;
 
-use crate::model::FieldType::{Optional, OptionalList};
 use crate::model::num::visit_nums;
 use crate::model::post_processor::PostProcessor;
 use crate::model::width_height::WidthHeight;
-use crate::model::{Creator, CreatorContext, DocumentationStructure, FieldInfo, HelpDocumentation};
+use crate::model::{Creator, CreatorContext};
 
 #[derive(Serialize, Deserialize, PartialEq, Debug, Default, Clone)]
 #[serde(deny_unknown_fields)]
@@ -52,47 +50,5 @@ impl Creator<solstrale::renderer::RenderConfig> for RenderConfig {
             // Spreading rather than listing them keeps this immune to new fields.
             ..Default::default()
         })
-    }
-}
-
-impl HelpDocumentation for RenderConfig {
-    fn get_documentation_structure(depth: u8) -> DocumentationStructure {
-        DocumentationStructure {
-            description: "General configuration for the renderer".to_string(),
-            fields: HashMap::from([
-                (
-                    "width_height".to_string(),
-                    FieldInfo::new(
-                        "Width and height in pixels of the rendered output",
-                        Optional,
-                        WidthHeight::get_documentation_structure(depth + 1),
-                    ),
-                ),
-                (
-                    "samples_per_pixel".to_string(),
-                    FieldInfo::new_simple(
-                        "Number of rays shot for each pixel. More rays gives less noisy image but takes longer time. Defaults to 200",
-                        Optional,
-                        "Count of rays shot per pixel",
-                    ),
-                ),
-                (
-                    "post_processors".to_string(),
-                    FieldInfo::new(
-                        "A post processor is applied to the image after rendering for various effects",
-                        OptionalList,
-                        PostProcessor::get_documentation_structure(depth + 1),
-                    ),
-                ),
-                (
-                    "preview".to_string(),
-                    FieldInfo::new_simple(
-                        "Run the denoise and saturation post processors on every batch rather than only the last, so the image is filtered while it renders and while the camera moves. Costs render time. Defaults to false",
-                        Optional,
-                        "true or false",
-                    ),
-                ),
-            ]),
-        }
     }
 }

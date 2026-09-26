@@ -2,32 +2,27 @@ use std::str::FromStr;
 
 use dark_light::Mode;
 use eframe::egui::{
-    Align, Button, Layout, Margin, Panel, ProgressBar, Ui, Vec2, ViewportBuilder, Visuals,
+    Align, Button, Id, Layout, Margin, Modal, Panel, ProgressBar, RichText, Ui, Vec2,
+    ViewportBuilder, ViewportCommand, Visuals,
 };
 use eframe::egui_wgpu::{WgpuConfiguration, WgpuSetup, WgpuSetupCreateNew};
 use eframe::{App, Frame, NativeOptions, Storage, egui, icon_data, run_native};
-use egui::UiKind::Menu;
 use egui::{CentralPanel, ScrollArea, Window};
-use egui_file_dialog::FileDialog;
+use egui_file_dialog::{DialogState, FileDialog};
 use hhmmss::Hhmmss;
-use once_cell::sync::Lazy;
+use std::collections::BTreeSet;
 use std::sync::Arc;
 
-use solstrale_desktop_rust::keyboard::{is_ctrl_space, is_enter};
-use solstrale_desktop_rust::model::scene::Scene;
-use solstrale_desktop_rust::model::{
-    DocumentationStructure, HelpDocumentation, get_documentation_structure_by_yaml_path,
-    parse_scene,
-};
+use solstrale_desktop_rust::document::Document;
+use solstrale_desktop_rust::editor::asset_picker::AssetPicker;
+use solstrale_desktop_rust::editor::inspector::inspector;
+use solstrale_desktop_rust::editor::outline::{OutlineCx, Selection, apply, outline};
+use solstrale_desktop_rust::keyboard::is_ctrl_s;
 use solstrale_desktop_rust::render_output::render_output;
-use solstrale_desktop_rust::yaml_editor::{create_layouter, yaml_editor};
 use solstrale_desktop_rust::{
-    DEFAULT_SCENE, ErrorInfo, RenderControl, RenderedImage, device_descriptor, help, load_scene,
-    loading_output, render_button, reset_confirm, save_image, save_scene, yaml_editor,
+    ErrorInfo, RenderControl, RenderedImage, device_descriptor, help, load_scene, loading_output,
+    render_button, save_image, save_scene,
 };
-
-static ROOT_DOCUMENTATION_STRUCTURE: Lazy<DocumentationStructure> =
-    Lazy::new(|| Scene::get_documentation_structure(0));
 
 fn main() -> eframe::Result<()> {
     let icon_bytes = include_bytes!("../../resources/icon.png");
@@ -62,24 +57,36 @@ fn main() -> eframe::Result<()> {
     )
 }
 
-#[derive(Default)]
+/// Something that would discard unsaved changes
+#[derive(Clone, Copy, Debug, PartialEq)]
+enum PendingAction {
+    New,
+    Load,
+}
+
 struct SolstraleApp {
     render_control: RenderControl,
     rendered_image: RenderedImage,
-    scene_yaml: String,
-    /// The scene last parsed from `scene_yaml`, when a render was requested
-    scene: Option<Scene>,
+    doc: Document,
+    selection: Selection,
+    assets: AssetPicker,
     error_info: ErrorInfo,
     dialogs: Dialogs,
-    display_help: bool,
+    /// Waiting on the user to decide what to do with unsaved changes
+    pending: Option<PendingAction>,
+    /// To do once the Save As dialog, opened to keep unsaved changes, is done
+    after_save: Option<PendingAction>,
+    /// Scene text from the last session that could not be loaded, kept in storage
+    unparsed_scene: Option<String>,
+    show_help: bool,
     dark_mode: bool,
+    title: String,
 }
 
 pub struct Dialogs {
     load_scene_dialog: FileDialog,
     save_scene_dialog: FileDialog,
     save_output_dialog: FileDialog,
-    show_reset_confirm_dialog: bool,
 }
 
 impl Default for Dialogs {
@@ -88,30 +95,37 @@ impl Default for Dialogs {
             load_scene_dialog: load_scene::create(),
             save_scene_dialog: save_scene::create(None),
             save_output_dialog: save_image::create(),
-            show_reset_confirm_dialog: false,
         }
     }
 }
 
 impl SolstraleApp {
     fn new(ctx: &eframe::CreationContext<'_>) -> Self {
-        let mut yaml = DEFAULT_SCENE.to_owned();
-
         let mut dark_mode = dark_light::detect().map_or(None, |m| Some(m == Mode::Dark));
+        let mut error_info = ErrorInfo::default();
+        let mut doc = Document::default();
+        let mut unparsed_scene = None;
 
-        let mut display_help = true;
         if let Some(storage) = ctx.storage {
-            if let Some(value) = storage.get_string("display_help") {
-                display_help =
-                    bool::from_str(&value).expect("Invalid app configuration for display help");
-            }
             if let Some(value) = storage.get_string("dark_mode") {
                 dark_mode =
                     Some(bool::from_str(&value).expect("Invalid app configuration for dark mode"));
             }
-            if let Some(value) = storage.get_string("scene_yaml") {
-                yaml = value;
+            let (restored, lost) = Document::restore(
+                storage.get_string("scene_yaml"),
+                storage.get_string("scene_path"),
+                storage.get_string("scene_dirty").as_deref() == Some("true"),
+            );
+            doc = restored;
+            if let Some((yaml, err)) = lost {
+                error_info.handle_str(&format!(
+                    "The scene from the last session could not be loaded, so the default scene is open. \
+                     Its text is kept in the app settings under scene_yaml_unparsed.\n\n{}",
+                    err
+                ));
+                unparsed_scene = Some(yaml);
             }
+            unparsed_scene = unparsed_scene.or(storage.get_string("scene_yaml_unparsed"));
         }
 
         if let Some(d) = dark_mode {
@@ -130,65 +144,213 @@ impl SolstraleApp {
             ));
         }
 
+        let dialogs = Dialogs {
+            save_scene_dialog: save_scene::create(doc.path.clone()),
+            ..Dialogs::default()
+        };
+
         SolstraleApp {
-            scene_yaml: yaml,
-            display_help,
-            dark_mode: dark_mode.unwrap_or(false),
+            render_control: RenderControl::default(),
             rendered_image,
-            ..Default::default()
+            doc,
+            selection: Selection::Scene,
+            assets: AssetPicker::default(),
+            error_info,
+            dialogs,
+            pending: None,
+            after_save: None,
+            unparsed_scene,
+            show_help: false,
+            dark_mode: dark_mode.unwrap_or(false),
+            title: String::new(),
         }
     }
-}
 
-impl App for SolstraleApp {
-    fn ui(&mut self, ui: &mut Ui, _frame: &mut Frame) {
+    /// Does `action` now, or asks first if it would discard unsaved changes
+    fn request(&mut self, action: PendingAction) {
+        if self.doc.dirty {
+            self.pending = Some(action);
+        } else {
+            self.perform(action);
+        }
+    }
+
+    fn perform(&mut self, action: PendingAction) {
+        match action {
+            PendingAction::New => self.open(Document::default()),
+            PendingAction::Load => self.dialogs.load_scene_dialog.pick_file(),
+        }
+    }
+
+    fn open(&mut self, doc: Document) {
+        self.dialogs.save_scene_dialog = save_scene::create(doc.path.clone());
+        self.doc = doc;
+        self.selection = Selection::Scene;
+        self.error_info.show_error = false;
+        self.render_control.render_requested = true;
+        self.render_control.reset_view = true;
+    }
+
+    /// Saves to the scene's file, or asks for one. Returns whether it saved now.
+    fn save(&mut self) -> bool {
+        match self.doc.path.clone() {
+            Some(path) => match self.doc.save_to(&path) {
+                Ok(()) => true,
+                Err(err) => {
+                    self.error_info.handle(err);
+                    false
+                }
+            },
+            None => {
+                self.dialogs.save_scene_dialog.save_file();
+                false
+            }
+        }
+    }
+
+    fn handle_dialogs(&mut self, ctx: &egui::Context) {
+        self.dialogs.load_scene_dialog.update(ctx);
+        if let Some(path) = self.dialogs.load_scene_dialog.take_picked() {
+            match Document::load(&path) {
+                Ok(doc) => self.open(doc),
+                // The scene that was open stays open
+                Err(err) => self.error_info.handle(err),
+            }
+        }
+
+        self.dialogs.save_scene_dialog.update(ctx);
+        if let Some(path) = self.dialogs.save_scene_dialog.take_picked() {
+            match self.doc.save_to(&path) {
+                Ok(()) => {
+                    self.dialogs.save_scene_dialog = save_scene::create(Some(path));
+                    if let Some(action) = self.after_save.take() {
+                        self.perform(action);
+                    }
+                }
+                Err(err) => self.error_info.handle(err),
+            }
+        }
+        if *self.dialogs.save_scene_dialog.state() == DialogState::Cancelled {
+            self.after_save = None;
+        }
+
+        save_image::handle_dialog(
+            &mut self.dialogs.save_output_dialog,
+            &mut self.error_info,
+            &self.rendered_image,
+            ctx,
+        );
+
+        self.assets.update(ctx);
+    }
+
+    fn unsaved_changes_modal(&mut self, ctx: &egui::Context) {
+        let Some(action) = self.pending else {
+            return;
+        };
+        let name = self
+            .doc
+            .path
+            .as_ref()
+            .and_then(|p| p.file_name())
+            .map_or("the scene".to_string(), |n| n.to_string_lossy().to_string());
+        let mut choice = None;
+        let modal = Modal::new(Id::new("unsaved-changes")).show(ctx, |ui| {
+            ui.heading("Unsaved changes");
+            ui.label(format!("Save the changes to {} first?", name));
+            ui.add_space(8.);
+            ui.horizontal(|ui| {
+                if ui.button("Save").clicked() {
+                    choice = Some("save");
+                }
+                if ui.button("Discard").clicked() {
+                    choice = Some("discard");
+                }
+                if ui.button("Cancel").clicked() {
+                    choice = Some("cancel");
+                }
+            });
+        });
+        match choice {
+            Some("save") => {
+                self.pending = None;
+                if self.save() {
+                    self.perform(action);
+                } else if self.doc.path.is_none() {
+                    self.after_save = Some(action);
+                }
+            }
+            Some("discard") => {
+                self.pending = None;
+                self.perform(action);
+            }
+            Some(_) => self.pending = None,
+            None if modal.should_close() => self.pending = None,
+            None => {}
+        }
+    }
+
+    fn top_panel(&mut self, ui: &mut Ui) {
         let ctx = ui.ctx().clone();
-        let ctx = &ctx;
-
         Panel::top("top-panel").show(ui, |ui| {
             ui.horizontal(|ui| {
                 ui.menu_button("File", |ui| {
-                    ui.menu_button("Scene", |ui| {
-                        if ui
-                            .button("Load")
-                            .on_hover_text("Load scene configuration from a file")
-                            .clicked()
-                        {
-                            ui.close_kind(Menu);
-                            self.dialogs.load_scene_dialog.pick_file();
-                        }
-                        if ui
-                            .button("Save")
-                            .on_hover_text("Save the current scene configuration to a file")
-                            .clicked()
-                        {
-                            ui.close_kind(Menu);
-                            self.dialogs.save_scene_dialog.save_file();
-                        }
-                    });
-                    let save_output_button = ui
-                        .add_enabled(self.rendered_image.progress > 0., Button::new("Save image"))
-                        .on_hover_text(
-                            "Saves the currently showing render output to an image file",
-                        );
-                    let save_output_button_clicked = save_output_button.clicked();
-                    if save_output_button_clicked {
-                        ui.close_kind(Menu);
+                    if ui
+                        .button("New")
+                        .on_hover_text("Start from the example scene")
+                        .clicked()
+                    {
+                        ui.close();
+                        self.request(PendingAction::New);
+                    }
+                    if ui
+                        .button("Load…")
+                        .on_hover_text("Load a scene file")
+                        .clicked()
+                    {
+                        ui.close();
+                        self.request(PendingAction::Load);
+                    }
+                    if ui
+                        .add(Button::new("Save").shortcut_text("Ctrl+S"))
+                        .on_hover_text("Save the scene to its file")
+                        .clicked()
+                    {
+                        ui.close();
+                        self.save();
+                    }
+                    if ui
+                        .button("Save as…")
+                        .on_hover_text("Save the scene to a new file")
+                        .clicked()
+                    {
+                        ui.close();
+                        self.dialogs.save_scene_dialog.save_file();
+                    }
+                    ui.separator();
+                    if ui
+                        .add_enabled(
+                            self.rendered_image.progress > 0.,
+                            Button::new("Save image…"),
+                        )
+                        .on_hover_text("Save the render output to an image file")
+                        .clicked()
+                    {
+                        ui.close();
                         self.dialogs.save_output_dialog.save_file();
                     }
                 });
-
-                let reset_button = ui.button("Reset");
-                if reset_button.clicked() {
-                    self.dialogs.show_reset_confirm_dialog = true;
-                }
-                reset_button.on_hover_text("Resets the scene configuration to the default example");
+                ui.menu_button("Help", |ui| {
+                    if ui.button("How to use").clicked() {
+                        ui.close();
+                        self.show_help = true;
+                    }
+                });
 
                 let render_button_enabled = render_button::is_enabled(&self.render_control);
                 let render_button = ui.add_enabled(render_button_enabled, Button::new("Render"));
                 let render_button_clicked = render_button.clicked();
-                render_button.on_hover_text("Restart the image rendering");
-
+                render_button.on_hover_text("Restart the image rendering (Ctrl+R)");
                 if render_button_enabled {
                     render_button::handle_click(
                         render_button_clicked,
@@ -207,7 +369,6 @@ impl App for SolstraleApp {
                 }
 
                 ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                    ui.checkbox(&mut self.display_help, "Display help");
                     if ui.checkbox(&mut self.dark_mode, "Dark mode").changed() {
                         ctx.set_visuals(if self.dark_mode {
                             Visuals::dark()
@@ -218,36 +379,9 @@ impl App for SolstraleApp {
                 });
             });
         });
+    }
 
-        load_scene::handle_dialog(
-            &mut self.dialogs.load_scene_dialog,
-            &mut self.dialogs.save_scene_dialog,
-            &mut self.error_info,
-            &mut self.scene_yaml,
-            &mut self.render_control,
-            ctx,
-        );
-
-        save_scene::handle_dialog(
-            &mut self.dialogs.save_scene_dialog,
-            &mut self.error_info,
-            &self.scene_yaml,
-            ctx,
-        );
-
-        save_image::handle_dialog(
-            &mut self.dialogs.save_output_dialog,
-            &mut self.error_info,
-            &self.rendered_image,
-            ctx,
-        );
-
-        reset_confirm::dialog(
-            &mut self.dialogs.show_reset_confirm_dialog,
-            &mut self.scene_yaml,
-            ctx,
-        );
-
+    fn bottom_panel(&mut self, ui: &mut Ui) {
         Panel::bottom("bottom-panel").show(ui, |ui| {
             egui::Frame::side_top_panel(ui.style())
                 .inner_margin(Margin {
@@ -269,49 +403,77 @@ impl App for SolstraleApp {
                     )
                 });
         });
+    }
 
-        let documentation_structure = get_documentation_structure_by_yaml_path(
-            &ROOT_DOCUMENTATION_STRUCTURE,
-            &yaml_editor::get_yaml_path(&self.scene_yaml, ctx),
-        );
-
-        Panel::left("code-panel").show(ui, |ui| {
-            egui::Frame::side_top_panel(ui.style())
-                .inner_margin(Margin::same(0))
-                .show(ui, |ui| {
-                    ScrollArea::both().min_scrolled_width(300.).show(ui, |ui| {
-                        ui.add(yaml_editor(
-                            &mut self.scene_yaml,
-                            &mut create_layouter(),
-                            Vec2 {
-                                x: 300.0,
-                                y: ui.available_height(),
-                            },
-                        ));
-
-                        if is_ctrl_space(ui)
-                            && let Some(doc) = &documentation_structure
-                        {
-                            yaml_editor::autocomplete(&mut self.scene_yaml, doc, ctx);
-                        }
-
-                        if is_enter(ui) {
-                            yaml_editor::indent_new_line(&mut self.scene_yaml, ctx);
-                        }
-                    })
-                });
-        });
-
-        Panel::right("help-panel").min_size(300.0).show_collapsible(
-            ui,
-            &mut self.display_help,
-            |ui| {
+    fn outline_panel(&mut self, ui: &mut Ui) {
+        Panel::left("outline-panel")
+            .min_size(220.)
+            .default_size(260.)
+            .show(ui, |ui| {
+                ui.add_space(4.);
                 ScrollArea::vertical().show(ui, |ui| {
-                    egui::Frame::side_top_panel(ui.style())
-                        .show(ui, |ui| help::show(ui, &documentation_structure));
-                })
-            },
-        );
+                    let scene_variables: BTreeSet<String> = self
+                        .doc
+                        .scene
+                        .variables
+                        .0
+                        .iter()
+                        .map(|(n, _)| n.clone())
+                        .collect();
+                    let mut cx = OutlineCx {
+                        selection: &mut self.selection,
+                        error: None,
+                        scene_variables: &scene_variables,
+                        ops: Vec::new(),
+                    };
+                    outline(ui, &self.doc.scene, &mut cx);
+                    let ops = cx.ops;
+                    for op in ops {
+                        if let Some(selection) = apply(&mut self.doc.scene.world, op) {
+                            self.selection = selection;
+                        }
+                        self.doc.dirty = true;
+                    }
+                });
+            });
+    }
+
+    fn inspector_panel(&mut self, ui: &mut Ui) {
+        Panel::right("inspector-panel")
+            .min_size(340.)
+            .default_size(400.)
+            .show(ui, |ui| {
+                ui.add_space(4.);
+                ScrollArea::both().auto_shrink(false).show(ui, |ui| {
+                    if inspector(
+                        ui,
+                        &mut self.doc.scene,
+                        &self.selection,
+                        0,
+                        &mut self.assets,
+                    ) {
+                        self.doc.dirty = true;
+                    }
+                });
+            });
+    }
+}
+
+impl App for SolstraleApp {
+    fn ui(&mut self, ui: &mut Ui, _frame: &mut Frame) {
+        let ctx = ui.ctx().clone();
+        let ctx = &ctx;
+
+        if is_ctrl_s(ui) {
+            self.save();
+        }
+
+        self.top_panel(ui);
+        self.handle_dialogs(ctx);
+        self.unsaved_changes_modal(ctx);
+        self.bottom_panel(ui);
+        self.outline_panel(ui);
+        self.inspector_panel(ui);
 
         CentralPanel::default()
             .frame(egui::Frame {
@@ -341,40 +503,58 @@ impl App for SolstraleApp {
                     loading_output::show(ui);
                 }
 
-                if self.render_control.render_requested {
-                    match parse_scene(&self.scene_yaml) {
-                        Ok(scene) => self.scene = Some(scene),
-                        Err(err) => {
-                            self.error_info.handle(err);
-                            self.render_control.render_requested = false;
-                        }
-                    }
-                }
-
                 render_output(
                     ui,
                     &mut self.render_control,
                     &mut self.rendered_image,
                     &mut self.error_info,
-                    self.scene.as_ref(),
+                    Some(&self.doc.scene),
                     0,
                     available_size,
                 );
             });
 
+        if self.show_help {
+            Window::new("How to use")
+                .open(&mut self.show_help)
+                .default_width(420.)
+                .show(ctx, |ui| {
+                    ScrollArea::vertical().show(ui, help::show);
+                });
+        }
+
         if self.error_info.show_error {
             Window::new("Error")
                 .open(&mut self.error_info.show_error)
                 .show(ctx, |ui| {
-                    ui.label(&self.error_info.error_message);
+                    ui.label(RichText::new(&self.error_info.error_message).monospace());
                 });
+        }
+
+        let title = self.doc.title();
+        if title != self.title {
+            ctx.send_viewport_cmd(ViewportCommand::Title(title.clone()));
+            self.title = title;
         }
     }
 
     fn save(&mut self, storage: &mut dyn Storage) {
-        storage.set_string("display_help", self.display_help.to_string());
         storage.set_string("dark_mode", self.dark_mode.to_string());
-        storage.set_string("scene_yaml", self.scene_yaml.to_owned())
+        match solstrale_desktop_rust::model::scene_to_yaml(&self.doc.scene) {
+            Ok(yaml) => storage.set_string("scene_yaml", yaml),
+            Err(err) => eprintln!("Could not store the scene: {}", err),
+        }
+        storage.set_string(
+            "scene_path",
+            self.doc
+                .path
+                .as_ref()
+                .map_or(String::new(), |p| p.display().to_string()),
+        );
+        storage.set_string("scene_dirty", self.doc.dirty.to_string());
+        if let Some(yaml) = &self.unparsed_scene {
+            storage.set_string("scene_yaml_unparsed", yaml.clone());
+        }
     }
 
     fn persist_egui_memory(&self) -> bool {

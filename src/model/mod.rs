@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use std::error::Error;
 use std::fmt;
 
@@ -25,7 +24,7 @@ pub mod metal;
 pub mod normal_texture;
 pub mod num;
 pub mod obj_model;
-mod one_of;
+pub mod one_of;
 pub mod orbit_camera;
 pub mod plastic;
 pub mod pos;
@@ -110,85 +109,6 @@ pub struct CreatorContext<'a> {
 
 pub trait Creator<T> {
     fn create(&self, ctx: &CreatorContext) -> Result<T, Box<dyn Error>>;
-}
-
-pub trait HelpDocumentation {
-    fn get_documentation_structure(depth: u8) -> DocumentationStructure;
-}
-
-#[derive(Clone)]
-pub struct DocumentationStructure {
-    pub description: String,
-    pub fields: HashMap<String, FieldInfo>,
-}
-
-impl DocumentationStructure {
-    pub fn new_simple(description: &str) -> DocumentationStructure {
-        DocumentationStructure {
-            description: description.to_string(),
-            fields: Default::default(),
-        }
-    }
-}
-
-#[derive(Clone)]
-pub enum FieldType {
-    Normal,
-    Optional,
-    List,
-    OptionalList,
-}
-
-#[derive(Clone)]
-pub struct FieldInfo {
-    pub description: String,
-    pub field_type: FieldType,
-    pub documentation_structure: DocumentationStructure,
-}
-
-impl FieldInfo {
-    pub fn new(
-        field_description: &str,
-        field_type: FieldType,
-        documentation_structure: DocumentationStructure,
-    ) -> FieldInfo {
-        FieldInfo {
-            description: field_description.to_string(),
-            field_type,
-            documentation_structure,
-        }
-    }
-    pub fn new_simple(
-        field_description: &str,
-        field_type: FieldType,
-        description: &str,
-    ) -> FieldInfo {
-        FieldInfo {
-            description: field_description.to_string(),
-            field_type,
-            documentation_structure: DocumentationStructure::new_simple(description),
-        }
-    }
-}
-
-pub fn get_documentation_structure_by_yaml_path(
-    info: &DocumentationStructure,
-    path: &[String],
-) -> Option<DocumentationStructure> {
-    if path.is_empty() {
-        Some(info.clone())
-    } else {
-        match path.split_first() {
-            None => None,
-            Some((first, rest)) => match info.fields.get(first) {
-                None => None,
-                Some(child_info) => get_documentation_structure_by_yaml_path(
-                    &child_info.documentation_structure,
-                    rest,
-                ),
-            },
-        }
-    }
 }
 
 /// Parses a scene file

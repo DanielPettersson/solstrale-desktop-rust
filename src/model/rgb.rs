@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use solstrale::geo::vec3::Vec3;
 
 use crate::model::num::{Num, VisitNums, parse_triple};
-use crate::model::{Creator, CreatorContext, DocumentationStructure, HelpDocumentation};
+use crate::model::{Creator, CreatorContext};
 
 #[derive(PartialEq, Debug, Clone)]
 pub struct Rgb {
@@ -59,13 +59,5 @@ impl VisitNums for Rgb {
         f(&self.r);
         f(&self.g);
         f(&self.b);
-    }
-}
-
-impl HelpDocumentation for Rgb {
-    fn get_documentation_structure(_: u8) -> DocumentationStructure {
-        DocumentationStructure::new_simple(
-            "Value describing an R, G, B color. For example: 1, 1, 0 for yellow or 0.5, 0.5, 0.5 for gray. Each value can be an expression",
-        )
     }
 }

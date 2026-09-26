@@ -9,6 +9,8 @@ use std::sync::Arc;
 use std::sync::mpsc::{Receiver, Sender};
 use std::time::Duration;
 
+pub mod document;
+pub mod editor;
 pub mod help;
 pub mod keyboard;
 pub mod load_scene;
@@ -16,10 +18,8 @@ pub mod loading_output;
 pub mod model;
 pub mod render_button;
 pub mod render_output;
-pub mod reset_confirm;
 pub mod save_image;
 pub mod save_scene;
-pub mod yaml_editor;
 
 /// The tone mapping curve every display path in the app uses.
 ///

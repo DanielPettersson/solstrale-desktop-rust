@@ -1,17 +1,12 @@
-use std::collections::HashMap;
 use std::error::Error;
 
 use serde::{Deserialize, Deserializer, Serialize};
 use solstrale::hittable::Hittables;
 
-use crate::model::FieldType::{List, Normal, Optional};
 use crate::model::hittable::Hittable;
 use crate::model::num::{EvalOr, Num, visit_nums};
 use crate::model::scope::check_name;
-use crate::model::{
-    Creator, CreatorContext, DocumentationStructure, ErrorPath, FieldInfo, HelpDocumentation,
-    ModelError,
-};
+use crate::model::{Creator, CreatorContext, ErrorPath, ModelError};
 
 /// Most iterations a single repeat may run
 pub const MAX_ITERATIONS: usize = 10_000;
@@ -110,60 +105,6 @@ impl Creator<Vec<Hittables>> for Repeat {
             }
         }
         Ok(list)
-    }
-}
-
-impl HelpDocumentation for Repeat {
-    fn get_documentation_structure(depth: u8) -> DocumentationStructure {
-        let mut doc = DocumentationStructure {
-            description: "Creates the hittables in its world once for each value of a loop variable, which expressions in the world can use. E.g. variable: i, to: 10 and center: i * 2, 0, 0 places ten spheres in a row".to_string(),
-            fields: HashMap::from([
-                (
-                    "variable".to_string(),
-                    FieldInfo::new_simple(
-                        "Name of the loop variable",
-                        Normal,
-                        "A name made of letters, digits and _",
-                    ),
-                ),
-                (
-                    "from".to_string(),
-                    FieldInfo::new_simple(
-                        "First value of the loop variable. Defaults to 0",
-                        Optional,
-                        "Number or expression",
-                    ),
-                ),
-                (
-                    "to".to_string(),
-                    FieldInfo::new_simple(
-                        "The loop stops before reaching this value",
-                        Normal,
-                        "Number or expression",
-                    ),
-                ),
-                (
-                    "step".to_string(),
-                    FieldInfo::new_simple(
-                        "How much the loop variable changes each iteration. Negative counts down. Defaults to 1",
-                        Optional,
-                        "Number or expression",
-                    ),
-                ),
-            ]),
-        };
-        // Hittable and Repeat document each other
-        if depth < 8 {
-            doc.fields.insert(
-                "world".to_string(),
-                FieldInfo::new(
-                    "The hittables to repeat",
-                    List,
-                    Hittable::get_documentation_structure(depth + 1),
-                ),
-            );
-        }
-        doc
     }
 }
 

@@ -1,22 +1,20 @@
-use crate::model::FieldType::Optional;
 use crate::model::num::Num;
 use crate::model::one_of::one_of;
 use crate::model::pos::Pos;
-use crate::model::{Creator, CreatorContext, DocumentationStructure, FieldInfo, HelpDocumentation};
+use crate::model::{Creator, CreatorContext};
 use solstrale::geo::transformation::{
     RotationX, RotationY, RotationZ, Scale, Transformations, Transformer, Translation,
 };
-use std::collections::HashMap;
 use std::error::Error;
 
 one_of! {
     #[derive(PartialEq, Debug, Clone)]
     pub enum Transformation {
         translation => Translation(Pos),
-        scale => Scale(Num),
-        rotation_x => RotationX(Num),
-        rotation_y => RotationY(Num),
-        rotation_z => RotationZ(Num),
+        scale => Scale(Num) = Num::Lit(1.),
+        rotation_x => RotationX(Num) = Num::Lit(0.),
+        rotation_y => RotationY(Num) = Num::Lit(0.),
+        rotation_z => RotationZ(Num) = Num::Lit(0.),
     }
     repr: TransformationRepr, TransformationReprRef;
     empty: None;
@@ -43,54 +41,4 @@ pub fn create_transformation(
         trans.push(t.create(ctx)?);
     }
     Ok(Transformations::new(trans))
-}
-
-impl HelpDocumentation for Transformation {
-    fn get_documentation_structure(depth: u8) -> DocumentationStructure {
-        DocumentationStructure {
-            description: "Changes a hittables position, rotation and / or size".to_string(),
-            fields: HashMap::from([
-                (
-                    "translation".to_string(),
-                    FieldInfo::new(
-                        "Moves the hittable by the given offset",
-                        Optional,
-                        Pos::get_documentation_structure(depth + 1),
-                    ),
-                ),
-                (
-                    "scale".to_string(),
-                    FieldInfo::new_simple(
-                        "Scales the hittable uniformly by the given factor",
-                        Optional,
-                        "Scaling factor",
-                    ),
-                ),
-                (
-                    "rotation_x".to_string(),
-                    FieldInfo::new_simple(
-                        "Rotates the hittable around the X axis",
-                        Optional,
-                        "Rotation in degrees",
-                    ),
-                ),
-                (
-                    "rotation_y".to_string(),
-                    FieldInfo::new_simple(
-                        "Rotates the hittable around the Y axis",
-                        Optional,
-                        "Rotation in degrees",
-                    ),
-                ),
-                (
-                    "rotation_z".to_string(),
-                    FieldInfo::new_simple(
-                        "Rotates the hittable around the Z axis",
-                        Optional,
-                        "Rotation in degrees",
-                    ),
-                ),
-            ]),
-        }
-    }
 }

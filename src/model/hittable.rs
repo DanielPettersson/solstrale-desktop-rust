@@ -1,15 +1,11 @@
-use crate::model::FieldType::Optional;
 use crate::model::r#box::Box;
 use crate::model::obj_model::ObjModel;
 use crate::model::one_of::one_of;
 use crate::model::quad::Quad;
 use crate::model::repeat::Repeat;
 use crate::model::sphere::Sphere;
-use crate::model::{
-    Creator, CreatorContext, DocumentationStructure, ErrorPath, FieldInfo, HelpDocumentation,
-};
+use crate::model::{Creator, CreatorContext, ErrorPath};
 use solstrale::hittable::Hittables;
-use std::collections::HashMap;
 use std::error::Error;
 
 one_of! {
@@ -34,56 +30,6 @@ impl Creator<Vec<Hittables>> for Hittable {
             Hittable::Box(b) => b.create(ctx).at(|| "box".into()),
             // Adds its own path segments, with the loop variable's value
             Hittable::Repeat(r) => r.create(ctx),
-        }
-    }
-}
-
-impl HelpDocumentation for Hittable {
-    fn get_documentation_structure(depth: u8) -> DocumentationStructure {
-        DocumentationStructure {
-            description: "Objects that are hittable by rays shot by the ray tracer".to_string(),
-            fields: HashMap::from([
-                (
-                    "sphere".to_string(),
-                    FieldInfo::new(
-                        "A sphere object",
-                        Optional,
-                        Sphere::get_documentation_structure(depth + 1),
-                    ),
-                ),
-                (
-                    "model".to_string(),
-                    FieldInfo::new(
-                        "A model is loaded from an .obj file. And contains a 3d model composed by triangles with materials",
-                        Optional,
-                        ObjModel::get_documentation_structure(depth + 1),
-                    ),
-                ),
-                (
-                    "quad".to_string(),
-                    FieldInfo::new(
-                        "A quad is a flat rectangular object",
-                        Optional,
-                        Quad::get_documentation_structure(depth + 1),
-                    ),
-                ),
-                (
-                    "box".to_string(),
-                    FieldInfo::new(
-                        "A cuboid object consisting of 6 quads",
-                        Optional,
-                        Box::get_documentation_structure(depth + 1),
-                    ),
-                ),
-                (
-                    "repeat".to_string(),
-                    FieldInfo::new(
-                        "Repeats a list of hittables for each value of a loop variable",
-                        Optional,
-                        Repeat::get_documentation_structure(depth + 1),
-                    ),
-                ),
-            ]),
         }
     }
 }
