@@ -398,12 +398,24 @@ fn row(
     if has_error {
         text = text.color(ERROR_COLOR);
     }
-    let id = Id::new("outline-row").with(path);
-    let response = ui
-        .dnd_drag_source(id, DragPath(path.to_vec()), |ui| {
-            ui.add(egui::Button::selectable(selected, text).truncate())
-        })
-        .inner;
+    // The row is both clicked to select and dragged to move, which a
+    // separate drag source over it would not allow
+    let response = ui.add(
+        egui::Button::selectable(selected, text)
+            .truncate()
+            .sense(egui::Sense::click_and_drag()),
+    );
+    response.dnd_set_drag_payload(DragPath(path.to_vec()));
+    if response.dragged() {
+        ui.ctx().set_cursor_icon(egui::CursorIcon::Grabbing);
+        egui::Tooltip::always_open(
+            ui.ctx().clone(),
+            ui.layer_id(),
+            Id::new("outline-drag"),
+            egui::PopupAnchor::Pointer,
+        )
+        .show(|ui| ui.label(summary(h)));
+    }
     if response.clicked() {
         *cx.selection = Selection::Hittable(path.to_vec());
     }

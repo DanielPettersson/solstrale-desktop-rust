@@ -8,7 +8,7 @@ A desktop UI for the Solstråle path tracer
 
 ## Goals
 - Provide a real-time preview of the path-traced scene as it renders.
-- Offer an intuitive YAML editor for scene configuration with syntax highlighting.
+- Offer a structured scene editor, an outline and an inspector, with scenes saved as YAML.
 
 ## Key Features
 - A responsive UI that remains fluid during heavy rendering tasks.

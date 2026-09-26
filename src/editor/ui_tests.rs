@@ -135,6 +135,11 @@ fn clicking_the_outline_selects() {
     h.get_by_label("Render configuration").click();
     h.run();
     assert_eq!(Selection::RenderConfig, h.state().selection);
+
+    // Hittable rows are drag sources too, which must not swallow the click
+    h.get_by_label("Box  0, 0, 0  to  165, 330, 165").click();
+    h.run();
+    assert_eq!(Selection::Hittable(vec![6]), h.state().selection);
 }
 
 fn text_field(value: &str) -> impl Fn(&egui_kittest::kittest::AccessKitNode<'_>) -> bool + '_ {
@@ -170,6 +175,38 @@ fn typing_an_expression_updates_the_scene_only_when_valid() {
     h.run();
     assert_eq!("i * 3", center_x(h.state()));
     save_preview(&mut h, "invalid_expression");
+}
+
+#[test]
+fn dragging_a_row_moves_the_hittable() {
+    let mut h = harness(Document::default().scene, Selection::Scene);
+    h.run();
+    let last = "Box  0, 0, 0  to  165, 165, 165";
+    let from = h.get_by_label(last).rect().center();
+    h.hover_at(from);
+    h.drag_at(from);
+    h.run();
+    // Past the drag threshold, which is when the drop zones appear
+    h.hover_at(from + egui::vec2(0., -30.));
+    h.run();
+    let target = h.get_by_label("Quad  at 555, 0, 0").rect().center_top() - egui::vec2(0., 3.);
+    h.hover_at(target);
+    h.run();
+    h.drop_at(target);
+    h.run();
+
+    let s = h.state();
+    assert_eq!(
+        last,
+        crate::editor::outline::summary(&s.scene.world[0]),
+        "{:?}",
+        s.scene
+            .world
+            .iter()
+            .map(crate::editor::outline::summary)
+            .collect::<Vec<_>>()
+    );
+    assert_eq!(Selection::Hittable(vec![0]), s.selection);
 }
 
 #[test]
