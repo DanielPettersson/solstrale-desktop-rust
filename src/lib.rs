@@ -1,4 +1,4 @@
-use crate::model::orbit_camera::OrbitCamera;
+use crate::model::orbit_camera::{CameraSnapshot, OrbitCamera};
 use eframe::egui::Vec2;
 use eframe::wgpu;
 use once_cell::sync::Lazy;
@@ -8,8 +8,6 @@ use std::error::Error;
 use std::sync::Arc;
 use std::sync::mpsc::{Receiver, Sender};
 use std::time::Duration;
-
-use model::scene::Scene;
 
 pub mod help;
 pub mod keyboard;
@@ -114,8 +112,32 @@ pub struct RenderControl {
     pub initial_render_started: bool,
     pub previous_frame_render_size: Vec2,
     pub orbit_camera: Option<OrbitCamera>,
-    pub scene: Option<Scene>,
+    /// The scene camera the orbit camera was last set from
+    pub applied_camera: Option<CameraSnapshot>,
+    /// Makes the next render move the view to the scene's camera
+    pub reset_view: bool,
     pub camera_updated: bool,
+}
+
+impl RenderControl {
+    /// Moves the view back to the scene's camera, without restarting the render
+    pub fn reset_view(&mut self) {
+        if let Some(applied) = &self.applied_camera {
+            self.orbit_camera = Some(OrbitCamera::from_config(&applied.into(), 1.));
+            self.camera_updated = true;
+        }
+    }
+
+    /// Whether the view has been moved away from the scene's camera
+    pub fn view_moved(&self) -> bool {
+        match (&self.orbit_camera, &self.applied_camera) {
+            (Some(orbit), Some(applied)) => {
+                !CameraSnapshot::from(&solstrale::camera::CameraConfig::from(orbit))
+                    .approx_eq(applied)
+            }
+            _ => false,
+        }
+    }
 }
 
 pub enum RenderMessage {

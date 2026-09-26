@@ -4,9 +4,12 @@ use std::error::Error;
 use serde::{Deserialize, Serialize};
 
 use crate::model::FieldType::{Normal, Optional};
-use crate::model::num::{EvalOr, Num, visit_nums};
+use crate::model::num::{Num, visit_nums};
 use crate::model::pos::Pos;
-use crate::model::{Creator, CreatorContext, DocumentationStructure, FieldInfo, HelpDocumentation};
+use crate::model::scope::Scope;
+use crate::model::{
+    Creator, CreatorContext, DocumentationStructure, FieldInfo, HelpDocumentation, ModelError,
+};
 
 #[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
 #[serde(deny_unknown_fields)]
@@ -36,17 +39,26 @@ impl Creator<solstrale::camera::CameraConfig> for CameraConfig {
         &self,
         ctx: &CreatorContext,
     ) -> Result<solstrale::camera::CameraConfig, Box<dyn Error>> {
-        Ok(solstrale::camera::CameraConfig {
-            vertical_fov_degrees: self.vertical_fov_degrees.eval_or(ctx, 60.)?,
-            aperture_size: self.aperture_size.eval_or(ctx, 0.)?,
-            look_from: self.look_from.create(ctx)?,
-            look_at: self.look_at.clone().unwrap_or_default().create(ctx)?,
-            up: self
-                .up
-                .clone()
-                .unwrap_or(Pos::new(0., 1., 0.))
-                .create(ctx)?,
-        })
+        self.eval(ctx.scope)
+    }
+}
+
+impl CameraConfig {
+    /// The camera with its expressions evaluated. Needs no GPU, unlike `create`.
+    pub fn eval(&self, scope: &Scope) -> Result<solstrale::camera::CameraConfig, Box<dyn Error>> {
+        let num =
+            |n: &Option<Num>, default: f64| n.as_ref().map_or(Ok(default), |n| n.eval_scope(scope));
+        let pos = |p: &Option<Pos>, default: Pos| p.as_ref().unwrap_or(&default).eval(scope);
+        let camera = (|| {
+            Ok(solstrale::camera::CameraConfig {
+                vertical_fov_degrees: num(&self.vertical_fov_degrees, 60.)?,
+                aperture_size: num(&self.aperture_size, 0.)?,
+                look_from: self.look_from.eval(scope)?,
+                look_at: pos(&self.look_at, Pos::default())?,
+                up: pos(&self.up, Pos::new(0., 1., 0.))?,
+            })
+        })();
+        camera.map_err(|e: String| Box::new(ModelError::new(&e)) as Box<dyn Error>)
     }
 }
 

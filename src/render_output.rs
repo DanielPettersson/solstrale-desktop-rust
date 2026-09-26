@@ -6,14 +6,15 @@ use std::time::{Duration, Instant};
 use eframe::egui::{Context, PointerButton, Sense, Ui, Vec2};
 use eframe::wgpu;
 use eframe::wgpu::util::DeviceExt;
+use solstrale::camera::CameraConfig;
 use solstrale::geo::vec3::Vec3;
 use solstrale::ray_trace;
 use solstrale::util::tone_map::ToneMapper;
 
-use crate::model::orbit_camera::OrbitCamera;
+use crate::model::orbit_camera::{CameraSnapshot, OrbitCamera, ViewAction, view_action};
 use crate::model::scene::Scene;
 use crate::model::scope::Scope;
-use crate::model::{Creator, CreatorContext, parse_scene};
+use crate::model::{Creator, CreatorContext};
 use crate::{
     DISPLAY_TONE_MAPPER, ErrorInfo, RenderCallback, RenderControl, RenderMessage, RenderResources,
     RenderedImage,
@@ -167,7 +168,8 @@ pub fn render_output(
     render_control: &mut RenderControl,
     rendered_image: &mut RenderedImage,
     error_info: &mut ErrorInfo,
-    scene_yaml: &str,
+    scene: Option<&Scene>,
+    frame_index: usize,
     viewport_size: Vec2,
 ) {
     // Process messages from the renderer
@@ -291,45 +293,43 @@ pub fn render_output(
         render_control.abort_sender = None;
         render_control.render_receiver = None;
         render_control.camera_config_sender = None;
-
-        if !render_control.camera_updated {
-            render_control.scene = None;
-            render_control.orbit_camera = None;
-        }
     }
 
     if render_control.render_requested
         && viewport_size.x > 0.0
         && viewport_size.y > 0.0
+        && let Some(scene) = scene
         && let Some(resources) = rendered_image.render_resources.as_ref()
     {
-        if render_control.scene.is_none()
-            && let Ok(s) = parse_scene(scene_yaml)
-        {
-            // Errors surface from the render thread, which evaluates the same
-            let camera = s.scope(&Scope::builtin(0)).and_then(|scope| {
-                s.camera.create(&CreatorContext {
-                    screen_width: viewport_size.x as usize,
-                    screen_height: viewport_size.y as usize,
-                    device: &resources.device,
-                    queue: &resources.queue,
-                    scope: &scope,
-                })
-            });
-            render_control.orbit_camera = camera.ok().map(|c| OrbitCamera::from_config(&c, 1.));
-            render_control.scene = Some(s);
+        match scene.camera_at(frame_index) {
+            Ok(camera) => {
+                let snapshot = CameraSnapshot::from(&camera);
+                if view_action(
+                    render_control.applied_camera.as_ref(),
+                    &snapshot,
+                    render_control.orbit_camera.is_some(),
+                    render_control.reset_view,
+                ) == ViewAction::Reset
+                {
+                    render_control.orbit_camera = Some(OrbitCamera::from_config(&camera, 1.));
+                    render_control.applied_camera = Some(snapshot);
+                }
+            }
+            // The render thread reports the error when it evaluates the same
+            Err(_) => {
+                render_control.orbit_camera = None;
+                render_control.applied_camera = None;
+            }
         }
-
-        if let (Some(scene), Some(orbit_camera)) =
-            (&mut render_control.scene, &render_control.orbit_camera)
-        {
-            scene.camera.look_from = orbit_camera.look_from().into();
-            scene.camera.look_at = Some(orbit_camera.look_at().into());
-        }
+        render_control.reset_view = false;
 
         let res = render(
-            scene_yaml,
-            render_control.scene.clone(),
+            scene.clone(),
+            frame_index,
+            render_control
+                .orbit_camera
+                .as_ref()
+                .map(|o| CameraSnapshot::from(&CameraConfig::from(o))),
             viewport_size,
             ui.ctx(),
             resources.clone(),
@@ -340,24 +340,21 @@ pub fn render_output(
         render_control.abort_sender = Some(res.1);
         render_control.camera_config_sender = Some(res.2);
         render_control.render_requested = false;
-        if !render_control.camera_updated {
-            render_control.loading_scene = true;
-        }
+        render_control.loading_scene = true;
         render_control.camera_updated = false;
     }
 }
 
+/// Builds the scene and ray traces it on a thread. `camera` replaces the
+/// scene's own camera, so a restart keeps the view the user has orbited to.
 fn render(
-    scene_yaml: &str,
-    scene: Option<Scene>,
+    scene: Scene,
+    frame_index: usize,
+    camera: Option<CameraSnapshot>,
     viewport_size: Vec2,
     ctx: &Context,
     resources: Arc<RenderResources>,
-) -> (
-    Receiver<RenderMessage>,
-    Sender<bool>,
-    Sender<solstrale::camera::CameraConfig>,
-) {
+) -> (Receiver<RenderMessage>, Sender<bool>, Sender<CameraConfig>) {
     let (output_sender, output_receiver) = channel();
     let (abort_sender, abort_receiver) = channel();
     let (camera_config_sender, camera_config_receiver) = channel();
@@ -368,23 +365,21 @@ fn render(
     }
 
     let render_sender_clone = render_sender.clone();
-    let scene_yaml_str = scene_yaml.to_string();
     let ctx1 = ctx.clone();
     let ctx2 = ctx.clone();
 
     thread::spawn(move || {
         let res = (|| {
-            let scene = match scene {
-                Some(s) => s,
-                None => parse_scene(&scene_yaml_str)?,
-            }
-            .create(&CreatorContext {
+            let mut scene = scene.create(&CreatorContext {
                 screen_width: viewport_size.x as usize,
                 screen_height: viewport_size.y as usize,
                 device: &resources.device,
                 queue: &resources.queue,
-                scope: &Scope::builtin(0),
+                scope: &Scope::builtin(frame_index),
             })?;
+            if let Some(camera) = &camera {
+                scene.camera = camera.into();
+            }
 
             ray_trace(
                 scene,

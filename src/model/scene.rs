@@ -45,6 +45,15 @@ impl Scene {
         self.variables.scope(base)
     }
 
+    /// The camera as it is at the given frame
+    pub fn camera_at(
+        &self,
+        frame_index: usize,
+    ) -> Result<solstrale::camera::CameraConfig, Box<dyn Error>> {
+        let scope = self.scope(&Scope::builtin(frame_index))?;
+        self.camera.eval(&scope).at(|| "camera".to_string())
+    }
+
     /// The hittables of the world, in a context that already has [`Scene::scope`]
     pub fn create_world(&self, ctx: &CreatorContext) -> Result<Vec<Hittables>, Box<dyn Error>> {
         let mut list = Vec::new();

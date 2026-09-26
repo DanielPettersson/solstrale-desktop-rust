@@ -32,6 +32,7 @@ pub fn handle_dialog(
                         *save_scene_dialog = save_scene::create(Some(file_path));
                         error_info.show_error = false;
                         render_control.render_requested = true;
+                        render_control.reset_view = true;
                     }
                     Err(err) => error_info.handle(Box::new(err)),
                 };

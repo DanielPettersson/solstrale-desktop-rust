@@ -1,4 +1,5 @@
 use crate::model::num::{Num, VisitNums, parse_triple};
+use crate::model::scope::Scope;
 use crate::model::{Creator, CreatorContext, DocumentationStructure, HelpDocumentation};
 use serde::{Deserialize, Serialize};
 use solstrale::geo::vec3::Vec3;
@@ -60,6 +61,16 @@ impl Creator<Vec3> for Pos {
             self.x.eval(ctx)?,
             self.y.eval(ctx)?,
             self.z.eval(ctx)?,
+        ))
+    }
+}
+
+impl Pos {
+    pub fn eval(&self, scope: &Scope) -> Result<Vec3, String> {
+        Ok(Vec3::new(
+            self.x.eval_scope(scope)?,
+            self.y.eval_scope(scope)?,
+            self.z.eval_scope(scope)?,
         ))
     }
 }

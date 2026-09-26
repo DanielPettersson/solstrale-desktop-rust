@@ -17,6 +17,7 @@ use solstrale_desktop_rust::keyboard::{is_ctrl_space, is_enter};
 use solstrale_desktop_rust::model::scene::Scene;
 use solstrale_desktop_rust::model::{
     DocumentationStructure, HelpDocumentation, get_documentation_structure_by_yaml_path,
+    parse_scene,
 };
 use solstrale_desktop_rust::render_output::render_output;
 use solstrale_desktop_rust::yaml_editor::{create_layouter, yaml_editor};
@@ -66,6 +67,8 @@ struct SolstraleApp {
     render_control: RenderControl,
     rendered_image: RenderedImage,
     scene_yaml: String,
+    /// The scene last parsed from `scene_yaml`, when a render was requested
+    scene: Option<Scene>,
     error_info: ErrorInfo,
     dialogs: Dialogs,
     display_help: bool,
@@ -193,6 +196,14 @@ impl App for SolstraleApp {
                         &mut self.error_info,
                         ui,
                     );
+                }
+
+                if ui
+                    .add_enabled(self.render_control.view_moved(), Button::new("Reset view"))
+                    .on_hover_text("Move the view back to the scene's camera")
+                    .clicked()
+                {
+                    self.render_control.reset_view();
                 }
 
                 ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
@@ -330,12 +341,23 @@ impl App for SolstraleApp {
                     loading_output::show(ui);
                 }
 
+                if self.render_control.render_requested {
+                    match parse_scene(&self.scene_yaml) {
+                        Ok(scene) => self.scene = Some(scene),
+                        Err(err) => {
+                            self.error_info.handle(err);
+                            self.render_control.render_requested = false;
+                        }
+                    }
+                }
+
                 render_output(
                     ui,
                     &mut self.render_control,
                     &mut self.rendered_image,
                     &mut self.error_info,
-                    &self.scene_yaml,
+                    self.scene.as_ref(),
+                    0,
                     available_size,
                 );
             });
