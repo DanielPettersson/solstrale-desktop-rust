@@ -1,5 +1,6 @@
 use crate::model::FieldType::{List, Normal, Optional};
 use crate::model::material::Material;
+use crate::model::num::{VisitNums, visit_nums};
 use crate::model::transformation::{Transformation, create_transformation};
 use crate::model::{
     Creator, CreatorContext, DocumentationStructure, FieldInfo, HelpDocumentation, ModelError,
@@ -28,6 +29,8 @@ pub struct ObjModel {
     pub transformations: Vec<Transformation>,
 }
 
+visit_nums!(ObjModel, material, transformations);
+
 impl Creator<Hittables> for ObjModel {
     fn create(&self, ctx: &CreatorContext) -> Result<Hittables, Box<dyn Error>> {
         let material = self.material.as_ref().map_or(
@@ -39,7 +42,9 @@ impl Creator<Hittables> for ObjModel {
         )?;
         let transformation = create_transformation(&self.transformations, ctx)?;
 
-        let key = format!("{:?}", self);
+        // The same model can evaluate differently, e.g. in each iteration of a
+        // repeat, so the key includes the values of the variables it reads.
+        let key = format!("{:?} {}", self, ctx.scope.fingerprint(&self.free_vars()));
         let model_result = MODEL_CACHE.get_with(key.to_owned(), || {
             Obj::new(&self.path, &self.name)
                 .load(&transformation, Some(material))

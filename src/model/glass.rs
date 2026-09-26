@@ -6,6 +6,7 @@ use solstrale::material::{Dielectric, Materials};
 
 use crate::model::FieldType::Optional;
 use crate::model::normal_texture::NormalTexture;
+use crate::model::num::{EvalOr, Num, visit_nums};
 use crate::model::rgb::Rgb;
 use crate::model::texture::Texture;
 use crate::model::{Creator, CreatorContext, DocumentationStructure, FieldInfo, HelpDocumentation};
@@ -18,17 +19,15 @@ pub struct Glass {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub normal: Option<NormalTexture>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub index_of_refraction: Option<f64>,
+    pub index_of_refraction: Option<Num>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub roughness: Option<f64>,
+    pub roughness: Option<Num>,
 }
 
+visit_nums!(Glass, albedo, index_of_refraction, roughness);
+
 /// Full transmission per world unit, so glass without an albedo is clear.
-static CLEAR_GLASS_ALBEDO: Texture = Texture::Color(Rgb {
-    r: 1.,
-    g: 1.,
-    b: 1.,
-});
+static CLEAR_GLASS_ALBEDO: Texture = Texture::Color(Rgb::new(1., 1., 1.));
 
 impl Creator<Materials> for Glass {
     fn create(&self, ctx: &CreatorContext) -> Result<Materials, Box<dyn Error>> {
@@ -41,8 +40,8 @@ impl Creator<Materials> for Glass {
                 None => None,
                 Some(n) => Some(n.create(ctx)?),
             },
-            self.index_of_refraction.unwrap_or(1.5),
-            self.roughness.unwrap_or(0.),
+            self.index_of_refraction.eval_or(ctx, 1.5)?,
+            self.roughness.eval_or(ctx, 0.)?,
         )
         .into())
     }

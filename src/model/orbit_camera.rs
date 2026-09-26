@@ -1,4 +1,3 @@
-use crate::model::{Creator, CreatorContext};
 use solstrale::camera::CameraConfig;
 use solstrale::geo::vec3::Vec3;
 use std::f64::consts::PI;
@@ -22,13 +21,7 @@ pub struct OrbitCamera {
 }
 
 impl OrbitCamera {
-    pub fn new(
-        cc: &crate::model::camera_config::CameraConfig,
-        ctx: &CreatorContext,
-        damping_factor: f64,
-    ) -> Self {
-        let camera_config = cc.create(ctx).unwrap();
-
+    pub fn from_config(camera_config: &CameraConfig, damping_factor: f64) -> Self {
         let dir = camera_config.look_from - camera_config.look_at;
         let distance = dir.length();
         let azimuth = dir.x.atan2(dir.z);

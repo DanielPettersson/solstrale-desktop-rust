@@ -95,6 +95,14 @@ macro_rules! one_of {
             }
         }
 
+        impl $crate::model::num::VisitNums for $name {
+            fn visit_nums(&self, f: &mut dyn FnMut(&$crate::model::num::Num)) {
+                match self {
+                    $($name::$variant(v) => $crate::model::num::VisitNums::visit_nums(v, f)),+
+                }
+            }
+        }
+
         impl serde::Serialize for $name {
             fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
                 let mut r = $repr_ref::default();

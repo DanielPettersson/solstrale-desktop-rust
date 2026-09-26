@@ -3,25 +3,24 @@ use std::error::Error;
 use serde::{Deserialize, Serialize};
 use solstrale::geo::vec3::Vec3;
 
-use crate::model::{
-    Creator, CreatorContext, DocumentationStructure, HelpDocumentation, parse_option,
-};
+use crate::model::num::{Num, VisitNums, parse_triple};
+use crate::model::{Creator, CreatorContext, DocumentationStructure, HelpDocumentation};
 
-#[derive(PartialEq, Debug, Copy, Clone)]
+#[derive(PartialEq, Debug, Clone)]
 pub struct Rgb {
-    pub r: f64,
-    pub g: f64,
-    pub b: f64,
+    pub r: Num,
+    pub g: Num,
+    pub b: Num,
 }
-
-static R: &str = "r";
-static G: &str = "g";
-static B: &str = "b";
 
 impl Rgb {
     /// Creates a new instance
-    pub fn new(r: f64, g: f64, b: f64) -> Rgb {
-        Rgb { r, g, b }
+    pub const fn new(r: f64, g: f64, b: f64) -> Rgb {
+        Rgb {
+            r: Num::Lit(r),
+            g: Num::Lit(g),
+            b: Num::Lit(b),
+        }
     }
 }
 
@@ -40,30 +39,33 @@ impl<'de> Deserialize<'de> for Rgb {
         D: serde::de::Deserializer<'de>,
     {
         let s = String::deserialize(deserializer)?;
-        let mut split = s.split(',');
-        let r = parse_option::<D>(split.next(), R)?;
-        let g = parse_option::<D>(split.next(), G)?;
-        let b = parse_option::<D>(split.next(), B)?;
+        let [r, g, b] = parse_triple(&s)?;
         Ok(Rgb { r, g, b })
     }
 }
 
-impl From<Rgb> for Vec3 {
-    fn from(value: Rgb) -> Self {
-        Vec3::new(value.r, value.g, value.b)
+impl Creator<Vec3> for Rgb {
+    fn create(&self, ctx: &CreatorContext) -> Result<Vec3, Box<dyn Error>> {
+        Ok(Vec3::new(
+            self.r.eval(ctx)?,
+            self.g.eval(ctx)?,
+            self.b.eval(ctx)?,
+        ))
     }
 }
 
-impl Creator<Vec3> for Rgb {
-    fn create(&self, _: &CreatorContext) -> Result<Vec3, Box<dyn Error>> {
-        Ok(Vec3::new(self.r, self.g, self.b))
+impl VisitNums for Rgb {
+    fn visit_nums(&self, f: &mut dyn FnMut(&Num)) {
+        f(&self.r);
+        f(&self.g);
+        f(&self.b);
     }
 }
 
 impl HelpDocumentation for Rgb {
     fn get_documentation_structure(_: u8) -> DocumentationStructure {
         DocumentationStructure::new_simple(
-            "Value describing an R, G, B color. For example: 1, 1, 0 for yellow or 0.5, 0.5, 0.5 for gray",
+            "Value describing an R, G, B color. For example: 1, 1, 0 for yellow or 0.5, 0.5, 0.5 for gray. Each value can be an expression",
         )
     }
 }

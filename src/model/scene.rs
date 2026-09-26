@@ -2,18 +2,25 @@ use std::collections::HashMap;
 use std::error::Error;
 
 use serde::{Deserialize, Serialize};
-use solstrale::hittable::Bvh;
+use solstrale::hittable::{Bvh, Hittables};
 
 use crate::model::FieldType::{List, Normal, Optional};
 use crate::model::camera_config::CameraConfig;
 use crate::model::hittable::Hittable;
+use crate::model::num::visit_nums;
 use crate::model::render_config::RenderConfig;
 use crate::model::rgb::Rgb;
-use crate::model::{Creator, CreatorContext, DocumentationStructure, FieldInfo, HelpDocumentation};
+use crate::model::scope::Scope;
+use crate::model::variables::Variables;
+use crate::model::{
+    Creator, CreatorContext, DocumentationStructure, ErrorPath, FieldInfo, HelpDocumentation,
+};
 
 #[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct Scene {
+    #[serde(skip_serializing_if = "Variables::is_empty", default)]
+    pub variables: Variables,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub render_configuration: Option<RenderConfig>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -22,25 +29,55 @@ pub struct Scene {
     pub world: Vec<Hittable>,
 }
 
+visit_nums!(
+    Scene,
+    variables,
+    render_configuration,
+    background_color,
+    camera,
+    world
+);
+
+impl Scene {
+    /// The scope the scene's contents are evaluated in: `base` plus the
+    /// scene variables
+    pub fn scope(&self, base: &Scope) -> Result<Scope, Box<dyn Error>> {
+        self.variables.scope(base)
+    }
+
+    /// The hittables of the world, in a context that already has [`Scene::scope`]
+    pub fn create_world(&self, ctx: &CreatorContext) -> Result<Vec<Hittables>, Box<dyn Error>> {
+        let mut list = Vec::new();
+        for (i, child) in self.world.iter().enumerate() {
+            list.append(&mut child.create(ctx).at(|| format!("world[{}]", i))?)
+        }
+        Ok(list)
+    }
+}
+
 impl Creator<solstrale::renderer::Scene> for Scene {
     fn create(&self, ctx: &CreatorContext) -> Result<solstrale::renderer::Scene, Box<dyn Error>> {
-        let mut list = Vec::new();
-        for child in self.world.iter() {
-            list.append(&mut child.create(ctx)?)
-        }
+        let scope = self.scope(ctx.scope)?;
+        let ctx = &CreatorContext {
+            scope: &scope,
+            ..*ctx
+        };
 
         Ok(solstrale::renderer::Scene {
-            world: Bvh::new(list).into(),
-            camera: self.camera.create(ctx)?,
+            world: Bvh::new(self.create_world(ctx)?).into(),
+            camera: self.camera.create(ctx).at(|| "camera".to_string())?,
             background_color: self
                 .background_color
-                .unwrap_or(Rgb::new(0., 0., 0.))
-                .create(ctx)?,
+                .as_ref()
+                .unwrap_or(&Rgb::new(0., 0., 0.))
+                .create(ctx)
+                .at(|| "background_color".to_string())?,
             render_config: self
                 .render_configuration
                 .as_ref()
                 .unwrap_or(&RenderConfig::default())
-                .create(ctx)?,
+                .create(ctx)
+                .at(|| "render_configuration".to_string())?,
         })
     }
 }
@@ -50,25 +87,23 @@ impl HelpDocumentation for Scene {
         DocumentationStructure {
             description:
                 "The scene YAML is used to configure all aspects of the rendered image.\n\n\
-            To help with repetitive configuration the yaml can be templated using Tera templates. For example: \n\n\
-            {% for x in range(end=10) %}\n\
-            \x20\x20- sphere:\n\
-            \x20\x20\x20\x20\x20\x20center: {{ x }}, 0, 0\n\
-            \x20\x20\x20\x20\x20\x20radius: 1\n\
-            {% endfor %}\n\n\
-            The templates have access to the following functions:\n\
-            \x20\x20- sin(v)\n\
-            \x20\x20- cos(v)\n\
-            \x20\x20- sqrt(v)\n\
-            \x20\x20- abs(v)\n\
-            \x20\x20- len(x, y, z)\n\
-            \x20\x20- range(start, end, step_by)\n\n\
-            The following variables are also available:\n\
-            \x20\x20- frameIndex (Useful for batch rendering)\n\n\
+            Numbers can be written as expressions, e.g. radius: sqrt(2) / 2 or center: i * 2, 0, sin(frameIndex * 0.1). \
+            Expressions support + - * / % ^ and parentheses, and the functions \
+            sin cos tan abs sqrt floor round pow(x, y) min(...) max(...) len(x, y, z).\n\n\
+            They can read the built-in variables frameIndex (the frame number when batch rendering), pi and e, \
+            the scene variables and the loop variables of enclosing repeats.\n\n\
             Use ctrl+space to autocomplete configuration keys and ctrl+r to restart the rendering\n\n\
             Progress bar shows percentage completed, remaining time, FPS (frames rendered per second) and MPPS (Million pixel samples rendered per second)"
                     .to_string(),
             fields: HashMap::from([
+                (
+                    "variables".to_string(),
+                    FieldInfo::new_simple(
+                        "Named values that expressions in the scene can use. Each can use the ones declared before it",
+                        Optional,
+                        "A map of name: number or expression, e.g. spacing: 2.5",
+                    ),
+                ),
                 (
                     "render_configuration".to_string(),
                     FieldInfo::new(

@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 use solstrale::post::PostProcessors;
 
 use crate::model::FieldType::{Optional, OptionalList};
+use crate::model::num::visit_nums;
 use crate::model::post_processor::PostProcessor;
 use crate::model::width_height::WidthHeight;
 use crate::model::{Creator, CreatorContext, DocumentationStructure, FieldInfo, HelpDocumentation};
@@ -21,6 +22,8 @@ pub struct RenderConfig {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub preview: Option<bool>,
 }
+
+visit_nums!(RenderConfig, post_processors);
 
 impl Creator<solstrale::renderer::RenderConfig> for RenderConfig {
     fn create(

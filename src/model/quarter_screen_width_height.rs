@@ -2,6 +2,7 @@ use std::error::Error;
 
 use serde::{Deserialize, Serialize};
 
+use crate::model::num::visit_nums;
 use crate::model::{Creator, CreatorContext, DocumentationStructure, HelpDocumentation};
 
 #[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
@@ -13,6 +14,8 @@ impl Creator<(usize, usize)> for QuarterScreenWidthHeight {
         Ok((ctx.screen_width / 4, ctx.screen_height / 4))
     }
 }
+
+visit_nums!(QuarterScreenWidthHeight);
 
 impl HelpDocumentation for QuarterScreenWidthHeight {
     fn get_documentation_structure(_: u8) -> DocumentationStructure {

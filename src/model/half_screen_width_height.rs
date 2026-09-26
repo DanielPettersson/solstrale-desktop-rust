@@ -2,6 +2,7 @@ use std::error::Error;
 
 use serde::{Deserialize, Serialize};
 
+use crate::model::num::visit_nums;
 use crate::model::{Creator, CreatorContext, DocumentationStructure, HelpDocumentation};
 
 #[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
@@ -13,6 +14,8 @@ impl Creator<(usize, usize)> for HalfScreenWidthHeight {
         Ok((ctx.screen_width / 2, ctx.screen_height / 2))
     }
 }
+
+visit_nums!(HalfScreenWidthHeight);
 
 impl HelpDocumentation for HalfScreenWidthHeight {
     fn get_documentation_structure(_: u8) -> DocumentationStructure {

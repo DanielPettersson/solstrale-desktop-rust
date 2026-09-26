@@ -6,6 +6,7 @@ use solstrale::hittable::Hittables;
 
 use crate::model::FieldType::{Normal, Optional, OptionalList};
 use crate::model::material::Material;
+use crate::model::num::visit_nums;
 use crate::model::pos::Pos;
 use crate::model::transformation::{Transformation, create_transformation};
 use crate::model::{Creator, CreatorContext, DocumentationStructure, FieldInfo, HelpDocumentation};
@@ -21,6 +22,8 @@ pub struct Quad {
     #[serde(skip_serializing_if = "Vec::is_empty", default)]
     pub transformations: Vec<Transformation>,
 }
+
+visit_nums!(Quad, q, u, v, material, transformations);
 
 impl Creator<Hittables> for Quad {
     fn create(&self, ctx: &CreatorContext) -> Result<Hittables, Box<dyn Error>> {

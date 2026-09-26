@@ -1,73 +1,111 @@
 use std::collections::HashMap;
 use std::error::Error;
+use std::fmt;
 
-use derive_more::Display;
 use eframe::wgpu;
 
-use crate::model::pos::Pos;
 use crate::model::scene::Scene;
-use crate::model::template::apply_template;
+use crate::model::scope::Scope;
 
-mod blend;
-mod bloom_post_processor;
-mod r#box;
-mod camera_config;
-mod custom_width_height;
-mod denoise_post_processor;
-mod glass;
-mod half_screen_width_height;
-mod hittable;
-mod image;
-mod lambertian;
-mod light;
-mod material;
-mod metal;
-mod normal_texture;
-mod obj_model;
+pub mod blend;
+pub mod bloom_post_processor;
+pub mod r#box;
+pub mod camera_config;
+pub mod custom_width_height;
+pub mod denoise_post_processor;
+pub mod expr;
+pub mod glass;
+pub mod half_screen_width_height;
+pub mod hittable;
+pub mod image;
+pub mod lambertian;
+pub mod light;
+pub mod material;
+pub mod metal;
+pub mod normal_texture;
+pub mod num;
+pub mod obj_model;
 mod one_of;
 pub mod orbit_camera;
-mod plastic;
-mod pos;
-mod post_processor;
-mod quad;
-mod quarter_screen_width_height;
-mod render_config;
-mod rgb;
-mod saturation_post_processor;
+pub mod plastic;
+pub mod pos;
+pub mod post_processor;
+pub mod quad;
+pub mod quarter_screen_width_height;
+pub mod render_config;
+pub mod repeat;
+pub mod rgb;
+pub mod saturation_post_processor;
 pub mod scene;
-mod screen_width_height;
-mod sphere;
-mod template;
-mod texture;
-mod transformation;
-mod width_height;
+pub mod scope;
+pub mod screen_width_height;
+pub mod sphere;
+pub mod texture;
+pub mod transformation;
+pub mod variables;
+pub mod width_height;
 
-#[derive(Clone, Debug, Display)]
-struct ModelError {
-    message: String,
+#[cfg(test)]
+mod scene_tests;
+
+/// An error in the scene, with the path to where in the scene it is.
+#[derive(Clone, Debug, PartialEq)]
+pub struct ModelError {
+    /// Outermost first, e.g. `["world[2]", "repeat (i = 3)", "world[0]", "sphere"]`
+    pub path: Vec<String>,
+    pub message: String,
 }
 
 impl ModelError {
-    fn new(message: &str) -> Self {
+    pub fn new(message: &str) -> Self {
         Self {
+            path: Vec::new(),
             message: message.to_string(),
         }
     }
 
     fn new_from_err(err: Box<dyn Error>) -> Self {
-        Self {
-            message: format!("{}", err),
+        match err.downcast::<ModelError>() {
+            Ok(e) => *e,
+            Err(e) => ModelError::new(&e.to_string()),
+        }
+    }
+}
+
+impl fmt::Display for ModelError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if self.path.is_empty() {
+            write!(f, "{}", self.message)
+        } else {
+            write!(f, "{}: {}", self.path.join(" › "), self.message)
         }
     }
 }
 
 impl Error for ModelError {}
 
+/// Adds where in the scene an error happened as it passes up through the model.
+pub trait ErrorPath<T> {
+    fn at(self, segment: impl FnOnce() -> String) -> Result<T, Box<dyn Error>>;
+}
+
+impl<T> ErrorPath<T> for Result<T, Box<dyn Error>> {
+    fn at(self, segment: impl FnOnce() -> String) -> Result<T, Box<dyn Error>> {
+        self.map_err(|e| {
+            let mut e = ModelError::new_from_err(e);
+            e.path.insert(0, segment());
+            Box::new(e) as Box<dyn Error>
+        })
+    }
+}
+
 pub struct CreatorContext<'a> {
     pub screen_width: usize,
     pub screen_height: usize,
     pub device: &'a wgpu::Device,
     pub queue: &'a wgpu::Queue,
+    /// Variables that expressions in the scene can read
+    pub scope: &'a Scope,
 }
 
 pub trait Creator<T> {
@@ -153,20 +191,22 @@ pub fn get_documentation_structure_by_yaml_path(
     }
 }
 
-pub fn parse_scene_yaml(templated_yaml: &str, frame_index: usize) -> Result<Scene, Box<dyn Error>> {
-    let yaml = apply_template(templated_yaml, frame_index)?;
-    let scene: Scene = serde_yaml::from_str(&yaml)?;
-    Ok(scene)
+/// Parses a scene file
+pub fn parse_scene(yaml: &str) -> Result<Scene, Box<dyn Error>> {
+    serde_yaml::from_str(yaml).map_err(|e| {
+        let mut msg = e.to_string();
+        if yaml.contains("{%") || yaml.contains("{{") {
+            msg.push_str(
+                "\nTera templates are no longer supported. Use variables, repeat and expressions instead.",
+            );
+        }
+        Box::new(ModelError::new(&msg)) as Box<dyn Error>
+    })
 }
 
-pub fn parse_option<'de, D>(a: Option<&str>, expected_field: &'static str) -> Result<f64, D::Error>
-where
-    D: serde::de::Deserializer<'de>,
-{
-    a.ok_or(serde::de::Error::missing_field(expected_field))?
-        .trim()
-        .parse::<f64>()
-        .map_err(serde::de::Error::custom)
+/// Writes a scene file
+pub fn scene_to_yaml(scene: &Scene) -> Result<String, Box<dyn Error>> {
+    Ok(serde_yaml::to_string(scene)?)
 }
 
 #[cfg(test)]
@@ -180,6 +220,8 @@ mod test {
     use crate::model::lambertian::Lambertian;
     use crate::model::material::Material;
     use crate::model::metal::Metal;
+    use crate::model::num::Num;
+    use crate::model::pos::Pos;
     use crate::model::post_processor::PostProcessor;
     use crate::model::render_config::RenderConfig;
     use crate::model::rgb::Rgb;
@@ -191,63 +233,32 @@ mod test {
     #[test]
     fn serde() {
         let scene = Scene {
+            variables: Default::default(),
             world: vec![Hittable::Box(crate::model::r#box::Box {
-                a: Pos {
-                    x: 1.,
-                    y: 2.,
-                    z: 3.,
-                },
-                b: Pos {
-                    x: 4.,
-                    y: 5.,
-                    z: 6.,
-                },
+                a: Pos::new(1., 2., 3.),
+                b: Pos::new(4., 5., 6.),
                 material: Some(Material::Blend(Box::new(Blend {
                     first: Material::Lambertian(Lambertian {
-                        albedo: Some(Texture::Color(Rgb {
-                            r: 1.0,
-                            g: 0.0,
-                            b: 0.0,
-                        })),
+                        albedo: Some(Texture::Color(Rgb::new(1.0, 0.0, 0.0))),
                         normal: None,
                     }),
                     second: Material::Metal(Metal {
-                        albedo: Some(Texture::Color(Rgb {
-                            r: 0.0,
-                            g: 1.0,
-                            b: 0.0,
-                        })),
+                        albedo: Some(Texture::Color(Rgb::new(0.0, 1.0, 0.0))),
                         normal: None,
-                        fuzz: Some(0.1),
+                        fuzz: Some(Num::Lit(0.1)),
                     }),
-                    blend_factor: Some(0.5),
+                    blend_factor: Some(Num::Lit(0.5)),
                 }))),
-                transformations: vec![Transformation::RotationX(30.)],
+                transformations: vec![Transformation::RotationX(Num::Lit(30.))],
             })],
             camera: CameraConfig {
-                vertical_fov_degrees: Some(0.0),
-                aperture_size: Some(0.0),
-                look_from: Pos {
-                    x: 0.0,
-                    y: 0.0,
-                    z: 0.0,
-                },
-                look_at: Some(Pos {
-                    x: 0.0,
-                    y: 0.0,
-                    z: 0.0,
-                }),
-                up: Some(Pos {
-                    x: 0.0,
-                    y: 1.0,
-                    z: 0.0,
-                }),
+                vertical_fov_degrees: Some(Num::Lit(0.0)),
+                aperture_size: Some(Num::Lit(0.0)),
+                look_from: Pos::new(0.0, 0.0, 0.0),
+                look_at: Some(Pos::new(0.0, 0.0, 0.0)),
+                up: Some(Pos::new(0.0, 1.0, 0.0)),
             },
-            background_color: Some(Rgb {
-                r: 0.0,
-                g: 0.0,
-                b: 0.0,
-            }),
+            background_color: Some(Rgb::new(0.0, 0.0, 0.0)),
             render_configuration: Some(RenderConfig {
                 width_height: Some(WidthHeight::Custom(CustomWidthHeight {
                     width: 200,
@@ -256,13 +267,13 @@ mod test {
                 samples_per_pixel: Some(50),
                 post_processors: vec![
                     PostProcessor::Denoise(DenoisePostProcessor {
-                        strength: Some(1.0),
+                        strength: Some(Num::Lit(1.0)),
                         iterations: Some(5),
                         guide: Some(DenoiseGuide::ColorOnly),
                     }),
                     PostProcessor::Bloom(BloomPostProcessor {
-                        kernel_size_fraction: Some(0.1),
-                        threshold: Some(1.5),
+                        kernel_size_fraction: Some(Num::Lit(0.1)),
+                        threshold: Some(Num::Lit(1.5)),
                         max_intensity: None,
                     }),
                 ],
@@ -323,7 +334,21 @@ world:
     /// until it is in front of a user.
     #[test]
     fn default_scene_parses() {
-        parse_scene_yaml(include_str!("../../resources/scene.yaml"), 0).unwrap();
+        parse_scene(include_str!("../../resources/scene.yaml")).unwrap();
+    }
+
+    #[test]
+    fn tera_templates_get_a_hint() {
+        let err = parse_scene(
+            "camera:\n  look_from: 0, 0, 0\nworld:\n{% for x in range(end=3) %}\n{% endfor %}\n",
+        )
+        .unwrap_err()
+        .to_string();
+        assert!(
+            err.contains("Tera templates are no longer supported"),
+            "{}",
+            err
+        );
     }
 
     /// Every one-of variant, written the ways users write them, survives a
@@ -394,7 +419,7 @@ world:
         .to_string();
         assert!(
             err.contains(
-                "expected only one of `sphere`, `model`, `quad`, `box`, found `sphere`, `quad`"
+                "expected only one of `sphere`, `model`, `quad`, `box`, `repeat`, found `sphere`, `quad`"
             ),
             "{}",
             err

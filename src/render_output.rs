@@ -12,7 +12,8 @@ use solstrale::util::tone_map::ToneMapper;
 
 use crate::model::orbit_camera::OrbitCamera;
 use crate::model::scene::Scene;
-use crate::model::{Creator, CreatorContext, parse_scene_yaml};
+use crate::model::scope::Scope;
+use crate::model::{Creator, CreatorContext, parse_scene};
 use crate::{
     DISPLAY_TONE_MAPPER, ErrorInfo, RenderCallback, RenderControl, RenderMessage, RenderResources,
     RenderedImage,
@@ -303,16 +304,19 @@ pub fn render_output(
         && let Some(resources) = rendered_image.render_resources.as_ref()
     {
         if render_control.scene.is_none()
-            && let Ok(s) = parse_scene_yaml(scene_yaml, 0)
+            && let Ok(s) = parse_scene(scene_yaml)
         {
-            let ctx = CreatorContext {
-                screen_width: viewport_size.x as usize,
-                screen_height: viewport_size.y as usize,
-                device: &resources.device,
-                queue: &resources.queue,
-            };
-
-            render_control.orbit_camera = Some(OrbitCamera::new(&s.camera, &ctx, 1.));
+            // Errors surface from the render thread, which evaluates the same
+            let camera = s.scope(&Scope::builtin(0)).and_then(|scope| {
+                s.camera.create(&CreatorContext {
+                    screen_width: viewport_size.x as usize,
+                    screen_height: viewport_size.y as usize,
+                    device: &resources.device,
+                    queue: &resources.queue,
+                    scope: &scope,
+                })
+            });
+            render_control.orbit_camera = camera.ok().map(|c| OrbitCamera::from_config(&c, 1.));
             render_control.scene = Some(s);
         }
 
@@ -372,13 +376,14 @@ fn render(
         let res = (|| {
             let scene = match scene {
                 Some(s) => s,
-                None => parse_scene_yaml(&scene_yaml_str, 0)?,
+                None => parse_scene(&scene_yaml_str)?,
             }
             .create(&CreatorContext {
                 screen_width: viewport_size.x as usize,
                 screen_height: viewport_size.y as usize,
                 device: &resources.device,
                 queue: &resources.queue,
+                scope: &Scope::builtin(0),
             })?;
 
             ray_trace(

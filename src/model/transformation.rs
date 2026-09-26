@@ -1,4 +1,5 @@
 use crate::model::FieldType::Optional;
+use crate::model::num::Num;
 use crate::model::one_of::one_of;
 use crate::model::pos::Pos;
 use crate::model::{Creator, CreatorContext, DocumentationStructure, FieldInfo, HelpDocumentation};
@@ -12,23 +13,23 @@ one_of! {
     #[derive(PartialEq, Debug, Clone)]
     pub enum Transformation {
         translation => Translation(Pos),
-        scale => Scale(f64),
-        rotation_x => RotationX(f64),
-        rotation_y => RotationY(f64),
-        rotation_z => RotationZ(f64),
+        scale => Scale(Num),
+        rotation_x => RotationX(Num),
+        rotation_y => RotationY(Num),
+        rotation_z => RotationZ(Num),
     }
     repr: TransformationRepr, TransformationReprRef;
     empty: None;
 }
 
 impl Creator<Box<dyn Transformer>> for Transformation {
-    fn create(&self, _: &CreatorContext) -> Result<Box<dyn Transformer>, Box<dyn Error>> {
+    fn create(&self, ctx: &CreatorContext) -> Result<Box<dyn Transformer>, Box<dyn Error>> {
         Ok(match self {
-            Transformation::Translation(p) => Box::new(Translation::new(p.into())),
-            Transformation::Scale(s) => Box::new(Scale::new(*s)),
-            Transformation::RotationX(r) => Box::new(RotationX::new(*r)),
-            Transformation::RotationY(r) => Box::new(RotationY::new(*r)),
-            Transformation::RotationZ(r) => Box::new(RotationZ::new(*r)),
+            Transformation::Translation(p) => Box::new(Translation::new(p.create(ctx)?)),
+            Transformation::Scale(s) => Box::new(Scale::new(s.eval(ctx)?)),
+            Transformation::RotationX(r) => Box::new(RotationX::new(r.eval(ctx)?)),
+            Transformation::RotationY(r) => Box::new(RotationY::new(r.eval(ctx)?)),
+            Transformation::RotationZ(r) => Box::new(RotationZ::new(r.eval(ctx)?)),
         })
     }
 }

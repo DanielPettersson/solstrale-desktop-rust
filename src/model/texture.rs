@@ -26,7 +26,10 @@ impl Default for Texture {
 impl Creator<Textures> for Texture {
     fn create(&self, ctx: &CreatorContext) -> Result<Textures, Box<dyn Error>> {
         match self {
-            Texture::Color(c) => Ok(SolidColor::new(c.r, c.g, c.b).into()),
+            Texture::Color(c) => {
+                let c = c.create(ctx)?;
+                Ok(SolidColor::new(c.x, c.y, c.z).into())
+            }
             Texture::Image(im) => im.create(ctx),
         }
     }

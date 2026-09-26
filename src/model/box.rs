@@ -6,6 +6,7 @@ use solstrale::hittable::Hittables;
 
 use crate::model::FieldType::{Normal, Optional, OptionalList};
 use crate::model::material::Material;
+use crate::model::num::visit_nums;
 use crate::model::pos::Pos;
 use crate::model::transformation::{Transformation, create_transformation};
 use crate::model::{Creator, CreatorContext, DocumentationStructure, FieldInfo, HelpDocumentation};
@@ -20,6 +21,8 @@ pub struct Box {
     #[serde(skip_serializing_if = "Vec::is_empty", default)]
     pub transformations: Vec<Transformation>,
 }
+
+visit_nums!(Box, a, b, material, transformations);
 
 impl Creator<Vec<Hittables>> for Box {
     fn create(&self, ctx: &CreatorContext) -> Result<Vec<Hittables>, std::boxed::Box<dyn Error>> {

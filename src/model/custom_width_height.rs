@@ -4,6 +4,7 @@ use std::error::Error;
 use serde::{Deserialize, Serialize};
 
 use crate::model::FieldType::Normal;
+use crate::model::num::visit_nums;
 use crate::model::{
     Creator, CreatorContext, DocumentationStructure, FieldInfo, HelpDocumentation, ModelError,
 };
@@ -14,6 +15,8 @@ pub struct CustomWidthHeight {
     pub width: usize,
     pub height: usize,
 }
+
+visit_nums!(CustomWidthHeight);
 
 impl Creator<(usize, usize)> for CustomWidthHeight {
     fn create(&self, _: &CreatorContext) -> Result<(usize, usize), Box<dyn Error>> {

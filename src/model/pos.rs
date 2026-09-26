@@ -1,25 +1,30 @@
-use crate::model::{
-    Creator, CreatorContext, DocumentationStructure, HelpDocumentation, parse_option,
-};
+use crate::model::num::{Num, VisitNums, parse_triple};
+use crate::model::{Creator, CreatorContext, DocumentationStructure, HelpDocumentation};
 use serde::{Deserialize, Serialize};
 use solstrale::geo::vec3::Vec3;
 use std::error::Error;
 
-#[derive(Copy, Clone, PartialEq, Debug, Default)]
+#[derive(Clone, PartialEq, Debug)]
 pub struct Pos {
-    pub x: f64,
-    pub y: f64,
-    pub z: f64,
+    pub x: Num,
+    pub y: Num,
+    pub z: Num,
 }
-
-static X: &str = "x";
-static Y: &str = "y";
-static Z: &str = "z";
 
 impl Pos {
     /// Creates a new instance
     pub fn new(x: f64, y: f64, z: f64) -> Pos {
-        Pos { x, y, z }
+        Pos {
+            x: Num::Lit(x),
+            y: Num::Lit(y),
+            z: Num::Lit(z),
+        }
+    }
+}
+
+impl Default for Pos {
+    fn default() -> Self {
+        Pos::new(0., 0., 0.)
     }
 }
 
@@ -38,40 +43,39 @@ impl<'de> Deserialize<'de> for Pos {
         D: serde::de::Deserializer<'de>,
     {
         let s = String::deserialize(deserializer)?;
-        let mut split = s.split(',');
-        let x = parse_option::<D>(split.next(), X)?;
-        let y = parse_option::<D>(split.next(), Y)?;
-        let z = parse_option::<D>(split.next(), Z)?;
+        let [x, y, z] = parse_triple(&s)?;
         Ok(Pos { x, y, z })
-    }
-}
-
-impl From<&Pos> for Vec3 {
-    fn from(value: &Pos) -> Self {
-        Vec3::new(value.x, value.y, value.z)
     }
 }
 
 impl From<Vec3> for Pos {
     fn from(value: Vec3) -> Self {
-        Pos {
-            x: value.x,
-            y: value.y,
-            z: value.z,
-        }
+        Pos::new(value.x, value.y, value.z)
     }
 }
 
 impl Creator<Vec3> for Pos {
-    fn create(&self, _: &CreatorContext) -> Result<Vec3, Box<dyn Error>> {
-        Ok(Vec3::new(self.x, self.y, self.z))
+    fn create(&self, ctx: &CreatorContext) -> Result<Vec3, Box<dyn Error>> {
+        Ok(Vec3::new(
+            self.x.eval(ctx)?,
+            self.y.eval(ctx)?,
+            self.z.eval(ctx)?,
+        ))
+    }
+}
+
+impl VisitNums for Pos {
+    fn visit_nums(&self, f: &mut dyn FnMut(&Num)) {
+        f(&self.x);
+        f(&self.y);
+        f(&self.z);
     }
 }
 
 impl HelpDocumentation for Pos {
     fn get_documentation_structure(_: u8) -> DocumentationStructure {
         DocumentationStructure::new_simple(
-            "Value describing an X, Y, Z position in space. For example: 1.0, 2.0, -3.0",
+            "Value describing an X, Y, Z position in space. For example: 1.0, 2.0, -3.0. Each value can be an expression, e.g. i * 2, 0, sin(frameIndex)",
         )
     }
 }

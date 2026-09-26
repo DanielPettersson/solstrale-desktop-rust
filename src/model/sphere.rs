@@ -1,5 +1,6 @@
 use crate::model::FieldType::{Normal, Optional, OptionalList};
 use crate::model::material::Material;
+use crate::model::num::{Num, visit_nums};
 use crate::model::pos::Pos;
 use crate::model::transformation::{Transformation, create_transformation};
 use crate::model::{Creator, CreatorContext, DocumentationStructure, FieldInfo, HelpDocumentation};
@@ -12,18 +13,20 @@ use std::error::Error;
 #[serde(deny_unknown_fields)]
 pub struct Sphere {
     pub center: Pos,
-    pub radius: f64,
+    pub radius: Num,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub material: Option<Material>,
     #[serde(skip_serializing_if = "Vec::is_empty", default)]
     pub transformations: Vec<Transformation>,
 }
 
+visit_nums!(Sphere, center, radius, material, transformations);
+
 impl Creator<Hittables> for Sphere {
     fn create(&self, ctx: &CreatorContext) -> Result<Hittables, Box<dyn Error>> {
         Ok(solstrale::hittable::Sphere::new(
             self.center.create(ctx)?,
-            self.radius,
+            self.radius.eval(ctx)?,
             self.material
                 .as_ref()
                 .unwrap_or(&Material::default())

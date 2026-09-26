@@ -4,17 +4,17 @@ use std::error::Error;
 use serde::{Deserialize, Serialize};
 
 use crate::model::FieldType::{Normal, Optional};
-use crate::model::{
-    Creator, CreatorContext, DocumentationStructure, FieldInfo, HelpDocumentation, Pos,
-};
+use crate::model::num::{EvalOr, Num, visit_nums};
+use crate::model::pos::Pos;
+use crate::model::{Creator, CreatorContext, DocumentationStructure, FieldInfo, HelpDocumentation};
 
 #[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct CameraConfig {
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub vertical_fov_degrees: Option<f64>,
+    pub vertical_fov_degrees: Option<Num>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub aperture_size: Option<f64>,
+    pub aperture_size: Option<Num>,
     pub look_from: Pos,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub look_at: Option<Pos>,
@@ -22,17 +22,30 @@ pub struct CameraConfig {
     pub up: Option<Pos>,
 }
 
+visit_nums!(
+    CameraConfig,
+    vertical_fov_degrees,
+    aperture_size,
+    look_from,
+    look_at,
+    up
+);
+
 impl Creator<solstrale::camera::CameraConfig> for CameraConfig {
     fn create(
         &self,
         ctx: &CreatorContext,
     ) -> Result<solstrale::camera::CameraConfig, Box<dyn Error>> {
         Ok(solstrale::camera::CameraConfig {
-            vertical_fov_degrees: self.vertical_fov_degrees.unwrap_or(60.),
-            aperture_size: self.aperture_size.unwrap_or(0.),
+            vertical_fov_degrees: self.vertical_fov_degrees.eval_or(ctx, 60.)?,
+            aperture_size: self.aperture_size.eval_or(ctx, 0.)?,
             look_from: self.look_from.create(ctx)?,
-            look_at: self.look_at.unwrap_or_default().create(ctx)?,
-            up: self.up.unwrap_or(Pos::new(0., 1., 0.)).create(ctx)?,
+            look_at: self.look_at.clone().unwrap_or_default().create(ctx)?,
+            up: self
+                .up
+                .clone()
+                .unwrap_or(Pos::new(0., 1., 0.))
+                .create(ctx)?,
         })
     }
 }

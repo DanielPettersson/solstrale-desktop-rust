@@ -1,4 +1,5 @@
 use crate::model::FieldType::Normal;
+use crate::model::num::visit_nums;
 use crate::model::{Creator, CreatorContext, DocumentationStructure, FieldInfo, HelpDocumentation};
 use serde::{Deserialize, Serialize};
 use solstrale::material::texture::{ImageMap, Textures};
@@ -10,6 +11,8 @@ use std::error::Error;
 pub struct Image {
     pub file: String,
 }
+
+visit_nums!(Image);
 
 impl Creator<Textures> for Image {
     fn create(&self, _: &CreatorContext) -> Result<Textures, Box<dyn Error>> {
