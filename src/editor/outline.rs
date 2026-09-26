@@ -12,6 +12,8 @@ use crate::model::pos::Pos;
 use crate::model::repeat::Repeat;
 use crate::model::scene::Scene;
 
+pub const ERROR_COLOR: Color32 = Color32::from_rgb(230, 80, 80);
+
 /// What the inspector shows
 #[derive(Clone, Debug, PartialEq, Hash)]
 pub enum Selection {
@@ -268,8 +270,8 @@ pub fn summary(h: &Hittable) -> String {
 
 pub struct OutlineCx<'a> {
     pub selection: &'a mut Selection,
-    /// The hittable a render error was traced to
-    pub error: Option<&'a [usize]>,
+    /// Where a render error was traced to
+    pub error: Option<&'a Selection>,
     /// Names new loop variables must not take
     pub scene_variables: &'a BTreeSet<String>,
     pub ops: Vec<TreeOp>,
@@ -282,7 +284,11 @@ pub fn outline(ui: &mut Ui, scene: &Scene, cx: &mut OutlineCx) {
         ("Render configuration", Selection::RenderConfig),
     ] {
         let selected = *cx.selection == sel;
-        if ui.selectable_label(selected, label).clicked() {
+        let mut text = RichText::new(label);
+        if cx.error == Some(&sel) {
+            text = text.color(ERROR_COLOR);
+        }
+        if ui.selectable_label(selected, text).clicked() {
             *cx.selection = sel;
         }
     }
@@ -385,10 +391,12 @@ fn row(
     taken: &BTreeSet<String>,
     cx: &mut OutlineCx,
 ) {
-    let selected = *cx.selection == Selection::Hittable(path.to_vec());
+    let this = Selection::Hittable(path.to_vec());
+    let selected = *cx.selection == this;
+    let has_error = cx.error == Some(&this);
     let mut text = RichText::new(summary(h));
-    if cx.error == Some(path) {
-        text = text.color(Color32::from_rgb(230, 80, 80));
+    if has_error {
+        text = text.color(ERROR_COLOR);
     }
     let id = Id::new("outline-row").with(path);
     let response = ui
@@ -399,7 +407,7 @@ fn row(
     if response.clicked() {
         *cx.selection = Selection::Hittable(path.to_vec());
     }
-    if cx.error == Some(path) {
+    if has_error {
         response
             .clone()
             .on_hover_text("The render error is in here");

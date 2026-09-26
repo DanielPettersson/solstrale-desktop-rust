@@ -1,4 +1,7 @@
+use crate::editor::outline::Selection;
 use crate::model::orbit_camera::{CameraSnapshot, OrbitCamera};
+use crate::model::scene::Scene;
+use crate::render_scheduler::{Change, classify, debounce_remaining};
 use eframe::egui::Vec2;
 use eframe::wgpu;
 use once_cell::sync::Lazy;
@@ -7,7 +10,7 @@ use solstrale::util::tone_map::ToneMapper;
 use std::error::Error;
 use std::sync::Arc;
 use std::sync::mpsc::{Receiver, Sender};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 pub mod document;
 pub mod editor;
@@ -18,6 +21,7 @@ pub mod loading_output;
 pub mod model;
 pub mod render_button;
 pub mod render_output;
+pub mod render_scheduler;
 pub mod save_image;
 pub mod save_scene;
 
@@ -117,9 +121,66 @@ pub struct RenderControl {
     /// Makes the next render move the view to the scene's camera
     pub reset_view: bool,
     pub camera_updated: bool,
+    /// The scene and frame the running render was built from
+    pub last_dispatched: Option<(Scene, usize)>,
+    /// When the scene was last edited, while that edit is not rendered yet
+    pub last_edit: Option<Instant>,
+    /// A render is building its scene and has not produced a sample yet
+    pub build_in_flight: bool,
+    /// Cover the viewport while the next render loads, as for a new scene
+    /// rather than an edit
+    pub overlay_next_render: bool,
+    /// Cover the viewport while the running render loads
+    pub overlay: bool,
+    pub render_error: Option<RenderError>,
+}
+
+/// Why the scene could not be rendered
+pub struct RenderError {
+    pub message: String,
+    /// Where in the scene the error is, when known
+    pub selection: Option<Selection>,
 }
 
 impl RenderControl {
+    pub fn edited(&mut self, now: Instant) {
+        self.last_edit = Some(now);
+    }
+
+    /// Acts on edits: a camera change goes straight to the running render,
+    /// anything else restarts it once the edits pause. Returns when to be
+    /// called again.
+    pub fn schedule(&mut self, scene: &Scene, frame: usize, now: Instant) -> Option<Duration> {
+        let last_edit = self.last_edit?;
+        let change = classify(self.last_dispatched.as_ref(), scene, frame);
+        if change == Change::Camera
+            && self.abort_sender.is_some()
+            && let Ok(camera) = scene.camera_at(frame)
+        {
+            self.orbit_camera = Some(OrbitCamera::from_config(&camera, 1.));
+            self.applied_camera = Some((&camera).into());
+            self.camera_updated = true;
+            self.last_dispatched = Some((scene.clone(), frame));
+            self.last_edit = None;
+            return None;
+        }
+        if change == Change::None {
+            self.last_edit = None;
+            return None;
+        }
+        if let Some(remaining) = debounce_remaining(last_edit, now) {
+            return Some(remaining);
+        }
+        // A build can not be aborted, so a new one waits for it rather than
+        // piling up behind it
+        if self.build_in_flight || self.render_requested {
+            return Some(Duration::from_millis(50));
+        }
+        self.render_requested = true;
+        self.last_edit = None;
+        None
+    }
+
     /// Moves the view back to the scene's camera, without restarting the render
     pub fn reset_view(&mut self) {
         if let Some(applied) = &self.applied_camera {
@@ -142,7 +203,11 @@ impl RenderControl {
 
 pub enum RenderMessage {
     SampleRendered(RenderProgress),
-    Error(String),
+    Error {
+        message: String,
+        /// Where in the scene, as in [`model::ModelError::path`]
+        path: Vec<String>,
+    },
 }
 
 pub struct RenderResources {

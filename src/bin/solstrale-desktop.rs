@@ -12,12 +12,15 @@ use egui_file_dialog::{DialogState, FileDialog};
 use hhmmss::Hhmmss;
 use std::collections::BTreeSet;
 use std::sync::Arc;
+use std::time::Instant;
 
 use solstrale_desktop_rust::document::Document;
 use solstrale_desktop_rust::editor::asset_picker::AssetPicker;
 use solstrale_desktop_rust::editor::inspector::inspector;
-use solstrale_desktop_rust::editor::outline::{OutlineCx, Selection, apply, outline};
+use solstrale_desktop_rust::editor::outline::{ERROR_COLOR, OutlineCx, Selection, apply, outline};
 use solstrale_desktop_rust::keyboard::is_ctrl_s;
+use solstrale_desktop_rust::model::num::Num;
+use solstrale_desktop_rust::model::pos::Pos;
 use solstrale_desktop_rust::render_output::render_output;
 use solstrale_desktop_rust::{
     ErrorInfo, RenderControl, RenderedImage, device_descriptor, help, load_scene, loading_output,
@@ -74,6 +77,8 @@ struct SolstraleApp {
     dialogs: Dialogs,
     /// Waiting on the user to decide what to do with unsaved changes
     pending: Option<PendingAction>,
+    /// Asking before "Use current view" replaces camera expressions
+    confirm_use_view: bool,
     /// To do once the Save As dialog, opened to keep unsaved changes, is done
     after_save: Option<PendingAction>,
     /// Scene text from the last session that could not be loaded, kept in storage
@@ -158,6 +163,7 @@ impl SolstraleApp {
             error_info,
             dialogs,
             pending: None,
+            confirm_use_view: false,
             after_save: None,
             unparsed_scene,
             show_help: false,
@@ -189,6 +195,8 @@ impl SolstraleApp {
         self.error_info.show_error = false;
         self.render_control.render_requested = true;
         self.render_control.reset_view = true;
+        self.render_control.overlay_next_render = true;
+        self.render_control.last_edit = None;
     }
 
     /// Saves to the scene's file, or asks for one. Returns whether it saved now.
@@ -242,6 +250,66 @@ impl SolstraleApp {
         );
 
         self.assets.update(ctx);
+    }
+
+    fn edited(&mut self) {
+        self.doc.dirty = true;
+        self.render_control.edited(Instant::now());
+    }
+
+    /// Writes the orbited view into the scene's camera. Asks first, unless
+    /// `confirmed`, when that would replace expressions.
+    fn use_current_view(&mut self, confirmed: bool) {
+        let Some(orbit) = &self.render_control.orbit_camera else {
+            return;
+        };
+        let camera = &mut self.doc.scene.camera;
+        let has_expr = |p: &Pos| [&p.x, &p.y, &p.z].iter().any(|n| matches!(n, Num::Expr(_)));
+        if !confirmed
+            && (has_expr(&camera.look_from) || camera.look_at.as_ref().is_some_and(has_expr))
+        {
+            self.confirm_use_view = true;
+            return;
+        }
+        let view = solstrale::camera::CameraConfig::from(orbit);
+        let round = |v: f64| (v * 1000.).round() / 1000.;
+        let pos = |v: solstrale::geo::vec3::Vec3| Pos::new(round(v.x), round(v.y), round(v.z));
+        camera.look_from = pos(view.look_from);
+        camera.look_at = Some(pos(view.look_at));
+        self.selection = Selection::Camera;
+        self.edited();
+    }
+
+    fn use_view_modal(&mut self, ctx: &egui::Context) {
+        if !self.confirm_use_view {
+            return;
+        }
+        let mut choice = None;
+        let modal = Modal::new(Id::new("use-current-view")).show(ctx, |ui| {
+            ui.heading("Replace expressions?");
+            ui.label(
+                "The camera's position uses expressions. Replace them with the view's numbers?",
+            );
+            ui.add_space(8.);
+            ui.horizontal(|ui| {
+                if ui.button("Replace").clicked() {
+                    choice = Some(true);
+                }
+                if ui.button("Cancel").clicked() {
+                    choice = Some(false);
+                }
+            });
+        });
+        match choice {
+            Some(replace) => {
+                self.confirm_use_view = false;
+                if replace {
+                    self.use_current_view(true);
+                }
+            }
+            None if modal.should_close() => self.confirm_use_view = false,
+            None => {}
+        }
     }
 
     fn unsaved_changes_modal(&mut self, ctx: &egui::Context) {
@@ -367,6 +435,16 @@ impl SolstraleApp {
                 {
                     self.render_control.reset_view();
                 }
+                if ui
+                    .add_enabled(
+                        self.render_control.view_moved(),
+                        Button::new("Use current view"),
+                    )
+                    .on_hover_text("Set the scene's camera to the view")
+                    .clicked()
+                {
+                    self.use_current_view(false);
+                }
 
                 ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                     if ui.checkbox(&mut self.dark_mode, "Dark mode").changed() {
@@ -389,18 +467,45 @@ impl SolstraleApp {
                     ..Margin::default()
                 })
                 .show(ui, |ui| {
-                    ui.add(
-                        ProgressBar::new(self.rendered_image.progress as f32).text(format!(
-                            "{:.0}% {} {:.1}FPS {:.1}MPPS",
-                            self.rendered_image.progress * 100.,
-                            self.rendered_image.estimated_time_left.hhmmss(),
-                            self.rendered_image.fps,
-                            self.rendered_image.fps
-                                * self.rendered_image.width as f64
-                                * self.rendered_image.height as f64
-                                / 1_000_000.,
-                        )),
-                    )
+                    if let Some(err) = &self.render_control.render_error {
+                        let text = RichText::new(format!(
+                            "⚠ {}",
+                            err.message.lines().next().unwrap_or("")
+                        ))
+                        .color(ERROR_COLOR);
+                        let mut response = ui
+                            .add(
+                                egui::Label::new(text)
+                                    .truncate()
+                                    .sense(egui::Sense::click()),
+                            )
+                            .on_hover_text(&err.message);
+                        if err.selection.is_some() {
+                            response = response.on_hover_cursor(egui::CursorIcon::PointingHand);
+                        }
+                        if response.clicked()
+                            && let Some(selection) = &err.selection
+                        {
+                            self.selection = selection.clone();
+                        }
+                    }
+                    ui.horizontal(|ui| {
+                        if self.render_control.loading_scene && !self.render_control.overlay {
+                            ui.spinner().on_hover_text("Building the scene");
+                        }
+                        ui.add(
+                            ProgressBar::new(self.rendered_image.progress as f32).text(format!(
+                                "{:.0}% {} {:.1}FPS {:.1}MPPS",
+                                self.rendered_image.progress * 100.,
+                                self.rendered_image.estimated_time_left.hhmmss(),
+                                self.rendered_image.fps,
+                                self.rendered_image.fps
+                                    * self.rendered_image.width as f64
+                                    * self.rendered_image.height as f64
+                                    / 1_000_000.,
+                            )),
+                        )
+                    });
                 });
         });
     }
@@ -420,9 +525,14 @@ impl SolstraleApp {
                         .iter()
                         .map(|(n, _)| n.clone())
                         .collect();
+                    let error = self
+                        .render_control
+                        .render_error
+                        .as_ref()
+                        .and_then(|e| e.selection.as_ref());
                     let mut cx = OutlineCx {
                         selection: &mut self.selection,
-                        error: None,
+                        error,
                         scene_variables: &scene_variables,
                         ops: Vec::new(),
                     };
@@ -432,7 +542,7 @@ impl SolstraleApp {
                         if let Some(selection) = apply(&mut self.doc.scene.world, op) {
                             self.selection = selection;
                         }
-                        self.doc.dirty = true;
+                        self.edited();
                     }
                 });
             });
@@ -452,7 +562,7 @@ impl SolstraleApp {
                         0,
                         &mut self.assets,
                     ) {
-                        self.doc.dirty = true;
+                        self.edited();
                     }
                 });
             });
@@ -471,6 +581,7 @@ impl App for SolstraleApp {
         self.top_panel(ui);
         self.handle_dialogs(ctx);
         self.unsaved_changes_modal(ctx);
+        self.use_view_modal(ctx);
         self.bottom_panel(ui);
         self.outline_panel(ui);
         self.inspector_panel(ui);
@@ -492,22 +603,30 @@ impl App for SolstraleApp {
                         && available_size.y > 0.
                     {
                         self.render_control.render_requested = true;
+                        self.render_control.overlay_next_render = true;
                         self.render_control.initial_render_started = true;
                     }
                     self.render_control.previous_frame_render_size = available_size;
                 }
 
-                if (self.render_control.loading_scene || self.render_control.render_requested)
-                    && !self.render_control.camera_updated
+                let rc = &self.render_control;
+                if (rc.loading_scene && rc.overlay)
+                    || (rc.render_requested && rc.overlay_next_render)
                 {
                     loading_output::show(ui);
+                }
+
+                if let Some(wait) = self
+                    .render_control
+                    .schedule(&self.doc.scene, 0, Instant::now())
+                {
+                    ui.ctx().request_repaint_after(wait);
                 }
 
                 render_output(
                     ui,
                     &mut self.render_control,
                     &mut self.rendered_image,
-                    &mut self.error_info,
                     Some(&self.doc.scene),
                     0,
                     available_size,

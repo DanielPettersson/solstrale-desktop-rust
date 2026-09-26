@@ -14,10 +14,11 @@ use solstrale::util::tone_map::ToneMapper;
 use crate::model::orbit_camera::{CameraSnapshot, OrbitCamera, ViewAction, view_action};
 use crate::model::scene::Scene;
 use crate::model::scope::Scope;
-use crate::model::{Creator, CreatorContext};
+use crate::model::{Creator, CreatorContext, ModelError};
+use crate::render_scheduler::error_selection;
 use crate::{
-    DISPLAY_TONE_MAPPER, ErrorInfo, RenderCallback, RenderControl, RenderMessage, RenderResources,
-    RenderedImage,
+    DISPLAY_TONE_MAPPER, RenderCallback, RenderControl, RenderError, RenderMessage,
+    RenderResources, RenderedImage,
 };
 
 /// Repaints are asked for at most this often. Progress messages can arrive
@@ -167,7 +168,6 @@ pub fn render_output(
     ui: &mut Ui,
     render_control: &mut RenderControl,
     rendered_image: &mut RenderedImage,
-    error_info: &mut ErrorInfo,
     scene: Option<&Scene>,
     frame_index: usize,
     viewport_size: Vec2,
@@ -192,10 +192,15 @@ pub fn render_output(
                         }
                         rendered_image.estimated_time_left = render_progress.estimated_time_left;
                         render_control.loading_scene = false;
+                        render_control.build_in_flight = false;
                     }
-                    RenderMessage::Error(error_message) => {
-                        error_info.handle_str(&error_message);
+                    RenderMessage::Error { message, path } => {
+                        render_control.render_error = Some(RenderError {
+                            message,
+                            selection: error_selection(&path),
+                        });
                         render_control.loading_scene = false;
+                        render_control.build_in_flight = false;
                     }
                 },
                 Err(err) => {
@@ -203,6 +208,7 @@ pub fn render_output(
                         TryRecvError::Empty => {}
                         TryRecvError::Disconnected => {
                             render_control.abort_sender = None;
+                            render_control.build_in_flight = false;
                         }
                     }
                     break;
@@ -342,6 +348,11 @@ pub fn render_output(
         render_control.render_requested = false;
         render_control.loading_scene = true;
         render_control.camera_updated = false;
+        render_control.build_in_flight = true;
+        render_control.overlay = render_control.overlay_next_render;
+        render_control.overlay_next_render = false;
+        render_control.render_error = None;
+        render_control.last_dispatched = Some((scene.clone(), frame_index));
     }
 }
 
@@ -393,13 +404,16 @@ fn render(
         })();
 
         if let Err(err) = res {
-            let mut err_msg = format!("{}", err);
+            let mut message = format!("{}", err);
             if let Some(s) = err.source() {
-                err_msg = err_msg + &format!("\n{}", s);
+                message = message + &format!("\n{}", s);
             }
+            let path = err
+                .downcast_ref::<ModelError>()
+                .map_or(Vec::new(), |e| e.path.clone());
 
             render_sender_clone
-                .send(RenderMessage::Error(err_msg))
+                .send(RenderMessage::Error { message, path })
                 .unwrap_or(());
             ctx1.request_repaint();
         };
