@@ -1,67 +1,34 @@
-use crate::model::FieldType::Optional;
 use crate::model::image::Image;
+use crate::model::one_of::one_of;
 use crate::model::rgb::Rgb;
-use crate::model::{
-    Creator, CreatorContext, DocumentationStructure, FieldInfo, HelpDocumentation, ModelError,
-};
-use serde::{Deserialize, Serialize};
+use crate::model::{Creator, CreatorContext};
 use solstrale::material::texture::{SolidColor, Textures};
-use std::collections::HashMap;
 use std::error::Error;
 
-#[derive(Serialize, Deserialize, PartialEq, Debug, Default, Clone)]
-#[serde(deny_unknown_fields)]
-pub struct Texture {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub color: Option<Rgb>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub image: Option<Image>,
+one_of! {
+    #[derive(PartialEq, Debug, Clone)]
+    pub enum Texture {
+        color => Color(Rgb) = Rgb::new(0.8, 0.8, 0.8),
+        image => Image(Image),
+    }
+    repr: TextureRepr, TextureReprRef;
+    empty: Some(Texture::default());
+}
+
+impl Default for Texture {
+    fn default() -> Self {
+        Texture::Color(Rgb::new(0.8, 0.8, 0.8))
+    }
 }
 
 impl Creator<Textures> for Texture {
     fn create(&self, ctx: &CreatorContext) -> Result<Textures, Box<dyn Error>> {
         match self {
-            Texture {
-                color: Some(c),
-                image: None,
-            } => Ok(SolidColor::new(c.r, c.g, c.b).into()),
-            Texture {
-                color: None,
-                image: Some(im),
-            } => im.create(ctx),
-            Texture {
-                color: None,
-                image: None,
-            } => Ok(SolidColor::new(0.8, 0.8, 0.8).into()),
-            _ => Err(From::from(ModelError::new(
-                "Texture should have max a single field defined",
-            ))),
-        }
-    }
-}
-
-impl HelpDocumentation for Texture {
-    fn get_documentation_structure(depth: u8) -> DocumentationStructure {
-        DocumentationStructure {
-            description: "A texture defines the color of hittable objects".to_string(),
-            fields: HashMap::from([
-                (
-                    "color".to_string(),
-                    FieldInfo::new(
-                        "Simple one-color texture",
-                        Optional,
-                        Rgb::get_documentation_structure(depth + 1),
-                    ),
-                ),
-                (
-                    "image".to_string(),
-                    FieldInfo::new(
-                        "Texture where the color of each coordinate is read from an image file",
-                        Optional,
-                        Image::get_documentation_structure(depth + 1),
-                    ),
-                ),
-            ]),
+            Texture::Color(c) => {
+                let c = c.create(ctx)?;
+                Ok(SolidColor::new(c.x, c.y, c.z).into())
+            }
+            Texture::Image(im) => im.create(ctx),
         }
     }
 }

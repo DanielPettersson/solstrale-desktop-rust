@@ -1,4 +1,3 @@
-use crate::model::{Creator, CreatorContext};
 use solstrale::camera::CameraConfig;
 use solstrale::geo::vec3::Vec3;
 use std::f64::consts::PI;
@@ -22,13 +21,7 @@ pub struct OrbitCamera {
 }
 
 impl OrbitCamera {
-    pub fn new(
-        cc: &crate::model::camera_config::CameraConfig,
-        ctx: &CreatorContext,
-        damping_factor: f64,
-    ) -> Self {
-        let camera_config = cc.create(ctx).unwrap();
-
+    pub fn from_config(camera_config: &CameraConfig, damping_factor: f64) -> Self {
         let dir = camera_config.look_from - camera_config.look_at;
         let distance = dir.length();
         let azimuth = dir.x.atan2(dir.z);
@@ -145,4 +138,122 @@ fn cross(a: Vec3, b: Vec3) -> Vec3 {
         a.z * b.x - a.x * b.z,
         a.x * b.y - a.y * b.x,
     )
+}
+
+/// A comparable copy of a camera config, which the library type is not.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct CameraSnapshot {
+    pub vertical_fov_degrees: f64,
+    pub aperture_size: f64,
+    pub look_from: Vec3,
+    pub look_at: Vec3,
+    pub up: Vec3,
+}
+
+impl CameraSnapshot {
+    /// Equal but for the rounding that going through orbit angles, or
+    /// writing the view into the scene to 0.001, adds
+    pub fn approx_eq(&self, other: &CameraSnapshot) -> bool {
+        let scale = 1e-3 + 1e-6 * (self.look_from - self.look_at).length();
+        (self.look_from - other.look_from).length() < scale
+            && (self.look_at - other.look_at).length() < scale
+            && self.up == other.up
+            && self.vertical_fov_degrees == other.vertical_fov_degrees
+            && self.aperture_size == other.aperture_size
+    }
+}
+
+impl From<&CameraConfig> for CameraSnapshot {
+    fn from(c: &CameraConfig) -> Self {
+        CameraSnapshot {
+            vertical_fov_degrees: c.vertical_fov_degrees,
+            aperture_size: c.aperture_size,
+            look_from: c.look_from,
+            look_at: c.look_at,
+            up: c.up,
+        }
+    }
+}
+
+impl From<&CameraSnapshot> for CameraConfig {
+    fn from(c: &CameraSnapshot) -> Self {
+        CameraConfig {
+            vertical_fov_degrees: c.vertical_fov_degrees,
+            aperture_size: c.aperture_size,
+            look_from: c.look_from,
+            look_at: c.look_at,
+            up: c.up,
+        }
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub enum ViewAction {
+    /// Keep the view the user has orbited to
+    Keep,
+    /// Move the view to the scene's camera
+    Reset,
+}
+
+/// Whether a full re-render keeps the orbited view. It is kept unless the
+/// scene's camera itself changed since the view was last set from it, so that
+/// editing a material does not throw away where the user has moved to.
+pub fn view_action(
+    applied: Option<&CameraSnapshot>,
+    scene_camera: &CameraSnapshot,
+    has_view: bool,
+    force_reset: bool,
+) -> ViewAction {
+    if force_reset || !has_view || applied != Some(scene_camera) {
+        ViewAction::Reset
+    } else {
+        ViewAction::Keep
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn snapshot(x: f64) -> CameraSnapshot {
+        CameraSnapshot {
+            vertical_fov_degrees: 60.,
+            aperture_size: 0.,
+            look_from: Vec3::new(x, 0., -10.),
+            look_at: Vec3::new(0., 0., 0.),
+            up: Vec3::new(0., 1., 0.),
+        }
+    }
+
+    #[test]
+    fn view_is_kept_unless_the_scene_camera_changed() {
+        let a = snapshot(0.);
+        assert_eq!(ViewAction::Keep, view_action(Some(&a), &a, true, false));
+        assert_eq!(
+            ViewAction::Reset,
+            view_action(Some(&a), &snapshot(1.), true, false)
+        );
+        assert_eq!(ViewAction::Reset, view_action(None, &a, true, false));
+        assert_eq!(ViewAction::Reset, view_action(Some(&a), &a, false, false));
+        assert_eq!(ViewAction::Reset, view_action(Some(&a), &a, true, true));
+    }
+
+    #[test]
+    fn from_config_round_trips() {
+        let c = CameraConfig::from(&snapshot(3.));
+        let orbit = OrbitCamera::from_config(&c, 1.);
+        let back = CameraSnapshot::from(&CameraConfig::from(&orbit));
+        let expected = snapshot(3.);
+        assert!(
+            (back.look_from - expected.look_from).length() < 1e-9,
+            "{:?}",
+            back
+        );
+        assert!(
+            (back.look_at - expected.look_at).length() < 1e-9,
+            "{:?}",
+            back
+        );
+        assert_eq!(expected.vertical_fov_degrees, back.vertical_fov_degrees);
+    }
 }

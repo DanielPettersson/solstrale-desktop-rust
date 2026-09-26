@@ -1,0 +1,382 @@
+//! Drives the outline and inspector headless. Renders are written to
+//! target/editor-previews for looking at, not compared.
+
+use eframe::egui::{self, Vec2};
+use egui_kittest::Harness;
+use egui_kittest::kittest::{NodeT, Queryable};
+
+use crate::document::Document;
+use crate::editor::asset_picker::AssetPicker;
+use crate::editor::inspector::{ViewRequest, inspector};
+use crate::editor::outline::{OutlineCx, Selection, apply, outline};
+use crate::model::hittable::Hittable;
+use crate::model::parse_scene;
+use crate::model::scene::Scene;
+
+struct State {
+    scene: Scene,
+    selection: Selection,
+    assets: AssetPicker,
+    changed: bool,
+    view_moved: bool,
+    view_request: Option<ViewRequest>,
+    /// Where the inspector was drawn, which its content has to stay inside
+    inspector_rect: egui::Rect,
+}
+
+/// The inspector panel's minimum width in the app
+const INSPECTOR_WIDTH: f32 = 340.;
+
+fn editor_ui(ui: &mut egui::Ui, s: &mut State) {
+    ui.horizontal_top(|ui| {
+        ui.allocate_ui(Vec2::new(260., ui.available_height()), |ui| {
+            ui.vertical(|ui| {
+                let vars = Default::default();
+                let mut cx = OutlineCx {
+                    selection: &mut s.selection,
+                    error: None,
+                    scene_variables: &vars,
+                    ops: Vec::new(),
+                };
+                outline(ui, &s.scene, &mut cx);
+                for op in cx.ops {
+                    if let Some(sel) = apply(&mut s.scene.world, op) {
+                        s.selection = sel;
+                    }
+                    s.changed = true;
+                }
+            });
+        });
+        ui.separator();
+        // As in the app's inspector panel
+        ui.allocate_ui_with_layout(
+            Vec2::new(INSPECTOR_WIDTH, ui.available_height()),
+            egui::Layout::top_down(egui::Align::Min),
+            |ui| {
+                ui.set_width(INSPECTOR_WIDTH);
+                s.inspector_rect = ui.max_rect();
+                egui::ScrollArea::vertical()
+                    .auto_shrink(false)
+                    .show(ui, |ui| {
+                        s.changed |= inspector(
+                            ui,
+                            &mut s.scene,
+                            &s.selection,
+                            0,
+                            &mut s.assets,
+                            s.view_moved,
+                            &mut s.view_request,
+                        );
+                    });
+            },
+        );
+    });
+}
+
+fn harness(scene: Scene, selection: Selection) -> Harness<'static, State> {
+    Harness::builder()
+        .with_size(Vec2::new(640., 900.))
+        .wgpu()
+        .build_ui_state(
+            editor_ui,
+            State {
+                scene,
+                selection,
+                assets: AssetPicker::default(),
+                changed: false,
+                view_moved: false,
+                view_request: None,
+                inspector_rect: egui::Rect::NOTHING,
+            },
+        )
+}
+
+fn save_preview(h: &mut Harness<State>, name: &str) {
+    let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("target/editor-previews");
+    std::fs::create_dir_all(&dir).unwrap();
+    h.render()
+        .unwrap()
+        .save(dir.join(format!("{}.png", name)))
+        .unwrap();
+}
+
+const EXPRESSIONS_SCENE: &str = "variables:
+  spacing: 2.5
+  wobble: sin(frameIndex * 0.1)
+camera:
+  look_from: 0, 1, -10
+  vertical_fov_degrees: 40 + wobble
+world:
+  - repeat:
+      variable: i
+      from: -2
+      to: 3
+      world:
+        - sphere:
+            center: i * spacing, wobble, 0
+            radius: 0.5
+            material:
+              metal:
+                fuzz: 0.1
+                albedo:
+                  color: 0.9, 0.5, 0.2
+            transformations:
+              - rotation_y: i * 10
+              - scale: 1.5
+";
+
+#[test]
+fn every_selection_renders() {
+    let default = Document::default().scene;
+    let expressions = parse_scene(EXPRESSIONS_SCENE).unwrap();
+    for (name, scene, selection) in [
+        ("scene", expressions.clone(), Selection::Scene),
+        ("camera", expressions.clone(), Selection::Camera),
+        ("render_config", default.clone(), Selection::RenderConfig),
+        ("repeat", expressions.clone(), Selection::Hittable(vec![0])),
+        (
+            "sphere_in_repeat",
+            expressions.clone(),
+            Selection::Hittable(vec![0, 0]),
+        ),
+        ("quad", default.clone(), Selection::Hittable(vec![0])),
+        ("box", default.clone(), Selection::Hittable(vec![6])),
+        ("light", default.clone(), Selection::Hittable(vec![2])),
+    ] {
+        let mut h = harness(scene, selection);
+        h.run();
+        save_preview(&mut h, name);
+        assert!(
+            !h.state().changed,
+            "{} changed the scene just by showing it",
+            name
+        );
+    }
+}
+
+#[test]
+fn defaults_are_left_out_of_the_scene() {
+    use crate::editor::store_unless_default;
+    let mut value = None;
+    store_unless_default(&mut value, 2., &1.);
+    assert_eq!(Some(2.), value);
+    store_unless_default(&mut value, 1., &1.);
+    assert_eq!(None, value);
+}
+
+/// Materials nested in blends, image textures and long expressions, which
+/// are what gets wide
+const NESTED_SCENE: &str = "variables:
+  a_rather_long_variable_name: 2
+camera:
+  look_from: 0, 1, -10
+world:
+  - sphere:
+      center: a_rather_long_variable_name * sin(frameIndex * 0.1), 1, 0
+      radius: 1
+      material:
+        blend:
+          first:
+            blend:
+              first:
+                lambertian:
+                  albedo:
+                    color: 0.5, 0.5, 0.5
+              second:
+                glass:
+                  albedo:
+                    image:
+                      file: /a/rather/long/path/to/some/texture/image.png
+          second:
+            plastic:
+              albedo:
+                color: 0.9, a_rather_long_variable_name / 10, 0.1
+      transformations:
+        - translation: 1, 2, 3
+        - rotation_y: a_rather_long_variable_name * 45
+";
+
+#[test]
+fn inspector_content_fits_the_panel() {
+    let default = Document::default().scene;
+    let expressions = parse_scene(EXPRESSIONS_SCENE).unwrap();
+    let nested = parse_scene(NESTED_SCENE).unwrap();
+    let mut cases = vec![
+        ("scene", nested.clone(), Selection::Scene),
+        ("camera", default.clone(), Selection::Camera),
+        ("render_config", default.clone(), Selection::RenderConfig),
+        ("repeat", expressions.clone(), Selection::Hittable(vec![0])),
+        ("nested", nested.clone(), Selection::Hittable(vec![0])),
+        (
+            "in_repeat",
+            expressions.clone(),
+            Selection::Hittable(vec![0, 0]),
+        ),
+    ];
+    for i in 0..default.world.len() {
+        cases.push(("default", default.clone(), Selection::Hittable(vec![i])));
+    }
+
+    for (name, scene, selection) in cases {
+        let mut h = harness(scene, selection.clone());
+        h.run();
+        let panel = h.state().inspector_rect;
+        let overflowing: Vec<String> = h
+            .query_all(egui_kittest::kittest::by())
+            .filter_map(|n| {
+                let node = n.accesskit_node();
+                // Text longer than its field scrolls inside it, and is clipped
+                if node.role() == egui::accesskit::Role::TextRun {
+                    return None;
+                }
+                // At the harness' 1 pixel per point
+                let r = node.bounding_box()?;
+                (r.x0 as f32 >= panel.min.x - 1. && r.x1 as f32 > panel.max.x + 1.).then(|| {
+                    format!(
+                        "{:?} {:?} {:?} at {:?}",
+                        node.role(),
+                        node.label(),
+                        node.value(),
+                        r
+                    )
+                })
+            })
+            .collect();
+        if !overflowing.is_empty() {
+            save_preview(&mut h, &format!("overflow_{}", name));
+        }
+        assert!(
+            overflowing.is_empty(),
+            "{} {:?} reaches past the panel's right edge {}:\n{}",
+            name,
+            selection,
+            panel.max.x,
+            overflowing.join("\n")
+        );
+    }
+    let mut h = harness(nested, Selection::Hittable(vec![0]));
+    h.run();
+    save_preview(&mut h, "nested_material");
+}
+
+#[test]
+fn clicking_the_outline_selects() {
+    let mut h = harness(Document::default().scene, Selection::Scene);
+    h.run();
+    h.get_by_label("Camera").click();
+    h.run();
+    assert_eq!(Selection::Camera, h.state().selection);
+
+    h.get_by_label("Render configuration").click();
+    h.run();
+    assert_eq!(Selection::RenderConfig, h.state().selection);
+
+    // Hittable rows are drag sources too, which must not swallow the click
+    h.get_by_label("Box  0, 0, 0  to  165, 330, 165").click();
+    h.run();
+    assert_eq!(Selection::Hittable(vec![6]), h.state().selection);
+}
+
+fn text_field(value: &str) -> impl Fn(&egui_kittest::kittest::AccessKitNode<'_>) -> bool + '_ {
+    move |n| n.role() == egui::accesskit::Role::TextInput && n.value().as_deref() == Some(value)
+}
+
+fn center_x(s: &State) -> String {
+    match crate::editor::outline::get(&s.scene.world, &[0, 0]) {
+        Some(Hittable::Sphere(sphere)) => sphere.center.x.to_string(),
+        other => panic!("{:?}", other),
+    }
+}
+
+#[test]
+fn typing_an_expression_updates_the_scene_only_when_valid() {
+    let mut h = harness(
+        parse_scene(EXPRESSIONS_SCENE).unwrap(),
+        Selection::Hittable(vec![0, 0]),
+    );
+    h.run();
+
+    let field = h.get_by(text_field("i * spacing"));
+    field.focus();
+    h.key_press_modifiers(egui::Modifiers::COMMAND, egui::Key::A);
+    field.type_text("i * 3");
+    h.run();
+    assert_eq!("i * 3", center_x(h.state()));
+    assert!(h.state().changed);
+
+    // `q` is not a variable here, so the scene keeps the last valid value
+    let field = h.get_by(text_field("i * 3"));
+    field.type_text(" * q");
+    h.run();
+    assert_eq!("i * 3", center_x(h.state()));
+    save_preview(&mut h, "invalid_expression");
+}
+
+#[test]
+fn dragging_a_row_moves_the_hittable() {
+    let mut h = harness(Document::default().scene, Selection::Scene);
+    h.run();
+    let last = "Box  0, 0, 0  to  165, 165, 165";
+    let from = h.get_by_label(last).rect().center();
+    h.hover_at(from);
+    h.drag_at(from);
+    h.run();
+    // Past the drag threshold, which is when the drop zones appear
+    h.hover_at(from + egui::vec2(0., -30.));
+    h.run();
+    let target = h.get_by_label("Quad  at 555, 0, 0").rect().center_top() - egui::vec2(0., 3.);
+    h.hover_at(target);
+    h.run();
+    h.drop_at(target);
+    h.run();
+
+    let s = h.state();
+    assert_eq!(
+        last,
+        crate::editor::outline::summary(&s.scene.world[0]),
+        "{:?}",
+        s.scene
+            .world
+            .iter()
+            .map(crate::editor::outline::summary)
+            .collect::<Vec<_>>()
+    );
+    assert_eq!(Selection::Hittable(vec![0]), s.selection);
+}
+
+#[test]
+fn a_moved_view_offers_to_reset_or_replace_camera_expressions() {
+    let mut h = harness(parse_scene(EXPRESSIONS_SCENE).unwrap(), Selection::Camera);
+    h.run();
+    assert!(h.query_by_label("Reset view").is_none());
+
+    h.state_mut().view_moved = true;
+    h.run();
+    save_preview(&mut h, "camera_view_moved");
+    h.get_by_label("Replace with view").click();
+    h.run();
+    assert_eq!(
+        Some(ViewRequest::UseView),
+        h.state_mut().view_request.take()
+    );
+    h.get_by_label("Reset view").click();
+    h.run();
+    assert_eq!(Some(ViewRequest::Reset), h.state().view_request);
+}
+
+#[test]
+fn adding_from_the_world_menu() {
+    let mut h = harness(Document::default().scene, Selection::Scene);
+    h.run();
+    let before = h.state().scene.world.len();
+    h.get_by_label("+").click();
+    h.run();
+    h.get_by_label("Sphere").click();
+    h.run();
+    let s = h.state();
+    assert_eq!(before + 1, s.scene.world.len());
+    assert!(matches!(s.scene.world.last(), Some(Hittable::Sphere(_))));
+    assert_eq!(Selection::Hittable(vec![before]), s.selection);
+    assert!(s.changed);
+    save_preview(&mut h, "added_sphere");
+}

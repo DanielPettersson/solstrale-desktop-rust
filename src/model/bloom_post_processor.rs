@@ -1,67 +1,37 @@
-use std::collections::HashMap;
 use std::error::Error;
 
 use serde::{Deserialize, Serialize};
 use solstrale::post::PostProcessors;
 
-use crate::model::FieldType::Optional;
-use crate::model::{Creator, CreatorContext, DocumentationStructure, FieldInfo, HelpDocumentation};
+use crate::model::num::{EvalOr, Num, visit_nums};
+use crate::model::{Creator, CreatorContext};
 
-#[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
+#[derive(Serialize, Deserialize, PartialEq, Debug, Clone, Default)]
 #[serde(deny_unknown_fields)]
 pub struct BloomPostProcessor {
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub kernel_size_fraction: Option<f64>,
+    pub kernel_size_fraction: Option<Num>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub threshold: Option<f64>,
+    pub threshold: Option<Num>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub max_intensity: Option<f64>,
+    pub max_intensity: Option<Num>,
 }
+
+visit_nums!(
+    BloomPostProcessor,
+    kernel_size_fraction,
+    threshold,
+    max_intensity
+);
 
 impl Creator<PostProcessors> for BloomPostProcessor {
     fn create(&self, ctx: &CreatorContext) -> Result<PostProcessors, Box<dyn Error>> {
         Ok(solstrale::post::BloomPostProcessor::new(
-            self.kernel_size_fraction.unwrap_or(0.1),
-            self.threshold,
-            self.max_intensity,
+            self.kernel_size_fraction.eval_or(ctx, 0.1)?,
+            self.threshold.eval_opt(ctx)?,
+            self.max_intensity.eval_opt(ctx)?,
             ctx.device,
         )?
         .into())
-    }
-}
-
-impl HelpDocumentation for BloomPostProcessor {
-    fn get_documentation_structure(_: u8) -> DocumentationStructure {
-        DocumentationStructure {
-            description:
-                "A post processor that applies a bloom effect to bright areas of the image"
-                    .to_string(),
-            fields: HashMap::from([
-                (
-                    "kernel_size_fraction".to_string(),
-                    FieldInfo::new_simple(
-                        "Size of the convolution filter applied to create the bloom effect",
-                        Optional,
-                        "A float number expressed as a fraction of the image width. Defaults to 0.1",
-                    ),
-                ),
-                (
-                    "threshold".to_string(),
-                    FieldInfo::new_simple(
-                        "Amount of brightness needed for bloom effect to be applied to a pixel",
-                        Optional,
-                        "The threshold as the length of the color as a vector. Defaults to \"white\"",
-                    ),
-                ),
-                (
-                    "max_intensity".to_string(),
-                    FieldInfo::new_simple(
-                        "Used to limit the intensity of the bloom effect",
-                        Optional,
-                        "When applying the bloom effect pixels will be normalized to maximum this value. Defaults to unlimited",
-                    ),
-                ),
-            ]),
-        }
     }
 }

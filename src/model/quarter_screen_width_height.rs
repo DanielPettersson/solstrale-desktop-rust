@@ -2,9 +2,10 @@ use std::error::Error;
 
 use serde::{Deserialize, Serialize};
 
-use crate::model::{Creator, CreatorContext, DocumentationStructure, HelpDocumentation};
+use crate::model::num::visit_nums;
+use crate::model::{Creator, CreatorContext};
 
-#[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
+#[derive(Serialize, Deserialize, PartialEq, Debug, Clone, Default)]
 #[serde(deny_unknown_fields)]
 pub struct QuarterScreenWidthHeight {}
 
@@ -14,10 +15,4 @@ impl Creator<(usize, usize)> for QuarterScreenWidthHeight {
     }
 }
 
-impl HelpDocumentation for QuarterScreenWidthHeight {
-    fn get_documentation_structure(_: u8) -> DocumentationStructure {
-        DocumentationStructure::new_simple(
-            "The width and height is quarter of the visible render window in each dimension",
-        )
-    }
-}
+visit_nums!(QuarterScreenWidthHeight);

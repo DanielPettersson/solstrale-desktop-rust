@@ -1,13 +1,12 @@
-use std::collections::HashMap;
 use std::error::Error;
 
 use serde::{Deserialize, Serialize};
 use solstrale::material::Materials;
 
-use crate::model::FieldType::Optional;
 use crate::model::normal_texture::NormalTexture;
+use crate::model::num::visit_nums;
 use crate::model::texture::Texture;
-use crate::model::{Creator, CreatorContext, DocumentationStructure, FieldInfo, HelpDocumentation};
+use crate::model::{Creator, CreatorContext};
 
 #[derive(Serialize, Deserialize, PartialEq, Debug, Default, Clone)]
 #[serde(deny_unknown_fields)]
@@ -17,6 +16,8 @@ pub struct Lambertian {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub normal: Option<NormalTexture>,
 }
+
+visit_nums!(Lambertian, albedo);
 
 impl Creator<Materials> for Lambertian {
     fn create(&self, ctx: &CreatorContext) -> Result<Materials, Box<dyn Error>> {
@@ -31,31 +32,5 @@ impl Creator<Materials> for Lambertian {
             },
         )
         .into())
-    }
-}
-
-impl HelpDocumentation for Lambertian {
-    fn get_documentation_structure(depth: u8) -> DocumentationStructure {
-        DocumentationStructure {
-            description: "A material with the appearance of a matte surface".to_string(),
-            fields: HashMap::from([
-                (
-                    "albedo".to_string(),
-                    FieldInfo::new(
-                        "Texture for the material's albedo color",
-                        Optional,
-                        Texture::get_documentation_structure(depth + 1),
-                    ),
-                ),
-                (
-                    "normal".to_string(),
-                    FieldInfo::new(
-                        "Texture for the material's normals. Used to give the illusion of fine structure of the hittable",
-                        Optional,
-                        NormalTexture::get_documentation_structure(depth + 1),
-                    ),
-                ),
-            ]),
-        }
     }
 }

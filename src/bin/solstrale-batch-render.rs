@@ -10,7 +10,8 @@ use solstrale::ray_trace;
 use solstrale::util::wgpu_util::buffer_to_image;
 use solstrale_desktop_rust::DISPLAY_TONE_MAPPER;
 use solstrale_desktop_rust::device_descriptor;
-use solstrale_desktop_rust::model::{Creator, CreatorContext, parse_scene_yaml};
+use solstrale_desktop_rust::model::scope::Scope;
+use solstrale_desktop_rust::model::{Creator, CreatorContext, parse_scene};
 
 #[derive(Parser)]
 #[command(version, about, long_about = None, disable_help_flag = true)]
@@ -74,14 +75,15 @@ fn main() -> Result<(), Box<dyn Error>> {
     let total_progress_bar =
         multi_progress.add(ProgressBar::new(num_frames as u64).with_style(total_progress_style));
 
-    for frame_index in 0..num_frames {
-        let scene_yaml = fs::read_to_string(scene_path.clone())?;
+    let scene_model = parse_scene(&fs::read_to_string(scene_path)?)?;
 
-        let scene = parse_scene_yaml(&scene_yaml, frame_index)?.create(&CreatorContext {
+    for frame_index in 0..num_frames {
+        let scene = scene_model.create(&CreatorContext {
             screen_width,
             screen_height,
             device: &device,
             queue: &queue,
+            scope: &Scope::builtin(frame_index),
         })?;
 
         let samples_per_pixel = scene.render_config.samples_per_pixel as u64;
