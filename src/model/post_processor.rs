@@ -1,47 +1,30 @@
 use crate::model::FieldType::Optional;
 use crate::model::bloom_post_processor::BloomPostProcessor;
 use crate::model::denoise_post_processor::DenoisePostProcessor;
+use crate::model::one_of::one_of;
 use crate::model::saturation_post_processor::SaturationPostProcessor;
-use crate::model::{
-    Creator, CreatorContext, DocumentationStructure, FieldInfo, HelpDocumentation, ModelError,
-};
-use serde::{Deserialize, Serialize};
+use crate::model::{Creator, CreatorContext, DocumentationStructure, FieldInfo, HelpDocumentation};
 use solstrale::post::PostProcessors;
 use std::collections::HashMap;
 use std::error::Error;
 
-#[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
-#[serde(deny_unknown_fields)]
-pub struct PostProcessor {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub denoise: Option<DenoisePostProcessor>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub bloom: Option<BloomPostProcessor>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub saturation: Option<SaturationPostProcessor>,
+one_of! {
+    #[derive(PartialEq, Debug, Clone)]
+    pub enum PostProcessor {
+        denoise => Denoise(DenoisePostProcessor),
+        bloom => Bloom(BloomPostProcessor),
+        saturation => Saturation(SaturationPostProcessor),
+    }
+    repr: PostProcessorRepr, PostProcessorReprRef;
+    empty: None;
 }
 
 impl Creator<PostProcessors> for PostProcessor {
     fn create(&self, ctx: &CreatorContext) -> Result<PostProcessors, Box<dyn Error>> {
         match self {
-            PostProcessor {
-                denoise: Some(d),
-                bloom: None,
-                saturation: None,
-            } => d.create(ctx),
-            PostProcessor {
-                denoise: None,
-                bloom: Some(b),
-                saturation: None,
-            } => b.create(ctx),
-            PostProcessor {
-                denoise: None,
-                bloom: None,
-                saturation: Some(s),
-            } => s.create(ctx),
-            _ => Err(From::from(ModelError::new(
-                "PostProcessor should have single field defined",
-            ))),
+            PostProcessor::Denoise(d) => d.create(ctx),
+            PostProcessor::Bloom(b) => b.create(ctx),
+            PostProcessor::Saturation(s) => s.create(ctx),
         }
     }
 }

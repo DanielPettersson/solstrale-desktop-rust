@@ -4,94 +4,42 @@ use crate::model::glass::Glass;
 use crate::model::lambertian::Lambertian;
 use crate::model::light::Light;
 use crate::model::metal::Metal;
+use crate::model::one_of::one_of;
 use crate::model::plastic::Plastic;
-use crate::model::{
-    Creator, CreatorContext, DocumentationStructure, FieldInfo, HelpDocumentation, ModelError,
-};
-use serde::{Deserialize, Serialize};
+use crate::model::{Creator, CreatorContext, DocumentationStructure, FieldInfo, HelpDocumentation};
 use solstrale::material::Materials;
 use std::collections::HashMap;
 use std::error::Error;
 
-#[derive(Serialize, Deserialize, PartialEq, Debug, Default, Clone)]
-#[serde(deny_unknown_fields)]
-pub struct Material {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub lambertian: Option<Lambertian>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub glass: Option<Glass>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub metal: Option<Metal>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub plastic: Option<Plastic>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub light: Option<Light>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub blend: Option<Box<Blend>>,
+one_of! {
+    #[derive(PartialEq, Debug, Clone)]
+    pub enum Material {
+        lambertian => Lambertian(Lambertian),
+        glass => Glass(Glass),
+        metal => Metal(Metal),
+        plastic => Plastic(Plastic),
+        light => Light(Light),
+        blend => Blend(Box<Blend>),
+    }
+    repr: MaterialRepr, MaterialReprRef;
+    empty: Some(Material::default());
+}
+
+impl Default for Material {
+    fn default() -> Self {
+        Material::Lambertian(Lambertian::default())
+    }
 }
 
 impl Creator<Materials> for Material {
     fn create(&self, ctx: &CreatorContext) -> Result<Materials, Box<dyn Error>> {
         match self {
-            Material {
-                lambertian: Some(l),
-                glass: None,
-                metal: None,
-                plastic: None,
-                light: None,
-                blend: None,
-            } => l.create(ctx),
-            Material {
-                lambertian: None,
-                glass: Some(g),
-                metal: None,
-                plastic: None,
-                light: None,
-                blend: None,
-            } => g.create(ctx),
-            Material {
-                lambertian: None,
-                glass: None,
-                metal: Some(m),
-                plastic: None,
-                light: None,
-                blend: None,
-            } => m.create(ctx),
-            Material {
-                lambertian: None,
-                glass: None,
-                metal: None,
-                plastic: Some(p),
-                light: None,
-                blend: None,
-            } => p.create(ctx),
-            Material {
-                lambertian: None,
-                glass: None,
-                metal: None,
-                plastic: None,
-                light: Some(l),
-                blend: None,
-            } => l.create(ctx),
-            Material {
-                lambertian: None,
-                glass: None,
-                metal: None,
-                plastic: None,
-                light: None,
-                blend: Some(b),
-            } => b.create(ctx),
-            Material {
-                lambertian: None,
-                glass: None,
-                metal: None,
-                plastic: None,
-                light: None,
-                blend: None,
-            } => Lambertian::default().create(ctx),
-            _ => Err(From::from(ModelError::new(
-                "Material should have max a single field defined",
-            ))),
+            Material::Lambertian(l) => l.create(ctx),
+            Material::Glass(g) => g.create(ctx),
+            Material::Metal(m) => m.create(ctx),
+            Material::Plastic(p) => p.create(ctx),
+            Material::Light(l) => l.create(ctx),
+            Material::Blend(b) => b.create(ctx),
         }
     }
 }

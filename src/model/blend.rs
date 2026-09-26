@@ -13,6 +13,7 @@ use crate::model::{Creator, CreatorContext, DocumentationStructure, FieldInfo, H
 pub struct Blend {
     pub first: Material,
     pub second: Material,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub blend_factor: Option<f64>,
 }
 

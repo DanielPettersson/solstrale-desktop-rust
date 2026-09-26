@@ -1,59 +1,33 @@
 use crate::model::FieldType::Optional;
 use crate::model::r#box::Box;
 use crate::model::obj_model::ObjModel;
+use crate::model::one_of::one_of;
 use crate::model::quad::Quad;
 use crate::model::sphere::Sphere;
-use crate::model::{
-    Creator, CreatorContext, DocumentationStructure, FieldInfo, HelpDocumentation, ModelError,
-};
-use serde::{Deserialize, Serialize};
+use crate::model::{Creator, CreatorContext, DocumentationStructure, FieldInfo, HelpDocumentation};
 use solstrale::hittable::Hittables;
 use std::collections::HashMap;
 use std::error::Error;
 
-#[derive(Serialize, Deserialize, PartialEq, Debug, Default, Clone)]
-#[serde(deny_unknown_fields)]
-pub struct Hittable {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub sphere: Option<Sphere>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub model: Option<ObjModel>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub quad: Option<Quad>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub r#box: Option<Box>,
+one_of! {
+    #[derive(PartialEq, Debug, Clone)]
+    pub enum Hittable {
+        sphere => Sphere(Sphere),
+        model => Model(ObjModel),
+        quad => Quad(Quad),
+        r#box => Box(Box),
+    }
+    repr: HittableRepr, HittableReprRef;
+    empty: None;
 }
 
 impl Creator<Vec<Hittables>> for Hittable {
     fn create(&self, ctx: &CreatorContext) -> Result<Vec<Hittables>, std::boxed::Box<dyn Error>> {
         match self {
-            Hittable {
-                sphere: Some(s),
-                model: None,
-                quad: None,
-                r#box: None,
-            } => s.create(ctx).map(|h| vec![h]),
-            Hittable {
-                sphere: None,
-                model: Some(m),
-                quad: None,
-                r#box: None,
-            } => m.create(ctx).map(|h| vec![h]),
-            Hittable {
-                sphere: None,
-                model: None,
-                quad: Some(q),
-                r#box: None,
-            } => q.create(ctx).map(|h| vec![h]),
-            Hittable {
-                sphere: None,
-                model: None,
-                quad: None,
-                r#box: Some(b),
-            } => b.create(ctx),
-            _ => Err(From::from(ModelError::new(
-                "Hittable should have single field defined",
-            ))),
+            Hittable::Sphere(s) => s.create(ctx).map(|h| vec![h]),
+            Hittable::Model(m) => m.create(ctx).map(|h| vec![h]),
+            Hittable::Quad(q) => q.create(ctx).map(|h| vec![h]),
+            Hittable::Box(b) => b.create(ctx),
         }
     }
 }

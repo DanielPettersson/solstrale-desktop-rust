@@ -16,6 +16,7 @@ pub struct Metal {
     pub albedo: Option<Texture>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub normal: Option<NormalTexture>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub fuzz: Option<f64>,
 }
 

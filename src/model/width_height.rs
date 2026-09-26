@@ -1,71 +1,39 @@
 use std::collections::HashMap;
 use std::error::Error;
 
-use serde::{Deserialize, Serialize};
-
 use crate::model::FieldType::{Normal, OptionalList};
 use crate::model::custom_width_height::CustomWidthHeight;
 use crate::model::half_screen_width_height::HalfScreenWidthHeight;
+use crate::model::one_of::one_of;
 use crate::model::quarter_screen_width_height::QuarterScreenWidthHeight;
 use crate::model::screen_width_height::ScreenWidthHeight;
-use crate::model::{
-    Creator, CreatorContext, DocumentationStructure, FieldInfo, HelpDocumentation, ModelError,
-};
+use crate::model::{Creator, CreatorContext, DocumentationStructure, FieldInfo, HelpDocumentation};
 
-#[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
-#[serde(deny_unknown_fields)]
-pub struct WidthHeight {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub screen: Option<ScreenWidthHeight>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub half_screen: Option<HalfScreenWidthHeight>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub quarter_screen: Option<QuarterScreenWidthHeight>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub custom: Option<CustomWidthHeight>,
+one_of! {
+    #[derive(PartialEq, Debug, Clone)]
+    pub enum WidthHeight {
+        screen => Screen(ScreenWidthHeight),
+        half_screen => HalfScreen(HalfScreenWidthHeight),
+        quarter_screen => QuarterScreen(QuarterScreenWidthHeight),
+        custom => Custom(CustomWidthHeight),
+    }
+    repr: WidthHeightRepr, WidthHeightReprRef;
+    empty: None;
 }
 
 impl Default for WidthHeight {
     fn default() -> Self {
-        WidthHeight {
-            screen: Some(ScreenWidthHeight {}),
-            half_screen: None,
-            quarter_screen: None,
-            custom: None,
-        }
+        WidthHeight::Screen(ScreenWidthHeight {})
     }
 }
 
 impl Creator<(usize, usize)> for WidthHeight {
     fn create(&self, ctx: &CreatorContext) -> Result<(usize, usize), Box<dyn Error>> {
         match self {
-            WidthHeight {
-                screen: Some(s),
-                half_screen: None,
-                quarter_screen: None,
-                custom: None,
-            } => s.create(ctx),
-            WidthHeight {
-                screen: None,
-                half_screen: Some(s),
-                quarter_screen: None,
-                custom: None,
-            } => s.create(ctx),
-            WidthHeight {
-                screen: None,
-                half_screen: None,
-                quarter_screen: Some(s),
-                custom: None,
-            } => s.create(ctx),
-            WidthHeight {
-                screen: None,
-                half_screen: None,
-                quarter_screen: None,
-                custom: Some(s),
-            } => s.create(ctx),
-            _ => Err(From::from(ModelError::new(
-                "WidthHeight should have single field defined",
-            ))),
+            WidthHeight::Screen(s) => s.create(ctx),
+            WidthHeight::HalfScreen(s) => s.create(ctx),
+            WidthHeight::QuarterScreen(s) => s.create(ctx),
+            WidthHeight::Custom(s) => s.create(ctx),
         }
     }
 }

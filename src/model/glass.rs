@@ -24,14 +24,11 @@ pub struct Glass {
 }
 
 /// Full transmission per world unit, so glass without an albedo is clear.
-static CLEAR_GLASS_ALBEDO: Texture = Texture {
-    color: Some(Rgb {
-        r: 1.,
-        g: 1.,
-        b: 1.,
-    }),
-    image: None,
-};
+static CLEAR_GLASS_ALBEDO: Texture = Texture::Color(Rgb {
+    r: 1.,
+    g: 1.,
+    b: 1.,
+});
 
 impl Creator<Materials> for Glass {
     fn create(&self, ctx: &CreatorContext) -> Result<Materials, Box<dyn Error>> {

@@ -1,72 +1,35 @@
 use crate::model::FieldType::Optional;
+use crate::model::one_of::one_of;
 use crate::model::pos::Pos;
-use crate::model::{
-    Creator, CreatorContext, DocumentationStructure, FieldInfo, HelpDocumentation, ModelError,
-};
-use serde::{Deserialize, Serialize};
+use crate::model::{Creator, CreatorContext, DocumentationStructure, FieldInfo, HelpDocumentation};
 use solstrale::geo::transformation::{
     RotationX, RotationY, RotationZ, Scale, Transformations, Transformer, Translation,
 };
 use std::collections::HashMap;
 use std::error::Error;
 
-#[derive(Serialize, Deserialize, PartialEq, Debug, Default, Clone)]
-#[serde(deny_unknown_fields)]
-pub struct Transformation {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub translation: Option<Pos>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub scale: Option<f64>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub rotation_x: Option<f64>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub rotation_y: Option<f64>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub rotation_z: Option<f64>,
+one_of! {
+    #[derive(PartialEq, Debug, Clone)]
+    pub enum Transformation {
+        translation => Translation(Pos),
+        scale => Scale(f64),
+        rotation_x => RotationX(f64),
+        rotation_y => RotationY(f64),
+        rotation_z => RotationZ(f64),
+    }
+    repr: TransformationRepr, TransformationReprRef;
+    empty: None;
 }
 
 impl Creator<Box<dyn Transformer>> for Transformation {
     fn create(&self, _: &CreatorContext) -> Result<Box<dyn Transformer>, Box<dyn Error>> {
-        match self {
-            Transformation {
-                translation: Some(p),
-                scale: None,
-                rotation_x: None,
-                rotation_y: None,
-                rotation_z: None,
-            } => Ok(Box::new(Translation::new(p.into()))),
-            Transformation {
-                translation: None,
-                scale: Some(s),
-                rotation_x: None,
-                rotation_y: None,
-                rotation_z: None,
-            } => Ok(Box::new(Scale::new(*s))),
-            Transformation {
-                translation: None,
-                scale: None,
-                rotation_x: Some(r),
-                rotation_y: None,
-                rotation_z: None,
-            } => Ok(Box::new(RotationX::new(*r))),
-            Transformation {
-                translation: None,
-                scale: None,
-                rotation_x: None,
-                rotation_y: Some(r),
-                rotation_z: None,
-            } => Ok(Box::new(RotationY::new(*r))),
-            Transformation {
-                translation: None,
-                scale: None,
-                rotation_x: None,
-                rotation_y: None,
-                rotation_z: Some(r),
-            } => Ok(Box::new(RotationZ::new(*r))),
-            _ => Err(From::from(ModelError::new(
-                "Transformation should have single field defined",
-            ))),
-        }
+        Ok(match self {
+            Transformation::Translation(p) => Box::new(Translation::new(p.into())),
+            Transformation::Scale(s) => Box::new(Scale::new(*s)),
+            Transformation::RotationX(r) => Box::new(RotationX::new(*r)),
+            Transformation::RotationY(r) => Box::new(RotationY::new(*r)),
+            Transformation::RotationZ(r) => Box::new(RotationZ::new(*r)),
+        })
     }
 }
 
