@@ -14,7 +14,8 @@ pub fn show(ui: &mut Ui) {
         "Editing",
         "Select a part of the scene in the outline to the left and change it in the inspector to the right. \
          Add hittables with +, and right click one for more, like duplicating or wrapping it in a repeat. \
-         Drag hittables in the outline to reorder them. Hover a label in the inspector for what it does.",
+         Drag hittables in the outline to reorder them. Hover a label in the inspector for what it does. \
+         Reset, or File > New from example scene, starts over from the example scene.",
     );
     section(
         ui,
