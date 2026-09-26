@@ -42,13 +42,26 @@ pub fn scope_at(
     (visible, preview)
 }
 
-/// Returns whether the scene changed
+/// What to do about a view that has moved away from the scene's camera
+#[derive(Debug, PartialEq)]
+pub enum ViewRequest {
+    /// Move the view back to the camera
+    Reset,
+    /// Write the view into the camera, replacing its expressions
+    UseView,
+}
+
+/// Returns whether the scene changed. `view_moved` is whether the viewport
+/// shows something else than the scene's camera, which happens when the
+/// camera is placed by expressions that dragging does not overwrite.
 pub fn inspector(
     ui: &mut Ui,
     scene: &mut Scene,
     selection: &Selection,
     frame: usize,
     assets: &mut AssetPicker,
+    view_moved: bool,
+    view_request: &mut Option<ViewRequest>,
 ) -> bool {
     let (visible, preview) = scope_at(scene, selection, frame);
     let mut cx = EditCx {
@@ -82,6 +95,31 @@ pub fn inspector(
         Selection::Camera => {
             ui.heading("Camera");
             ui.add_space(4.);
+            if view_moved {
+                egui::Frame::group(ui.style()).show(ui, |ui| {
+                    ui.label(
+                        "The view has been moved, but the camera is placed by expressions, \
+                         which moving the view does not change.",
+                    );
+                    ui.horizontal(|ui| {
+                        if ui
+                            .button("Reset view")
+                            .on_hover_text("Move the view back to where the expressions place the camera")
+                            .clicked()
+                        {
+                            *view_request = Some(ViewRequest::Reset);
+                        }
+                        if ui
+                            .button("Replace with view")
+                            .on_hover_text("Replace the expressions for look from and look at with the view's position")
+                            .clicked()
+                        {
+                            *view_request = Some(ViewRequest::UseView);
+                        }
+                    });
+                });
+                ui.add_space(4.);
+            }
             scene.camera.edit(ui, &mut cx)
         }
         Selection::RenderConfig => {

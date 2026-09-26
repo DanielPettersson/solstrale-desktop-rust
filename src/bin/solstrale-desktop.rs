@@ -16,7 +16,7 @@ use std::time::Instant;
 
 use solstrale_desktop_rust::document::Document;
 use solstrale_desktop_rust::editor::asset_picker::AssetPicker;
-use solstrale_desktop_rust::editor::inspector::inspector;
+use solstrale_desktop_rust::editor::inspector::{ViewRequest, inspector};
 use solstrale_desktop_rust::editor::outline::{ERROR_COLOR, OutlineCx, Selection, apply, outline};
 use solstrale_desktop_rust::keyboard::is_ctrl_s;
 use solstrale_desktop_rust::render_output::render_output;
@@ -75,8 +75,6 @@ struct SolstraleApp {
     dialogs: Dialogs,
     /// Waiting on the user to decide what to do with unsaved changes
     pending: Option<PendingAction>,
-    /// Asking before "Use current view" replaces camera expressions
-    confirm_use_view: bool,
     /// To do once the Save As dialog, opened to keep unsaved changes, is done
     after_save: Option<PendingAction>,
     /// Scene text from the last session that could not be loaded, kept in storage
@@ -173,7 +171,6 @@ impl SolstraleApp {
             error_info,
             dialogs,
             pending: None,
-            confirm_use_view: false,
             after_save: None,
             unparsed_scene,
             show_help: false,
@@ -267,54 +264,6 @@ impl SolstraleApp {
     fn edited(&mut self) {
         self.doc.dirty = true;
         self.render_control.edited(Instant::now());
-    }
-
-    /// Writes the orbited view into the scene's camera. Asks first, unless
-    /// `confirmed`, when that would replace expressions.
-    fn use_current_view(&mut self, confirmed: bool) {
-        if !confirmed && self.doc.scene.camera.position_uses_expressions() {
-            self.confirm_use_view = true;
-            return;
-        }
-        if self
-            .render_control
-            .write_view_to_camera(&mut self.doc.scene, self.frame_index, true)
-        {
-            self.selection = Selection::Camera;
-            self.doc.dirty = true;
-        }
-    }
-
-    fn use_view_modal(&mut self, ctx: &egui::Context) {
-        if !self.confirm_use_view {
-            return;
-        }
-        let mut choice = None;
-        let modal = Modal::new(Id::new("use-current-view")).show(ctx, |ui| {
-            ui.heading("Replace expressions?");
-            ui.label(
-                "The camera's position uses expressions. Replace them with the view's numbers?",
-            );
-            ui.add_space(8.);
-            ui.horizontal(|ui| {
-                if ui.button("Replace").clicked() {
-                    choice = Some(true);
-                }
-                if ui.button("Cancel").clicked() {
-                    choice = Some(false);
-                }
-            });
-        });
-        match choice {
-            Some(replace) => {
-                self.confirm_use_view = false;
-                if replace {
-                    self.use_current_view(true);
-                }
-            }
-            None if modal.should_close() => self.confirm_use_view = false,
-            None => {}
-        }
     }
 
     fn unsaved_changes_modal(&mut self, ctx: &egui::Context) {
@@ -431,24 +380,6 @@ impl SolstraleApp {
                         &mut self.error_info,
                         ui,
                     );
-                }
-
-                if ui
-                    .add_enabled(self.render_control.view_moved(), Button::new("Reset view"))
-                    .on_hover_text("Move the view back to the scene's camera")
-                    .clicked()
-                {
-                    self.render_control.reset_view();
-                }
-                if ui
-                    .add_enabled(
-                        self.render_control.view_moved(),
-                        Button::new("Use current view"),
-                    )
-                    .on_hover_text("Set the scene's camera to the view")
-                    .clicked()
-                {
-                    self.use_current_view(false);
                 }
 
                 ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
@@ -596,14 +527,30 @@ impl SolstraleApp {
             .show(ui, |ui| {
                 ui.add_space(4.);
                 ScrollArea::both().auto_shrink(false).show(ui, |ui| {
+                    let mut view_request = None;
                     if inspector(
                         ui,
                         &mut self.doc.scene,
                         &self.selection,
                         self.frame_index,
                         &mut self.assets,
+                        self.render_control.view_moved(),
+                        &mut view_request,
                     ) {
                         self.edited();
+                    }
+                    match view_request {
+                        Some(ViewRequest::Reset) => self.render_control.reset_view(),
+                        Some(ViewRequest::UseView)
+                            if self.render_control.write_view_to_camera(
+                                &mut self.doc.scene,
+                                self.frame_index,
+                                true,
+                            ) =>
+                        {
+                            self.doc.dirty = true;
+                        }
+                        _ => {}
                     }
                 });
             });
@@ -622,7 +569,6 @@ impl App for SolstraleApp {
         self.top_panel(ui);
         self.handle_dialogs(ctx);
         self.unsaved_changes_modal(ctx);
-        self.use_view_modal(ctx);
         self.bottom_panel(ui);
         self.outline_panel(ui);
         self.inspector_panel(ui);

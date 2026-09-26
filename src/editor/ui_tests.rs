@@ -7,7 +7,7 @@ use egui_kittest::kittest::Queryable;
 
 use crate::document::Document;
 use crate::editor::asset_picker::AssetPicker;
-use crate::editor::inspector::inspector;
+use crate::editor::inspector::{ViewRequest, inspector};
 use crate::editor::outline::{OutlineCx, Selection, apply, outline};
 use crate::model::hittable::Hittable;
 use crate::model::parse_scene;
@@ -18,6 +18,8 @@ struct State {
     selection: Selection,
     assets: AssetPicker,
     changed: bool,
+    view_moved: bool,
+    view_request: Option<ViewRequest>,
 }
 
 fn editor_ui(ui: &mut egui::Ui, s: &mut State) {
@@ -42,7 +44,15 @@ fn editor_ui(ui: &mut egui::Ui, s: &mut State) {
         });
         ui.separator();
         ui.vertical(|ui| {
-            s.changed |= inspector(ui, &mut s.scene, &s.selection, 0, &mut s.assets);
+            s.changed |= inspector(
+                ui,
+                &mut s.scene,
+                &s.selection,
+                0,
+                &mut s.assets,
+                s.view_moved,
+                &mut s.view_request,
+            );
         });
     });
 }
@@ -58,6 +68,8 @@ fn harness(scene: Scene, selection: Selection) -> Harness<'static, State> {
                 selection,
                 assets: AssetPicker::default(),
                 changed: false,
+                view_moved: false,
+                view_request: None,
             },
         )
 }
@@ -207,6 +219,26 @@ fn dragging_a_row_moves_the_hittable() {
             .collect::<Vec<_>>()
     );
     assert_eq!(Selection::Hittable(vec![0]), s.selection);
+}
+
+#[test]
+fn a_moved_view_offers_to_reset_or_replace_camera_expressions() {
+    let mut h = harness(parse_scene(EXPRESSIONS_SCENE).unwrap(), Selection::Camera);
+    h.run();
+    assert!(h.query_by_label("Reset view").is_none());
+
+    h.state_mut().view_moved = true;
+    h.run();
+    save_preview(&mut h, "camera_view_moved");
+    h.get_by_label("Replace with view").click();
+    h.run();
+    assert_eq!(
+        Some(ViewRequest::UseView),
+        h.state_mut().view_request.take()
+    );
+    h.get_by_label("Reset view").click();
+    h.run();
+    assert_eq!(Some(ViewRequest::Reset), h.state().view_request);
 }
 
 #[test]
