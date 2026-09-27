@@ -1,4 +1,5 @@
 use crate::model::num::visit_nums;
+use crate::model::texture_cache::{Kind, texture};
 use crate::model::{Creator, CreatorContext};
 use serde::{Deserialize, Serialize};
 use solstrale::material::texture::{ImageMap, Textures};
@@ -14,6 +15,6 @@ visit_nums!(Image);
 
 impl Creator<Textures> for Image {
     fn create(&self, _: &CreatorContext) -> Result<Textures, Box<dyn Error>> {
-        ImageMap::load(self.file.as_ref()).map(|t| t.into())
+        texture(Kind::Color, &self.file, ImageMap::load).map(|t| t.into())
     }
 }

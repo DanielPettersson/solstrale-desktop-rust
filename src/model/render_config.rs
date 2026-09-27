@@ -23,17 +23,22 @@ pub struct RenderConfig {
 
 visit_nums!(RenderConfig, post_processors);
 
+impl RenderConfig {
+    /// Built apart from the rest of the configuration, since each one compiles
+    /// its pipelines
+    pub fn create_post_processors(
+        &self,
+        ctx: &CreatorContext,
+    ) -> Result<Vec<PostProcessors>, Box<dyn Error>> {
+        self.post_processors.iter().map(|p| p.create(ctx)).collect()
+    }
+}
+
 impl Creator<solstrale::renderer::RenderConfig> for RenderConfig {
     fn create(
         &self,
         ctx: &CreatorContext,
     ) -> Result<solstrale::renderer::RenderConfig, Box<dyn Error>> {
-        let mut post_processors: Vec<PostProcessors> = Vec::new();
-
-        for p in &self.post_processors {
-            post_processors.push(p.create(ctx)?);
-        }
-
         let (width, height) = self
             .width_height
             .as_ref()
@@ -44,7 +49,6 @@ impl Creator<solstrale::renderer::RenderConfig> for RenderConfig {
             width,
             height,
             samples_per_pixel: self.samples_per_pixel.unwrap_or(200),
-            post_processors,
             preview: self.preview.unwrap_or(false),
             // Take library defaults for the rest (max_depth, samples_per_batch).
             // Spreading rather than listing them keeps this immune to new fields.

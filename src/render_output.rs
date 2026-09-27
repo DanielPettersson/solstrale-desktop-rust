@@ -1,5 +1,5 @@
 use std::sync::Arc;
-use std::sync::mpsc::{Receiver, Sender, TryRecvError, channel};
+use std::sync::mpsc::{Receiver, Sender, channel};
 use std::thread;
 use std::time::{Duration, Instant};
 
@@ -9,16 +9,17 @@ use eframe::wgpu::util::DeviceExt;
 use solstrale::camera::CameraConfig;
 use solstrale::geo::vec3::Vec3;
 use solstrale::ray_trace;
+use solstrale::renderer::SceneUpdate;
 use solstrale::util::tone_map::ToneMapper;
 
 use crate::model::orbit_camera::{CameraSnapshot, OrbitCamera, ViewAction, view_action};
 use crate::model::scene::Scene;
 use crate::model::scope::Scope;
-use crate::model::{Creator, CreatorContext, ModelError};
-use crate::render_scheduler::error_selection;
+use crate::model::{Creator, CreatorContext};
+use crate::render_scheduler::{Inputs, create_update};
 use crate::{
-    DISPLAY_TONE_MAPPER, RenderCallback, RenderControl, RenderError, RenderMessage,
-    RenderResources, RenderedImage,
+    Build, Built, DISPLAY_TONE_MAPPER, RenderCallback, RenderControl, RenderError, RenderMessage,
+    RenderResources, RenderedImage, UpdateRequest,
 };
 
 /// Repaints are asked for at most this often. Progress messages can arrive
@@ -54,14 +55,15 @@ fn vs_main(@builtin(vertex_index) in_vertex_index: u32) -> VertexOutput {
     return out;
 }
 
-@group(0) @binding(0) var<uniform> viewport_size: vec2<f32>;
+// Of the rendered image, which is stretched over the viewport
+@group(0) @binding(0) var<uniform> image_size: vec2<f32>;
 @group(0) @binding(1) var<storage, read> buffer: array<f32>;
 
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
-    let x = min(u32(in.uv.x * viewport_size.x), u32(viewport_size.x) - 1u);
-    let y = min(u32(in.uv.y * viewport_size.y), u32(viewport_size.y) - 1u);
-    let index = (y * u32(viewport_size.x) + x) * 4u;
+    let x = min(u32(in.uv.x * image_size.x), u32(image_size.x) - 1u);
+    let y = min(u32(in.uv.y * image_size.y), u32(image_size.y) - 1u);
+    let index = (y * u32(image_size.x) + x) * 4u;
 
     let r = buffer[index];
     let g = buffer[index + 1u];
@@ -148,8 +150,8 @@ pub fn create_render_resources(
         cache: None,
     });
 
-    let viewport_size_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-        label: Some("Viewport Size Buffer"),
+    let image_size_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+        label: Some("Image Size Buffer"),
         contents: bytemuck::cast_slice(&[0.0f32, 0.0f32]),
         usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
     });
@@ -157,7 +159,7 @@ pub fn create_render_resources(
     RenderResources {
         pipeline,
         bind_group_layout,
-        viewport_size_buffer,
+        image_size_buffer,
         target_format,
         device: device.clone(),
         queue: queue.clone(),
@@ -172,51 +174,6 @@ pub fn render_output(
     frame_index: usize,
     viewport_size: Vec2,
 ) {
-    // Process messages from the renderer
-    if let Some(render_receiver) = &render_control.render_receiver {
-        loop {
-            match render_receiver.try_recv() {
-                Ok(render_message) => match render_message {
-                    RenderMessage::SampleRendered(render_progress) => {
-                        // The renderer reports the same buffer for the whole
-                        // run. Only swapping the handle when it really changed
-                        // keeps the cached blit bind group valid.
-                        if rendered_image.output_buffer.as_ref()
-                            != Some(&render_progress.output_buffer)
-                        {
-                            rendered_image.output_buffer = Some(render_progress.output_buffer);
-                        }
-                        rendered_image.progress = render_progress.progress;
-                        if let Some(fps) = render_progress.fps {
-                            rendered_image.fps = fps;
-                        }
-                        rendered_image.estimated_time_left = render_progress.estimated_time_left;
-                        render_control.loading_scene = false;
-                        render_control.build_in_flight = false;
-                    }
-                    RenderMessage::Error { message, path } => {
-                        render_control.render_error = Some(RenderError {
-                            message,
-                            selection: error_selection(&path),
-                        });
-                        render_control.loading_scene = false;
-                        render_control.build_in_flight = false;
-                    }
-                },
-                Err(err) => {
-                    match err {
-                        TryRecvError::Empty => {}
-                        TryRecvError::Disconnected => {
-                            render_control.abort_sender = None;
-                            render_control.build_in_flight = false;
-                        }
-                    }
-                    break;
-                }
-            }
-        }
-    }
-
     // UI and Interaction
     if viewport_size.x > 0.0 && viewport_size.y > 0.0 {
         let (rect, response) = ui.allocate_exact_size(viewport_size, Sense::drag());
@@ -280,34 +237,46 @@ pub fn render_output(
         }
     }
 
-    // Handle render restarts
+    if let (Some(scene), Some(resources)) = (scene, rendered_image.render_resources.clone()) {
+        dispatch(
+            render_control,
+            scene,
+            frame_index,
+            viewport_size,
+            ui.ctx(),
+            &resources,
+        );
+    }
+}
 
+/// Sends the view to the running render, and starts what
+/// [`RenderControl::schedule`] asked for: a new render, or an update to build.
+pub fn dispatch(
+    render_control: &mut RenderControl,
+    scene: &Scene,
+    frame_index: usize,
+    viewport_size: Vec2,
+    ctx: &Context,
+    resources: &Arc<RenderResources>,
+) {
     if render_control.camera_updated
-        && let (Some(sender), Some(orbit_camera)) = (
-            &render_control.camera_config_sender,
-            &render_control.orbit_camera,
-        )
-        && sender.send(orbit_camera.into()).is_ok()
+        && let (Some(sender), Some(orbit_camera)) =
+            (&render_control.update_sender, &render_control.orbit_camera)
+        && sender.send(CameraConfig::from(orbit_camera).into()).is_ok()
     {
         render_control.camera_updated = false;
+        render_control.edit_timer.sent();
     }
 
     if render_control.render_requested {
         if let Some(sender) = &render_control.abort_sender {
             sender.send(true).ok();
         }
-
-        render_control.abort_sender = None;
-        render_control.render_receiver = None;
-        render_control.camera_config_sender = None;
+        render_control.end_render();
     }
 
-    if render_control.render_requested
-        && viewport_size.x > 0.0
-        && viewport_size.y > 0.0
-        && let Some(scene) = scene
-        && let Some(resources) = rendered_image.render_resources.as_ref()
-    {
+    let screen = (viewport_size.x as usize, viewport_size.y as usize);
+    if render_control.render_requested && screen.0 > 0 && screen.1 > 0 {
         match scene.camera_at(frame_index) {
             Ok(camera) => {
                 let snapshot = CameraSnapshot::from(&camera);
@@ -337,23 +306,37 @@ pub fn render_output(
                 .orbit_camera
                 .as_ref()
                 .map(|o| CameraSnapshot::from(&CameraConfig::from(o))),
-            viewport_size,
-            ui.ctx(),
+            screen,
+            ctx,
             resources.clone(),
         );
-        rendered_image.width = viewport_size.x as u32;
-        rendered_image.height = viewport_size.y as u32;
         render_control.render_receiver = Some(res.0);
         render_control.abort_sender = Some(res.1);
-        render_control.camera_config_sender = Some(res.2);
+        render_control.update_sender = Some(res.2);
         render_control.render_requested = false;
+        render_control.edit_pending = false;
         render_control.loading_scene = true;
         render_control.camera_updated = false;
-        render_control.build_in_flight = true;
         render_control.overlay = render_control.overlay_next_render;
         render_control.overlay_next_render = false;
         render_control.render_error = None;
-        render_control.last_dispatched = Some((scene.clone(), frame_index));
+        render_control.rendered = Inputs::of(scene, frame_index, screen).ok();
+        render_control.edit_timer.new_render();
+    }
+
+    if let Some(request) = render_control.update_requested.take() {
+        match &render_control.update_sender {
+            Some(sender) => {
+                let inputs = request.inputs.clone();
+                render_control.build = Some(Build {
+                    receiver: build_update(request, sender.clone(), ctx, resources.clone()),
+                    inputs,
+                    started: Instant::now(),
+                });
+            }
+            // The render ended since, so the edit starts a new one
+            None => render_control.edit_pending = true,
+        }
     }
 }
 
@@ -363,18 +346,14 @@ fn render(
     scene: Scene,
     frame_index: usize,
     camera: Option<CameraSnapshot>,
-    viewport_size: Vec2,
+    screen: (usize, usize),
     ctx: &Context,
     resources: Arc<RenderResources>,
-) -> (Receiver<RenderMessage>, Sender<bool>, Sender<CameraConfig>) {
+) -> (Receiver<RenderMessage>, Sender<bool>, Sender<SceneUpdate>) {
     let (output_sender, output_receiver) = channel();
     let (abort_sender, abort_receiver) = channel();
-    let (camera_config_sender, camera_config_receiver) = channel();
+    let (update_sender, update_receiver) = channel();
     let (render_sender, render_receiver) = channel();
-
-    if viewport_size.x <= 0.0 || viewport_size.y <= 0.0 {
-        return (render_receiver, abort_sender, camera_config_sender);
-    }
 
     let render_sender_clone = render_sender.clone();
     let ctx1 = ctx.clone();
@@ -383,11 +362,12 @@ fn render(
     thread::spawn(move || {
         let res = (|| {
             let mut scene = scene.create(&CreatorContext {
-                screen_width: viewport_size.x as usize,
-                screen_height: viewport_size.y as usize,
+                screen_width: screen.0,
+                screen_height: screen.1,
                 device: &resources.device,
                 queue: &resources.queue,
                 scope: &Scope::builtin(frame_index),
+                refit_models: false,
             })?;
             if let Some(camera) = &camera {
                 scene.camera = camera.into();
@@ -396,7 +376,7 @@ fn render(
             ray_trace(
                 scene,
                 &output_sender,
-                &camera_config_receiver,
+                &update_receiver,
                 &abort_receiver,
                 &resources.device,
                 &resources.queue,
@@ -405,16 +385,8 @@ fn render(
         })();
 
         if let Err(err) = res {
-            let mut message = format!("{}", err);
-            if let Some(s) = err.source() {
-                message = message + &format!("\n{}", s);
-            }
-            let path = err
-                .downcast_ref::<ModelError>()
-                .map_or(Vec::new(), |e| e.path.clone());
-
             render_sender_clone
-                .send(RenderMessage::Error { message, path })
+                .send(RenderMessage::Error(RenderError::new(&*err)))
                 .unwrap_or(());
             ctx1.request_repaint();
         };
@@ -443,7 +415,44 @@ fn render(
         }
     });
 
-    (render_receiver, abort_sender, camera_config_sender)
+    (render_receiver, abort_sender, update_sender)
+}
+
+/// Builds the parts of the scene that changed on a thread, and sends them to
+/// the running render
+fn build_update(
+    request: UpdateRequest,
+    updates: Sender<SceneUpdate>,
+    ctx: &Context,
+    resources: Arc<RenderResources>,
+) -> Receiver<Built> {
+    let (sender, receiver) = channel();
+    let ctx = ctx.clone();
+    thread::spawn(move || {
+        let (update, parts, error) = create_update(
+            &request.scene,
+            &CreatorContext {
+                screen_width: request.screen.0,
+                screen_height: request.screen.1,
+                device: &resources.device,
+                queue: &resources.queue,
+                scope: &Scope::builtin(request.frame),
+                refit_models: true,
+            },
+            request.parts,
+        );
+        if !parts.is_empty() {
+            updates.send(update).ok();
+        }
+        sender
+            .send(Built {
+                parts,
+                error: error.map(|e| RenderError::new(&*e)),
+            })
+            .ok();
+        ctx.request_repaint();
+    });
+    receiver
 }
 
 #[cfg(test)]

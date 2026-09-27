@@ -49,13 +49,15 @@ A desktop UI for the [Solstråle path tracer](https://github.com/DanielPettersso
     target/release/solstrale-desktop
     ```
 
+    With `SOLSTRALE_TIME_EDITS=1` set, it prints how long each edit takes to show in the viewport.
+
 ### Interactive Controls
 
 *   **Orbit:** Left-click and drag.
 *   **Pan:** Right-click and drag.
 *   **Zoom:** Scroll wheel.
 *   **Camera:** Moving the view moves the scene's camera. When the camera's position is an expression only the view moves, and the camera's inspector offers to reset the view or replace the expressions with it.
-*   **Edit Scene:** Select a part of the scene in the outline on the left and change it in the inspector on the right. Add hittables with +, right click one to duplicate, move, wrap in a repeat or delete it, and drag to reorder. Help > How to use has the details.
+*   **Edit Scene:** Select a part of the scene in the outline on the left and change it in the inspector on the right. Add hittables with +, right click one to duplicate, move, wrap in a repeat or delete it, and drag to reorder. Help > How to use has the details. An edit goes to the running render as it is made, and only the part of the scene it changed is built again.
 *   **Shortcuts:** Ctrl+S saves the scene, Ctrl+R restarts the render.
 
 ## Scene Files

@@ -9,7 +9,7 @@ lto = true
 codegen-units = 1
 
 [dependencies]
-solstrale = { git = "https://github.com/DanielPettersson/solstrale-rust" }
+solstrale = { git = "https://github.com/DanielPettersson/solstrale-rust", rev = "d7dadb4a341117c24a9206159b9f2f24ae1994d4" }
 eframe = { version = "0.36.2", features = ["persistence", "wayland", "wgpu"] }
 egui = "0.36.2"
 egui-file-dialog = "0.15.0"

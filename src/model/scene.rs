@@ -1,7 +1,9 @@
 use std::error::Error;
 
 use serde::{Deserialize, Serialize};
+use solstrale::geo::vec3::Vec3;
 use solstrale::hittable::{Bvh, Hittables};
+use solstrale::post::PostProcessors;
 
 use crate::model::camera_config::CameraConfig;
 use crate::model::hittable::Hittable;
@@ -56,12 +58,55 @@ impl Scene {
     }
 
     /// The hittables of the world, in a context that already has [`Scene::scope`]
-    pub fn create_world(&self, ctx: &CreatorContext) -> Result<Vec<Hittables>, Box<dyn Error>> {
+    pub fn create_hittables(&self, ctx: &CreatorContext) -> Result<Vec<Hittables>, Box<dyn Error>> {
         let mut list = Vec::new();
         for (i, child) in self.world.iter().enumerate() {
             list.append(&mut child.create(ctx).at(|| format!("world[{}]", i))?)
         }
         Ok(list)
+    }
+
+    // The parts of the scene the renderer takes separately, each in a context
+    // that already has [`Scene::scope`]
+
+    pub fn create_world(&self, ctx: &CreatorContext) -> Result<Hittables, Box<dyn Error>> {
+        Ok(Bvh::new(self.create_hittables(ctx)?).into())
+    }
+
+    pub fn create_camera(
+        &self,
+        ctx: &CreatorContext,
+    ) -> Result<solstrale::camera::CameraConfig, Box<dyn Error>> {
+        self.camera.create(ctx).at(|| "camera".to_string())
+    }
+
+    pub fn create_background_color(&self, ctx: &CreatorContext) -> Result<Vec3, Box<dyn Error>> {
+        self.background_color
+            .as_ref()
+            .unwrap_or(&Rgb::new(0., 0., 0.))
+            .create(ctx)
+            .at(|| "background_color".to_string())
+    }
+
+    pub fn create_render_config(
+        &self,
+        ctx: &CreatorContext,
+    ) -> Result<solstrale::renderer::RenderConfig, Box<dyn Error>> {
+        self.render_configuration
+            .as_ref()
+            .unwrap_or(&RenderConfig::default())
+            .create(ctx)
+            .at(|| "render_configuration".to_string())
+    }
+
+    pub fn create_post_processors(
+        &self,
+        ctx: &CreatorContext,
+    ) -> Result<Vec<PostProcessors>, Box<dyn Error>> {
+        self.render_configuration
+            .as_ref()
+            .map_or(Ok(Vec::new()), |c| c.create_post_processors(ctx))
+            .at(|| "render_configuration".to_string())
     }
 }
 
@@ -74,20 +119,11 @@ impl Creator<solstrale::renderer::Scene> for Scene {
         };
 
         Ok(solstrale::renderer::Scene {
-            world: Bvh::new(self.create_world(ctx)?).into(),
-            camera: self.camera.create(ctx).at(|| "camera".to_string())?,
-            background_color: self
-                .background_color
-                .as_ref()
-                .unwrap_or(&Rgb::new(0., 0., 0.))
-                .create(ctx)
-                .at(|| "background_color".to_string())?,
-            render_config: self
-                .render_configuration
-                .as_ref()
-                .unwrap_or(&RenderConfig::default())
-                .create(ctx)
-                .at(|| "render_configuration".to_string())?,
+            world: self.create_world(ctx)?,
+            camera: self.create_camera(ctx)?,
+            background_color: self.create_background_color(ctx)?,
+            render_config: self.create_render_config(ctx)?,
+            post_processors: self.create_post_processors(ctx)?,
         })
     }
 }

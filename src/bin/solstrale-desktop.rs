@@ -21,8 +21,8 @@ use solstrale_desktop_rust::editor::outline::{ERROR_COLOR, OutlineCx, Selection,
 use solstrale_desktop_rust::keyboard::is_ctrl_s;
 use solstrale_desktop_rust::render_output::render_output;
 use solstrale_desktop_rust::{
-    ErrorInfo, RenderControl, RenderedImage, device_descriptor, help, load_scene, loading_output,
-    render_button, save_image, save_scene,
+    ErrorInfo, RenderControl, RenderedImage, SLOW_BUILD, device_descriptor, help, load_scene,
+    loading_output, render_button, save_image, save_scene,
 };
 
 fn main() -> eframe::Result<()> {
@@ -205,7 +205,7 @@ impl SolstraleApp {
         self.render_control.render_requested = true;
         self.render_control.reset_view = true;
         self.render_control.overlay_next_render = true;
-        self.render_control.last_edit = None;
+        self.render_control.edit_pending = false;
     }
 
     /// Saves to the scene's file, or asks for one. Returns whether it saved now.
@@ -427,8 +427,10 @@ impl SolstraleApp {
                     }
                     ui.horizontal(|ui| {
                         self.frame_controls(ui);
-                        if self.render_control.loading_scene && !self.render_control.overlay {
+                        if self.render_control.building(Instant::now()) {
                             ui.spinner().on_hover_text("Building the scene");
+                        } else if self.render_control.build.is_some() {
+                            ui.ctx().request_repaint_after(SLOW_BUILD);
                         }
                         ui.add(
                             ProgressBar::new(self.rendered_image.progress as f32).text(format!(
@@ -563,6 +565,8 @@ impl App for SolstraleApp {
         let ctx = ui.ctx().clone();
         let ctx = &ctx;
 
+        self.render_control.receive(&mut self.rendered_image);
+
         if is_ctrl_s(ui) {
             self.save();
         }
@@ -604,12 +608,11 @@ impl App for SolstraleApp {
                     loading_output::show(ui);
                 }
 
-                if let Some(wait) =
-                    self.render_control
-                        .schedule(&self.doc.scene, self.frame_index, Instant::now())
-                {
-                    ui.ctx().request_repaint_after(wait);
-                }
+                self.render_control.schedule(
+                    &self.doc.scene,
+                    self.frame_index,
+                    (available_size.x as usize, available_size.y as usize),
+                );
 
                 render_output(
                     ui,

@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 use solstrale::material::texture::{Textures, load_normal_texture};
 
 use crate::model::num::visit_nums;
+use crate::model::texture_cache::{Kind, texture};
 use crate::model::{Creator, CreatorContext};
 
 #[derive(Serialize, Deserialize, PartialEq, Debug, Clone, Default)]
@@ -16,6 +17,6 @@ visit_nums!(NormalTexture);
 
 impl Creator<Textures> for NormalTexture {
     fn create(&self, _: &CreatorContext) -> Result<Textures, Box<dyn Error>> {
-        load_normal_texture(self.file.as_ref()).map(|t| t.into())
+        texture(Kind::Normal, &self.file, load_normal_texture).map(|t| t.into())
     }
 }
