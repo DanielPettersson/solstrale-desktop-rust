@@ -40,6 +40,7 @@ pub mod scope;
 pub mod screen_width_height;
 pub mod sphere;
 pub mod texture;
+pub mod texture_cache;
 pub mod transformation;
 pub mod variables;
 pub mod width_height;
@@ -105,6 +106,9 @@ pub struct CreatorContext<'a> {
     pub queue: &'a wgpu::Queue,
     /// Variables that expressions in the scene can read
     pub scope: &'a Scope,
+    /// Leave a model turned off its axes with its tree refitted rather than
+    /// built again: quicker to move, up to 23% slower to render
+    pub refit_models: bool,
 }
 
 pub trait Creator<T> {

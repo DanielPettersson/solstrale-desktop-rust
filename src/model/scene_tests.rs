@@ -16,6 +16,7 @@ fn ctx_with<T>(scope: &Scope, f: impl FnOnce(&CreatorContext) -> T) -> T {
         device,
         queue,
         scope,
+        refit_models: false,
     })
 }
 
@@ -24,7 +25,7 @@ fn world(yaml: &str, frame: usize) -> Result<Vec<Hittables>, String> {
     let scope = scene
         .scope(&Scope::builtin(frame))
         .map_err(|e| e.to_string())?;
-    ctx_with(&scope, |ctx| scene.create_world(ctx)).map_err(|e| e.to_string())
+    ctx_with(&scope, |ctx| scene.create_hittables(ctx)).map_err(|e| e.to_string())
 }
 
 fn full_scene_error(yaml: &str) -> String {

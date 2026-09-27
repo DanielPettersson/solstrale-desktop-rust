@@ -84,6 +84,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             device: &device,
             queue: &queue,
             scope: &Scope::builtin(frame_index),
+            refit_models: false,
         })?;
 
         let samples_per_pixel = scene.render_config.samples_per_pixel as u64;
@@ -92,7 +93,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             .add(ProgressBar::new(samples_per_pixel).with_style(frame_progress_style.clone()));
 
         let (output_sender, output_receiver) = channel();
-        let (_, camera_config_receiver) = channel();
+        let (_, update_receiver) = channel();
         let (_, abort_receiver) = channel();
 
         let device_clone = device.clone();
@@ -101,7 +102,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             ray_trace(
                 scene,
                 &output_sender,
-                &camera_config_receiver,
+                &update_receiver,
                 &abort_receiver,
                 &device_clone,
                 &queue_clone,
@@ -110,22 +111,20 @@ fn main() -> Result<(), Box<dyn Error>> {
             .unwrap();
         });
 
-        let mut image_buffer: Option<wgpu::Buffer> = None;
+        let mut image: Option<(wgpu::Buffer, u32, u32)> = None;
         for render_output in &output_receiver {
-            image_buffer = Some(render_output.output_buffer);
+            image = Some((
+                render_output.output_buffer,
+                render_output.width,
+                render_output.height,
+            ));
             total_progress_bar.inc(1);
             frame_progress_bar.inc(1);
         }
 
-        if let Some(buffer) = image_buffer {
-            let image = buffer_to_image(
-                &device,
-                &queue,
-                &buffer,
-                screen_width as u32,
-                screen_height as u32,
-                DISPLAY_TONE_MAPPER,
-            );
+        if let Some((buffer, width, height)) = image {
+            let image =
+                buffer_to_image(&device, &queue, &buffer, width, height, DISPLAY_TONE_MAPPER);
 
             image.save(format!("frame_{:0>8}.png", frame_index))?;
         }

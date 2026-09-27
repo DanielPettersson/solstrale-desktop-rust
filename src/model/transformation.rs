@@ -42,3 +42,21 @@ pub fn create_transformation(
     }
     Ok(Transformations::new(trans))
 }
+
+/// Whether the transformations turn what they transform by anything but whole
+/// quarter turns, which is what loosens a refitted tree
+pub fn rotates_off_axis(
+    transformations: &[Transformation],
+    ctx: &CreatorContext,
+) -> Result<bool, Box<dyn Error>> {
+    for t in transformations {
+        if let Transformation::RotationX(r)
+        | Transformation::RotationY(r)
+        | Transformation::RotationZ(r) = t
+            && r.eval(ctx)? % 90. != 0.
+        {
+            return Ok(true);
+        }
+    }
+    Ok(false)
+}
