@@ -224,7 +224,7 @@ pub fn render_output(
                 }
             }
             let scroll = ui.input(|i| i.smooth_scroll_delta.y);
-            if scroll != 0.0 {
+            if scroll != 0.0 && ui.ui_contains_pointer() {
                 orbit_camera.zoom(scroll as f64 * ZOOM_SENSITIVITY);
                 input_changed = true;
             }
