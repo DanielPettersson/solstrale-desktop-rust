@@ -333,7 +333,7 @@ fn list(
         drop_zone(ui, parent, i, cx);
         match h {
             Hittable::Repeat(r) => {
-                let id = Id::new("outline").with(&path);
+                let id = Id::unique("outline").with(&path);
                 CollapsingState::load_with_default_open(ui.ctx(), id, true)
                     .show_header(ui, |ui| row(ui, h, &path, items.len(), taken, cx))
                     .body(|ui| {
@@ -411,7 +411,7 @@ fn row(
         egui::Tooltip::always_open(
             ui.ctx().clone(),
             ui.layer_id(),
-            Id::new("outline-drag"),
+            Id::unique("outline-drag"),
             egui::PopupAnchor::Pointer,
         )
         .show(|ui| ui.label(summary(h)));

@@ -223,33 +223,33 @@ mod tests {
 
     #[test]
     fn numbers_read_as_literals() {
-        assert_eq!(Num::Lit(30.), serde_yaml::from_str::<Num>("30").unwrap());
+        assert_eq!(Num::Lit(30.), yaml_serde::from_str::<Num>("30").unwrap());
         assert_eq!(
             Num::Lit(30.),
-            serde_yaml::from_str::<Num>("\"30\"").unwrap()
+            yaml_serde::from_str::<Num>("\"30\"").unwrap()
         );
-        assert_eq!(Num::Lit(-0.5), serde_yaml::from_str::<Num>("-0.5").unwrap());
+        assert_eq!(Num::Lit(-0.5), yaml_serde::from_str::<Num>("-0.5").unwrap());
     }
 
     #[test]
     fn expressions_round_trip_unquoted() {
-        let n: Num = serde_yaml::from_str("sin(frameIndex * 0.1) * 2").unwrap();
+        let n: Num = yaml_serde::from_str("sin(frameIndex * 0.1) * 2").unwrap();
         assert!(matches!(n, Num::Expr(_)));
         assert_eq!(
             "sin(frameIndex * 0.1) * 2\n",
-            serde_yaml::to_string(&n).unwrap()
+            yaml_serde::to_string(&n).unwrap()
         );
     }
 
     #[test]
     fn invalid_expression_is_a_load_error() {
-        let err = serde_yaml::from_str::<Num>("1 +").unwrap_err().to_string();
+        let err = yaml_serde::from_str::<Num>("1 +").unwrap_err().to_string();
         assert!(err.contains("expected a value"), "{}", err);
     }
 
     #[test]
     fn triple_needs_three_parts() {
-        let err = parse_triple::<serde_yaml::Error>("1, 2").unwrap_err();
+        let err = parse_triple::<yaml_serde::Error>("1, 2").unwrap_err();
         assert!(err.to_string().contains("expected 3"), "{}", err);
     }
 }

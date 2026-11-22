@@ -87,10 +87,10 @@ mod tests {
 
     #[test]
     fn keeps_order_and_reads_earlier_variables() {
-        let vars: Variables = serde_yaml::from_str("b: 2\na: b * 3 + frameIndex\n").unwrap();
+        let vars: Variables = yaml_serde::from_str("b: 2\na: b * 3 + frameIndex\n").unwrap();
         assert_eq!(
             "b: 2.0\na: b * 3 + frameIndex\n",
-            serde_yaml::to_string(&vars).unwrap()
+            yaml_serde::to_string(&vars).unwrap()
         );
         let scope = vars.scope(&Scope::builtin(1)).unwrap();
         assert_eq!(Some(7.), scope.get("a"));
@@ -98,7 +98,7 @@ mod tests {
 
     #[test]
     fn later_variables_are_not_visible() {
-        let vars: Variables = serde_yaml::from_str("a: b\nb: 1\n").unwrap();
+        let vars: Variables = yaml_serde::from_str("a: b\nb: 1\n").unwrap();
         let err = vars.scope(&Scope::builtin(0)).unwrap_err().to_string();
         assert_eq!("variables › a: unknown variable `b` in `b`", err);
     }
@@ -111,7 +111,7 @@ mod tests {
             ("sin: 1\n", "function name"),
             ("2x: 1\n", "not a valid name"),
         ] {
-            let err = serde_yaml::from_str::<Variables>(yaml)
+            let err = yaml_serde::from_str::<Variables>(yaml)
                 .unwrap_err()
                 .to_string();
             assert!(err.contains(msg), "{}: {}", yaml, err);

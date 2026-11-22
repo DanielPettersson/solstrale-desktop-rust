@@ -126,7 +126,7 @@ mod tests {
 
     #[test]
     fn variable_name_is_checked() {
-        let err = serde_yaml::from_str::<Repeat>("variable: pi\nto: 3\n")
+        let err = yaml_serde::from_str::<Repeat>("variable: pi\nto: 3\n")
             .unwrap_err()
             .to_string();
         assert!(err.contains("built-in"), "{}", err);

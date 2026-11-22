@@ -10,14 +10,12 @@ codegen-units = 1
 
 [dependencies]
 solstrale = { git = "https://github.com/DanielPettersson/solstrale-rust", rev = "d7dadb4a341117c24a9206159b9f2f24ae1994d4" }
-eframe = { version = "0.36.2", features = ["persistence", "wayland", "wgpu"] }
-egui = "0.36.2"
-egui-file-dialog = "0.15.0"
+eframe = { version = "0.37.0", features = ["persistence", "wayland", "wgpu"] }
+egui = "0.37.0"
+egui-file-dialog = "0.16.0"
 image = "0.25.8"
 serde = { version = "1.0.228", features = ["derive"] }
-serde_json = "1.0.145"
-serde_yaml = "0.9.34"
-enum-map = { version = "3.1.0", features = ["serde"] }
+yaml_serde = "0.10.7"
 moka = { version = "0.12.11", features = ["sync"] }
 once_cell = "1.21.3"
 bytemuck = { version = "1.21.0", features = ["derive"] }
@@ -28,4 +26,4 @@ indicatif = "0.18.0"
 pollster = "1.0.1"
 
 [dev-dependencies]
-egui_kittest = { version = "0.36", features = ["wgpu", "snapshot"] }
+egui_kittest = { version = "0.37.0", features = ["wgpu", "snapshot"] }

@@ -117,7 +117,7 @@ pub trait Creator<T> {
 
 /// Parses a scene file
 pub fn parse_scene(yaml: &str) -> Result<Scene, Box<dyn Error>> {
-    serde_yaml::from_str(yaml).map_err(|e| {
+    yaml_serde::from_str(yaml).map_err(|e| {
         let mut msg = e.to_string();
         if yaml.contains("{%") || yaml.contains("{{") {
             msg.push_str(
@@ -130,7 +130,7 @@ pub fn parse_scene(yaml: &str) -> Result<Scene, Box<dyn Error>> {
 
 /// Writes a scene file
 pub fn scene_to_yaml(scene: &Scene) -> Result<String, Box<dyn Error>> {
-    Ok(serde_yaml::to_string(scene)?)
+    Ok(yaml_serde::to_string(scene)?)
 }
 
 #[cfg(test)]
@@ -205,7 +205,7 @@ mod test {
             }),
         };
 
-        let yaml = serde_yaml::to_string(&scene).unwrap();
+        let yaml = yaml_serde::to_string(&scene).unwrap();
         assert_eq!(
             "render_configuration:
   width_height:
@@ -250,7 +250,7 @@ world:
             yaml
         );
 
-        let de_scene: Scene = serde_yaml::from_str(&yaml).unwrap();
+        let de_scene: Scene = yaml_serde::from_str(&yaml).unwrap();
         assert_eq!(scene, de_scene);
     }
 
@@ -324,9 +324,9 @@ world:
       path: /tmp
       name: x.obj
 ";
-        let scene: Scene = serde_yaml::from_str(yaml).unwrap();
-        let written = serde_yaml::to_string(&scene).unwrap();
-        let reread: Scene = serde_yaml::from_str(&written).unwrap();
+        let scene: Scene = yaml_serde::from_str(yaml).unwrap();
+        let written = yaml_serde::to_string(&scene).unwrap();
+        let reread: Scene = yaml_serde::from_str(&written).unwrap();
         assert_eq!(scene, reread);
         assert!(written.contains("half_screen: {}"), "{}", written);
         assert!(written.contains("- denoise: {}"), "{}", written);
@@ -336,7 +336,7 @@ world:
 
     #[test]
     fn one_of_rejects_two_keys() {
-        let err = serde_yaml::from_str::<Hittable>(
+        let err = yaml_serde::from_str::<Hittable>(
             "sphere:\n  center: 0, 0, 0\n  radius: 1\nquad:\n  q: 0, 0, 0\n  u: 1, 0, 0\n  v: 0, 1, 0\n",
         )
         .unwrap_err()
@@ -352,24 +352,24 @@ world:
 
     #[test]
     fn one_of_rejects_no_key_unless_it_has_a_default() {
-        let err = serde_yaml::from_str::<Hittable>("{}")
+        let err = yaml_serde::from_str::<Hittable>("{}")
             .unwrap_err()
             .to_string();
         assert!(err.contains("expected one of `sphere`"), "{}", err);
 
         assert_eq!(
             Material::default(),
-            serde_yaml::from_str::<Material>("{}").unwrap()
+            yaml_serde::from_str::<Material>("{}").unwrap()
         );
         assert_eq!(
             Texture::Color(Rgb::new(0.8, 0.8, 0.8)),
-            serde_yaml::from_str::<Texture>("{}").unwrap()
+            yaml_serde::from_str::<Texture>("{}").unwrap()
         );
     }
 
     #[test]
     fn one_of_rejects_unknown_key() {
-        let err = serde_yaml::from_str::<Hittable>("spere:\n  radius: 1\n")
+        let err = yaml_serde::from_str::<Hittable>("spere:\n  radius: 1\n")
             .unwrap_err()
             .to_string();
         assert!(err.contains("unknown field `spere`"), "{}", err);
@@ -377,7 +377,7 @@ world:
 
     #[test]
     fn one_of_error_has_location() {
-        let err = serde_yaml::from_str::<Scene>(
+        let err = yaml_serde::from_str::<Scene>(
             "camera:\n  look_from: 0, 0, 0\nworld:\n  - sphere:\n      center: 0, 0, 0\n      radius: 1\n    box:\n      a: 0, 0, 0\n      b: 1, 1, 1\n",
         )
         .unwrap_err()

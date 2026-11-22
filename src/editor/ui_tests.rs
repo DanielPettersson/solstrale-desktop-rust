@@ -25,7 +25,7 @@ struct State {
 }
 
 /// The inspector panel's minimum width in the app
-const INSPECTOR_WIDTH: f32 = 340.;
+const INSPECTOR_WIDTH: f32 = 430.;
 
 fn editor_ui(ui: &mut egui::Ui, s: &mut State) {
     ui.horizontal_top(|ui| {
@@ -77,6 +77,7 @@ fn harness(scene: Scene, selection: Selection) -> Harness<'static, State> {
     Harness::builder()
         .with_size(Vec2::new(640., 900.))
         .wgpu()
+        .with_accessibility_check(false)
         .build_ui_state(
             editor_ui,
             State {

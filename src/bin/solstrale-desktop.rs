@@ -33,7 +33,7 @@ fn main() -> eframe::Result<()> {
         viewport: ViewportBuilder::default()
             .with_resizable(true)
             .with_inner_size(Vec2 {
-                x: 1400.0,
+                x: 1490.0,
                 y: 800.0,
             })
             .with_min_inner_size(Vec2 { x: 700., y: 300. })
@@ -277,7 +277,7 @@ impl SolstraleApp {
             .and_then(|p| p.file_name())
             .map_or("the scene".to_string(), |n| n.to_string_lossy().to_string());
         let mut choice = None;
-        let modal = Modal::new(Id::new("unsaved-changes")).show(ctx, |ui| {
+        let modal = Modal::new(Id::unique("unsaved-changes")).show(ctx, |ui| {
             ui.heading("Unsaved changes");
             ui.label(format!("Save the changes to {} first?", name));
             ui.add_space(8.);
@@ -524,8 +524,8 @@ impl SolstraleApp {
 
     fn inspector_panel(&mut self, ui: &mut Ui) {
         Panel::right("inspector-panel")
-            .min_size(340.)
-            .default_size(400.)
+            .min_size(430.)
+            .default_size(500.)
             .show(ui, |ui| {
                 ui.add_space(4.);
                 // Vertical only: the inspector fits its content to the width

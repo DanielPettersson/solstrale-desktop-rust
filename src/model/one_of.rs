@@ -36,7 +36,7 @@ pub(crate) use or_default;
 /// Declares an enum that reads and writes as a map with exactly one key, e.g.
 /// `sphere: {...}`.
 ///
-/// A derived enum does not do this in serde_yaml 0.9, which writes variants as
+/// A derived enum does not do this in yaml_serde 0.9, which writes variants as
 /// YAML tags (`!sphere`) and refuses untagged maps. So the enum goes through a
 /// struct of `Option`s on both sides, which also keeps `deny_unknown_fields`
 /// errors for misspelled keys. `empty` is what a map with no key reads as, or
